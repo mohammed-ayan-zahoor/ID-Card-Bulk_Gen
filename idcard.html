@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered ID Card Generator (Double-Sided)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .step-card {
+            transition: all 0.3s ease;
+        }
+        .canvas-wrapper {
+            border: 4px solid transparent;
+            transition: border-color 0.3s ease;
+        }
+        .canvas-wrapper.active {
+            border-color: #ec4899;
+        }
+        .placeholder {
+            position: absolute;
+            border: 2px dashed #3b82f6;
+            cursor: move;
+            user-select: none;
+            background-color: rgba(59, 130, 246, 0.2);
+            padding: 4px;
+            box-sizing: border-box;
+        }
+        .placeholder.text-placeholder {
+            color: #1e40af;
+            font-weight: 500;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+        .placeholder.photo-placeholder {
+            border-style: solid;
+            border-color: #16a34a;
+            background-color: rgba(22, 163, 74, 0.2);
+            color: #14532d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .placeholder.active {
+            border-style: solid;
+            border-color: #db2777;
+            background-color: rgba(219, 39, 119, 0.2);
+            z-index: 10;
+        }
+        .placeholder.active .resize-handle {
+            display: block;
+        }
+        .delete-btn {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 24px;
+            height: 24px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            border: 2px solid white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            line-height: 1;
+            z-index: 20;
+        }
+        .placeholder:hover .delete-btn {
+            opacity: 1;
+        }
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 12px;
+            height: 12px;
+            background: #db2777;
+            border: 2px solid white;
+            cursor: se-resize;
+            display: none;
+            z-index: 15;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">AI-Powered ID Card Generator</h1>
+            <p class="text-base md:text-lg text-gray-600 mt-2">Design both sides of your card, upload data, and generate print-ready sheets.</p>
+        </header>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Controls Column -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Step 1: Card Design -->
+                <div id="step1" class="bg-white p-6 rounded-xl shadow-md step-card">
+                    <div class="flex items-center mb-4"><span class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">1</span><h2 class="text-xl sm:text-2xl font-semibold">Card Setup</h2></div>
+                    <p class="text-gray-600 mb-4">Choose an orientation. Default designs are provided, which you can replace.</p>
+                                        
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Orientation</label>
+                        <div class="flex justify-around bg-gray-100 rounded-lg p-1">
+                            <button id="orientation-horizontal-btn" class="w-full px-3 py-2 rounded-md">Horizontal</button>
+                            <button id="orientation-vertical-btn" class="w-full px-3 py-2 rounded-md">Vertical</button>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Front Design</label>
+                            <input type="file" id="bg-image-front-input" accept="image/jpeg, image/png" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Back Design</label>
+                            <input type="file" id="bg-image-back-input" accept="image/jpeg, image/png" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        </div>
+                    </div>
+                </div>
+                <!-- Step 2: Upload Data -->
+                <div id="step2" class="bg-white p-6 rounded-xl shadow-md step-card">
+                    <div class="flex items-center mb-4"><span class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">2</span><h2 class="text-xl sm:text-2xl font-semibold">Upload Data</h2></div>
+                    <p class="text-gray-600 mb-4">Upload your Excel (.xlsx) or CSV file.</p>
+                    <input type="file" id="data-file-input" accept=".xlsx, .csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+                                
+                <!-- Step 3: AI/Manual Design -->
+                <div id="step3" class="bg-white p-6 rounded-xl shadow-md step-card">
+                    <div class="flex items-center mb-4"><span class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">3</span><h2 class="text-xl sm:text-2xl font-semibold">Design Card</h2></div>
+                    <p class="text-gray-600 mb-4">Click on a canvas (Front/Back) to edit it. Use AI or add fields manually.</p>
+                    <div id="ai-controls" class="space-y-3 opacity-50">
+                        <button id="ai-layout-btn" class="w-full bg-teal-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-600 transition-colors flex items-center justify-center" disabled>✨ Suggest Layout</button>
+                        <button id="ai-title-btn" class="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors flex items-center justify-center" disabled>✨ Generate Title</button>
+                        <button id="add-all-headers-btn" class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center" disabled>Add All Data Fields</button>
+                    </div>
+                     <hr class="my-4">
+                    <div id="add-placeholder-controls" class="space-y-4">
+                        <div>
+                            <label for="field-name-input" class="block text-sm font-medium text-gray-700 mb-1">Field Name:</label>
+                            <input type="text" id="field-name-input" placeholder="e.g., FullName, Address" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <button id="add-text-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Add Text Field</button>
+                        <button id="add-photo-btn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Add Photo Field</button>
+                    </div>
+                </div>
+                <!-- Edit Panel -->
+                <div id="edit-panel" class="bg-white p-6 rounded-xl shadow-md step-card hidden">
+                    <h2 class="text-xl sm:text-2xl font-semibold mb-4">Edit Selected Field</h2>
+                    <div id="edit-controls" class="space-y-4"></div>
+                </div>
+                <!-- Step 4: Generate -->
+                <div id="step4" class="bg-white p-6 rounded-xl shadow-md step-card">
+                    <div class="flex items-center mb-4"><span class="bg-purple-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">4</span><h2 class="text-xl sm:text-2xl font-semibold">Generate Cards</h2></div>
+                    <div class="space-y-4">
+                        <button id="preview-btn" class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors" disabled>Preview First Card</button>
+                        <button id="generate-pdf-btn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors text-lg" disabled>Export to A4 PDF</button>
+                        <button id="generate-zip-btn" class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors" disabled>Generate & Download ZIP</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Canvas Column -->
+            <div class="lg:col-span-2 space-y-8">
+                <div id="front-canvas-wrapper" class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto">
+                    <h3 class="text-center font-bold text-lg sm:text-xl mb-2">FRONT</h3>
+                    <canvas id="front-canvas" class="w-full h-full rounded-md bg-gray-200"></canvas>
+                    <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full"></div>
+                </div>
+                <div id="back-canvas-wrapper" class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto">
+                    <h3 class="text-center font-bold text-lg sm:text-xl mb-2">BACK</h3>
+                    <canvas id="back-canvas" class="w-full h-full rounded-md bg-gray-200"></canvas>
+                    <div id="back-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full"></div>
+                </div>
+            </div>
+        </div>
+                
+        <!-- Modals -->
+        <div id="loading-modal" class="modal-overlay hidden"><div class="modal-content flex flex-col items-center"><div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4"></div><p id="loading-text" class="text-lg font-semibold text-gray-700">Thinking...</p><style>.loader { border-top-color: #4f46e5; animation: spinner 1.5s linear infinite; } @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style></div></div>
+        <div id="error-modal" class="modal-overlay hidden"><div class="modal-content"><h3 class="text-2xl font-bold text-red-600 mb-4">Error</h3><p id="error-text" class="text-gray-700"></p><button onclick="document.getElementById('error-modal').classList.add('hidden')" class="mt-6 bg-red-500 text-white font-bold py-2 px-6 rounded-lg">Close</button></div></div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const bgImageFrontInput = document.getElementById('bg-image-front-input');
+            const bgImageBackInput = document.getElementById('bg-image-back-input');
+            const dataFileInput = document.getElementById('data-file-input');
+            const fieldNameInput = document.getElementById('field-name-input');
+            const addTextBtn = document.getElementById('add-text-btn');
+            const addPhotoBtn = document.getElementById('add-photo-btn');
+            const previewBtn = document.getElementById('preview-btn');
+            const generateZipBtn = document.getElementById('generate-zip-btn');
+            const generatePdfBtn = document.getElementById('generate-pdf-btn');
+            const frontCanvas = document.getElementById('front-canvas');
+            const backCanvas = document.getElementById('back-canvas');
+            const frontCtx = frontCanvas.getContext('2d');
+            const backCtx = backCanvas.getContext('2d');
+            const frontCanvasWrapper = document.getElementById('front-canvas-wrapper');
+            const backCanvasWrapper = document.getElementById('back-canvas-wrapper');
+            const frontPlaceholderWrapper = document.getElementById('front-placeholder-wrapper');
+            const backPlaceholderWrapper = document.getElementById('back-placeholder-wrapper');
+            const editPanel = document.getElementById('edit-panel');
+            const editControls = document.getElementById('edit-controls');
+            const aiControls = document.getElementById('ai-controls');
+            const aiLayoutBtn = document.getElementById('ai-layout-btn');
+            const aiTitleBtn = document.getElementById('ai-title-btn');
+            const addAllHeadersBtn = document.getElementById('add-all-headers-btn');
+            const loadingModal = document.getElementById('loading-modal');
+            const loadingText = document.getElementById('loading-text');
+            const errorModal = document.getElementById('error-modal');
+            const errorText = document.getElementById('error-text');
+            const orientationHorizontalBtn = document.getElementById('orientation-horizontal-btn');
+            const orientationVerticalBtn = document.getElementById('orientation-vertical-btn');
+            // --- State ---
+            let bgImages = { front: new Image(), back: new Image() };
+            let data = [];
+            let headers = [];
+            let placeholders = { front: [], back: [] };
+            let activeSide = 'front';
+            let activePlaceholderId = null;
+            let dragOffsetX, dragOffsetY;
+            let isResizing = false;
+            let orientation = 'horizontal';
+            // --- Constants ---
+            const HORIZONTAL_WIDTH = 856;
+            const HORIZONTAL_HEIGHT = 540;
+            const defaultBgDataUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODU2IiBoZWlnaHQ9IjU0MCIgdmlld0JveD0iMCAwIDg1NiA1NDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkMSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I0YzRjRGNjtzdG9wLW9wYWNpdHk6MSIgLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNFNUU3RUI7c3RvcC1vcGFjaXR5OjEiIC8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9Ijg1NiIgaGVpZ2h0PSI1NDAiIGZpbGw9InVybCgjZ3JhZDEpIi8+PHBhdGggZD0iTTAgMCBIODU2IFYxMTAgQyA1MDAgMTUwLCAzNTYgNTAsIDAgOTAgWiIgZmlsbD0iIzI1NjNFQiIvPjxwYXRoIGQ9Ik04NTYgNTQwIEgwIFY0MzAgQyAzMDAgNDAwLCA1NTYgNTAwLCA4NTYgNDUwIFoiIGZpbGw9IiMzQjgyRjYiIGZpbGwtb3BhY2l0eT0iMC42Ii8+PC9zdmc+";
+            const defaultBackBgDataUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODU2IiBoZWlnaHQ9IjU0MCIgdmlld0JveD0iMCAwIDg1NiA1NDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkMiIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I0YzRjRGNjtzdG9wLW9wYWNpdHk6MSIgLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNFNUU3RUI7c3RvcC1vcGFjaXR5OjEiIC8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9Ijg1NiIgaGVpZ2h0PSI1NDAiIGZpbGw9InVybCgjZ3JhZDIpIi8+PC9zdmc+";
+            // --- Canvas Drawing ---
+            const drawCardOnContext = async (targetCtx, side, width, height, rowData) => {
+                targetCtx.clearRect(0, 0, width, height);
+                const bg = bgImages[side];
+                if (bg && bg.complete) {
+                    targetCtx.drawImage(bg, 0, 0, width, height);
+                }
+                                
+                if (!rowData) return;
+                for (const p of placeholders[side]) {
+                    const isStaticTitle = p.key === 'title' && p.staticText;
+                    const value = isStaticTitle ? p.staticText : String(rowData[p.key] || '');
+                    if (!value) continue;
+                    const x = p.x * width;
+                    const y = p.y * height;
+                    if (p.type === 'photo') {
+                        const pWidth = p.width * width;
+                        const pHeight = p.height * height;
+                        try {
+                            const img = await loadImage(value);
+                            targetCtx.drawImage(img, x, y, pWidth, pHeight);
+                        } catch (error) {
+                            console.error(`Could not load image: ${value}`, error);
+                            targetCtx.fillStyle = '#fee2e2'; targetCtx.fillRect(x, y, pWidth, pHeight);
+                            targetCtx.fillStyle = '#ef4444'; targetCtx.textAlign = 'center'; targetCtx.fillText('X', x + pWidth / 2, y + pHeight / 2);
+                        }
+                    } else {
+                        targetCtx.fillStyle = p.color;
+                        targetCtx.font = `${p.fontSize}px Inter`;
+                        targetCtx.textAlign = p.align;
+                        targetCtx.textBaseline = 'top';
+                        const maxWidth = p.width * width;
+                        wrapText(targetCtx, value, x, y, maxWidth, p.lineHeight);
+                    }
+                }
+            };
+            const drawAllCanvases = (rowData = null) => {
+                const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const h = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                drawCardOnContext(frontCtx, 'front', w, h, rowData);
+                drawCardOnContext(backCtx, 'back', w, h, rowData);
+            };
+            const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
+                const words = text.split(' ');
+                let line = '';
+                let currentY = y;
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + ' ';
+                    const metrics = context.measureText(testLine);
+                    const testWidth = metrics.width;
+                    if (testWidth > maxWidth && n > 0) {
+                        context.fillText(line, x, currentY);
+                        line = words[n] + ' ';
+                        currentY += lineHeight;
+                    } else { line = testLine; }
+                }
+                context.fillText(line, x, currentY);
+            };
+            const loadImage = (src) => new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+            // --- Placeholder Management ---
+            const addPlaceholder = (pData) => {
+                const base = { id: `p_${crypto.randomUUID()}`, key: '', type: 'text', x: 0.1, y: 0.1, width: 0.3, height: 0.1, fontSize: 15, lineHeight: 18, color: '#000000', align: 'left' };
+                const newPlaceholder = { ...base, ...pData };
+                placeholders[activeSide].push(newPlaceholder);
+                setActivePlaceholder(newPlaceholder.id);
+            };
+            const renderPlaceholders = () => {
+                const renderSide = (side) => {
+                    const wrapper = side === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
+                    wrapper.innerHTML = '';
+                    placeholders[side].forEach(p => {
+                        const el = document.createElement('div');
+                        el.id = p.id;
+                        el.className = `placeholder ${p.type}-placeholder ${p.id === activePlaceholderId ? 'active' : ''}`;
+                        el.style.left = `${p.x * 100}%`;
+                        el.style.top = `${p.y * 100}%`;
+                        el.style.width = `${p.width * 100}%`;
+                        el.style.height = `${p.height * 100}%`;
+                                                
+                        const displayText = p.staticText ? p.staticText : `{{${p.key}}}`;
+                        el.innerHTML = `<span>${displayText}</span>`;
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'delete-btn';
+                        deleteBtn.innerHTML = '×';
+                        deleteBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            placeholders[side] = placeholders[side].filter(pl => pl.id !== p.id);
+                            if (activePlaceholderId === p.id) setActivePlaceholder(null);
+                            else renderPlaceholders();
+                        };
+                        el.appendChild(deleteBtn);
+                                                
+                        const resizeHandle = document.createElement('div');
+                        resizeHandle.className = 'resize-handle';
+                        resizeHandle.addEventListener('mousedown', onResizeStart);
+                        el.appendChild(resizeHandle);
+                                                
+                        el.addEventListener('mousedown', onDragStart);
+                        wrapper.appendChild(el);
+                    });
+                }
+                renderSide('front');
+                renderSide('back');
+            };
+            const setActiveSide = (side) => {
+                activeSide = side;
+                frontCanvasWrapper.classList.toggle('active', side === 'front');
+                backCanvasWrapper.classList.toggle('active', side === 'back');
+                setActivePlaceholder(null);
+            };
+            const setActivePlaceholder = (id) => {
+                activePlaceholderId = id;
+                editPanel.classList.toggle('hidden', !id);
+                if (id) renderEditPanel();
+                renderPlaceholders();
+            };
+                        
+            // --- Edit Panel ---
+            const renderEditPanel = () => {
+                const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
+                if (!p) return;
+                                
+                const keyInputLabel = p.staticText ? "Static Text" : "Field Name (from data)";
+                const keyInputValue = p.staticText ? p.staticText : p.key;
+                let content = `<div><label class="block text-sm font-medium">${keyInputLabel}</label><input type="text" value="${keyInputValue}" oninput="updatePlaceholderProp('${p.id}', '${p.staticText ? 'staticText' : 'key'}', this.value)" class="w-full p-2 border rounded"></div>`;
+                                
+                if (p.type === 'text') {
+                    content += `
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium">Font Size</label><input type="number" value="${p.fontSize}" oninput="updatePlaceholderProp('${p.id}', 'fontSize', this.value)" class="w-full p-2 border rounded"></div>
+                            <div><label class="block text-sm font-medium">Color</label><input type="color" value="${p.color}" oninput="updatePlaceholderProp('${p.id}', 'color', this.value)" class="w-full p-2 h-10 border rounded"></div>
+                            <div><label class="block text-sm font-medium">Line Height</label><input type="number" value="${p.lineHeight}" oninput="updatePlaceholderProp('${p.id}', 'lineHeight', this.value)" class="w-full p-2 border rounded"></div>
+                        </div>
+                        <div><label class="block text-sm font-medium">Alignment</label><div class="flex justify-around bg-gray-100 rounded-lg p-1">
+                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'left')" class="px-3 py-1 rounded ${p.align === 'left' ? 'bg-blue-500 text-white' : ''}">Left</button>
+                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'center')" class="px-3 py-1 rounded ${p.align === 'center' ? 'bg-blue-500 text-white' : ''}">Center</button>
+                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'right')" class="px-3 py-1 rounded ${p.align === 'right' ? 'bg-blue-500 text-white' : ''}">Right</button>
+                        </div></div>`;
+                }
+                editControls.innerHTML = content;
+            };
+            window.updatePlaceholderProp = (id, prop, value) => {
+                const p = placeholders[activeSide].find(pl => pl.id === id);
+                if (p) {
+                    const numValue = parseFloat(value);
+                    p[prop] = isNaN(numValue) ? value : numValue;
+                    renderPlaceholders();
+                    if(prop === 'align') renderEditPanel();
+                }
+            };
+            // --- Interaction Logic ---
+            const onDragStart = (e) => {
+                if (isResizing) return;
+                e.preventDefault(); e.stopPropagation();
+                const target = e.target.closest('.placeholder');
+                if (!target) return;
+                if (activePlaceholderId !== target.id) setActivePlaceholder(target.id);
+                const elementToDrag = document.getElementById(target.id);
+                if (!elementToDrag) return;
+                dragOffsetX = e.clientX - elementToDrag.getBoundingClientRect().left;
+                dragOffsetY = e.clientY - elementToDrag.getBoundingClientRect().top;
+                document.addEventListener('mousemove', onDragMove);
+                document.addEventListener('mouseup', onDragEnd);
+            };
+            const onDragMove = (e) => {
+                const activeEl = document.getElementById(activePlaceholderId);
+                if (!activeEl) return;
+                const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
+                const wrapperRect = wrapper.getBoundingClientRect();
+                let x = e.clientX - wrapperRect.left - dragOffsetX;
+                let y = e.clientY - wrapperRect.top - dragOffsetY;
+                x = Math.max(0, Math.min(x, wrapperRect.width - activeEl.offsetWidth));
+                y = Math.max(0, Math.min(y, wrapperRect.height - activeEl.offsetHeight));
+                activeEl.style.left = `${x}px`;
+                activeEl.style.top = `${y}px`;
+            };
+            const onDragEnd = () => {
+                const activeEl = document.getElementById(activePlaceholderId);
+                if (activeEl) {
+                    const pData = placeholders[activeSide].find(p => p.id === activePlaceholderId);
+                    if (pData) {
+                        const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
+                        const wrapperRect = wrapper.getBoundingClientRect();
+                        pData.x = activeEl.offsetLeft / wrapperRect.width;
+                        pData.y = activeEl.offsetTop / wrapperRect.height;
+                    }
+                }
+                document.removeEventListener('mousemove', onDragMove);
+                document.removeEventListener('mouseup', onDragEnd);
+            };
+            const onResizeStart = (e) => {
+                e.preventDefault(); e.stopPropagation();
+                isResizing = true;
+                const target = e.target.closest('.placeholder');
+                if (!target) return;
+                if (activePlaceholderId !== target.id) setActivePlaceholder(target.id);
+                document.addEventListener('mousemove', onResizeMove);
+                document.addEventListener('mouseup', onResizeEnd);
+            };
+            const onResizeMove = (e) => {
+                const activeEl = document.getElementById(activePlaceholderId);
+                const pData = placeholders[activeSide].find(p => p.id === activePlaceholderId);
+                if (!activeEl || !pData) return;
+                const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
+                const wrapperRect = wrapper.getBoundingClientRect();
+                const newWidth = e.clientX - activeEl.getBoundingClientRect().left;
+                const newHeight = e.clientY - activeEl.getBoundingClientRect().top;
+                pData.width = Math.max(20 / wrapperRect.width, newWidth / wrapperRect.width);
+                pData.height = Math.max(20 / wrapperRect.height, newHeight / wrapperRect.height);
+                renderPlaceholders();
+                renderEditPanel();
+            };
+            const onResizeEnd = () => {
+                isResizing = false;
+                document.removeEventListener('mousemove', onResizeMove);
+                document.removeEventListener('mouseup', onResizeEnd);
+            };
+            document.addEventListener('keydown', (e) => {
+                if (!activePlaceholderId) return;
+                const pData = placeholders[activeSide].find(p => p.id === activePlaceholderId);
+                if (!pData) return;
+                const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
+                const smallStep = 1 / wrapper.offsetWidth;
+                const largeStep = 10 / wrapper.offsetWidth;
+                const step = e.shiftKey ? largeStep : smallStep;
+                let needsRender = false;
+                switch (e.key) {
+                    case 'ArrowUp': pData.y -= step; needsRender = true; break;
+                    case 'ArrowDown': pData.y += step; needsRender = true; break;
+                    case 'ArrowLeft': pData.x -= step; needsRender = true; break;
+                    case 'ArrowRight': pData.x += step; needsRender = true; break;
+                }
+                if (needsRender) { e.preventDefault(); renderPlaceholders(); }
+            });
+            // --- Gemini API Call ---
+            const callGemini = async (prompt, jsonSchema = null) => {
+                loadingModal.classList.remove('hidden');
+                const apiKey = ""; // API key will be injected by the environment
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                if (jsonSchema) {
+                    payload.generationConfig = { responseMimeType: "application/json", responseSchema: jsonSchema };
+                }
+                try {
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) {
+                        const errorBody = await response.json();
+                        throw new Error(`API Error: ${errorBody.error.message}`);
+                    }
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) throw new Error("No content received from API.");
+                    return text;
+                } catch (error) {
+                    console.error("Gemini API call failed:", error);
+                    errorText.textContent = error.message || "An unknown error occurred.";
+                    errorModal.classList.remove('hidden');
+                    return null;
+                } finally {
+                    loadingModal.classList.add('hidden');
+                }
+            };
+            // --- Orientation Logic ---
+            const setOrientation = (newOrientation) => {
+                if (orientation === newOrientation) return;
+                orientation = newOrientation;
+                                
+                const isHorizontal = newOrientation === 'horizontal';
+                const newW = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const newH = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                [frontCanvas, backCanvas].forEach(c => {
+                    c.width = newW;
+                    c.height = newH;
+                });
+                [frontCanvasWrapper, backCanvasWrapper].forEach(w => {
+                    w.style.aspectRatio = `${newW} / ${newH}`;
+                });
+                orientationHorizontalBtn.classList.toggle('bg-blue-500', isHorizontal);
+                orientationHorizontalBtn.classList.toggle('text-white', isHorizontal);
+                orientationVerticalBtn.classList.toggle('bg-blue-500', !isHorizontal);
+                orientationVerticalBtn.classList.toggle('text-white', !isHorizontal);
+                drawAllCanvases();
+                renderPlaceholders();
+            };
+            // --- Event Listeners ---
+            const setupBgImageInput = (input, side) => {
+                input.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => { bgImages[side].src = event.target.result; };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            };
+            setupBgImageInput(bgImageFrontInput, 'front');
+            setupBgImageInput(bgImageBackInput, 'back');
+            dataFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const workbook = XLSX.read(event.target.result, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                    if (data.length > 0) {
+                        headers = Object.keys(data[0]);
+                        aiControls.classList.remove('opacity-50');
+                        aiLayoutBtn.disabled = false; aiTitleBtn.disabled = false; addAllHeadersBtn.disabled = false;
+                        previewBtn.disabled = false; generateZipBtn.disabled = false; generatePdfBtn.disabled = false;
+                        alert(`${data.length} records loaded successfully!`);
+                    } else { alert('The file seems to be empty or in an incorrect format.'); }
+                };
+                reader.readAsBinaryString(file);
+            });
+                        
+            aiLayoutBtn.addEventListener('click', async () => {
+                loadingText.textContent = `Designing the ${activeSide} of the card...`;
+                const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const h = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                const prompt = `Based on these data headers for the ${activeSide} of an ID card, create a logical layout for a ${orientation} card. Headers: ${headers.join(', ')}. The canvas is ${w}x${h}. A photo field should be about 1/4 of the width and 1/2 of the height for vertical, or 1/4 height and 1/3 width for horizontal. Place the most important info prominently. Identify which field is likely the photo.`;
+                const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { key: { type: "STRING" }, type: { type: "STRING", enum: ["text", "photo"] }, x: { type: "NUMBER" }, y: { type: "NUMBER" }, width: { type: "NUMBER" }, height: { type: "NUMBER" } }, required: ["key", "type", "x", "y", "width", "height"] } };
+                const result = await callGemini(prompt, schema);
+                if (result) {
+                    placeholders[activeSide] = [];
+                    const layout = JSON.parse(result);
+                    layout.forEach(p => {
+                        const base = p.type === 'text' ? { fontSize: 15, lineHeight: 18, color: '#000000', align: 'left' } : {};
+                        addPlaceholder({ ...p, ...base });
+                    });
+                }
+            });
+            aiTitleBtn.addEventListener('click', async () => {
+                loadingText.textContent = "Generating a professional title...";
+                const prompt = `Based on these data headers, suggest a short, professional title for the ID card. For example, "Employee ID" or "Student Pass". Headers: ${headers.join(', ')}`;
+                const result = await callGemini(prompt);
+                if (result) {
+                    addPlaceholder({ key: 'title', type: 'text', x: 0.1, y: 0.05, width: 0.8, height: 0.1, fontSize: 36, staticText: result.replace(/"/g, '') });
+                }
+            });
+            addAllHeadersBtn.addEventListener('click', () => {
+                if (headers.length === 0) return;
+                let yOffset = 0.1;
+                headers.forEach(header => {
+                    addPlaceholder({ key: header, type: 'text', y: yOffset });
+                    yOffset += 0.1;
+                });
+            });
+            orientationHorizontalBtn.addEventListener('click', () => setOrientation('horizontal'));
+            orientationVerticalBtn.addEventListener('click', () => setOrientation('vertical'));
+            frontCanvasWrapper.addEventListener('click', () => setActiveSide('front'));
+            backCanvasWrapper.addEventListener('click', () => setActiveSide('back'));
+            addTextBtn.addEventListener('click', () => addPlaceholder({ key: fieldNameInput.value || 'New Text', type: 'text' }));
+            addPhotoBtn.addEventListener('click', () => addPlaceholder({ key: fieldNameInput.value || 'New Photo', type: 'photo' }));
+                        
+            previewBtn.addEventListener('click', async () => {
+                if (data.length === 0) { alert('Please upload data to preview.'); return; }
+                setActivePlaceholder(null);
+                frontPlaceholderWrapper.style.display = 'none';
+                backPlaceholderWrapper.style.display = 'none';
+                await drawAllCanvases(data[0]);
+                const backButton = document.createElement('button');
+                backButton.innerText = 'Back to Edit';
+                backButton.className = 'absolute top-2 right-2 bg-yellow-400 text-black font-bold py-1 px-3 rounded z-30';
+                backButton.onclick = () => { frontPlaceholderWrapper.style.display = 'block'; backPlaceholderWrapper.style.display = 'block'; drawAllCanvases(); backButton.remove(); };
+                document.getElementById('front-canvas-wrapper').appendChild(backButton);
+            });
+
+            // COMPLETELY NEW PDF GENERATION LOGIC - SIMPLE AND RELIABLE
+            generatePdfBtn.addEventListener('click', async () => {
+                if (data.length === 0) { 
+                    alert('Please upload data and add fields before generating.'); 
+                    return; 
+                }
+                    
+                loadingModal.classList.remove('hidden');
+                loadingText.textContent = 'Generating A4 PDF...';
+                    
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+                    
+                const isHorizontal = orientation === 'horizontal';
+                const cardWidthMM = isHorizontal ? 85.6 : 54.0;
+                const cardHeightMM = isHorizontal ? 54.0 : 85.6;
+                    
+                // Optimized for 5 cards per row on A4 landscape (297mm x 210mm)
+                const cardsPerRow = 5;
+                const pageWidth = 297;
+                const pageHeight = 210;
+                
+                // Calculate optimal spacing for 5 cards
+                const totalCardsWidth = cardsPerRow * cardWidthMM;
+                const availableSpaceForGaps = pageWidth - totalCardsWidth;
+                const cardSpacing = availableSpaceForGaps / (cardsPerRow + 1); // Equal spacing including margins
+                
+                const frontRowY = 15; // Top margin
+                const backRowY = frontRowY + cardHeightMM + 15; // Space between front and back rows
+                
+                // Create temporary canvas for rendering
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                tempCanvas.height = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                // Process cards in batches of 5
+                for (let i = 0; i < data.length; i += cardsPerRow) {
+                    if (i > 0) pdf.addPage(); // New page for each batch
+                    
+                    // Process each card in this batch
+                    for (let j = 0; j < cardsPerRow && (i + j) < data.length; j++) {
+                        const cardData = data[i + j];
+                        const cardX = cardSpacing + (j * (cardWidthMM + cardSpacing));
+                        
+                        // Draw FRONT card (top row)
+                        await drawCardOnContext(tempCtx, 'front', tempCanvas.width, tempCanvas.height, cardData);
+                        const frontDataUrl = tempCanvas.toDataURL('image/png');
+                        pdf.addImage(frontDataUrl, 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM);
+                        
+                        // Draw BACK card (bottom row, rotated 180 degrees for proper double-sided printing)
+                        // Create a temporary canvas for rotation
+                        const rotatedCanvas = document.createElement('canvas');
+                        rotatedCanvas.width = tempCanvas.width;
+                        rotatedCanvas.height = tempCanvas.height;
+                        const rotatedCtx = rotatedCanvas.getContext('2d');
+
+                        // Draw the back card normally first
+                        await drawCardOnContext(tempCtx, 'back', tempCanvas.width, tempCanvas.height, cardData);
+
+                        // Now rotate and draw it on the rotated canvas
+                        rotatedCtx.translate(rotatedCanvas.width/2, rotatedCanvas.height/2);
+                        rotatedCtx.rotate(Math.PI); // 180 degrees
+                        rotatedCtx.translate(-rotatedCanvas.width/2, -rotatedCanvas.height/2);
+                        rotatedCtx.drawImage(tempCanvas, 0, 0);
+
+                        const backDataUrl = rotatedCanvas.toDataURL('image/png');
+                        pdf.addImage(backDataUrl, 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+                    }
+                }
+
+                pdf.save('ID_Cards_Double_Sided_5_Per_Sheet.pdf');
+                loadingModal.classList.add('hidden');
+            });
+
+            generateZipBtn.addEventListener('click', async () => {
+                if (data.length === 0) { alert('Please upload data and add fields before generating.'); return; }
+                setActivePlaceholder(null);
+                loadingModal.classList.remove('hidden');
+                loadingText.textContent = 'Generating ZIP...';
+                                
+                const zip = new JSZip();
+                const tempCanvas = document.createElement('canvas');
+                const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const h = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                tempCanvas.width = w;
+                tempCanvas.height = h;
+                const tempCtx = tempCanvas.getContext('2d');
+                for (let i = 0; i < data.length; i++) {
+                    const baseName = `ID_Card_${data[i].ID || data[i].id || i + 1}`;
+                                        
+                    await drawCardOnContext(tempCtx, 'front', w, h, data[i]);
+                    zip.file(`${baseName}_Front.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
+                                        
+                    await drawCardOnContext(tempCtx, 'back', w, h, data[i]);
+                    zip.file(`${baseName}_Back.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
+                }
+                zip.generateAsync({ type: 'blob' }).then((content) => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = 'ID_Cards_Double_Sided.zip';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    loadingModal.classList.add('hidden');
+                });
+            });
+            // --- Initial Setup ---
+            const initialSetup = () => {
+                bgImages.front.onload = () => drawAllCanvases();
+                bgImages.back.onload = () => drawAllCanvases();
+                                
+                bgImages.front.src = defaultBgDataUrl;
+                bgImages.back.src = defaultBackBgDataUrl;
+                                
+                setOrientation('horizontal');
+                setActiveSide('front');
+            };
+            initialSetup();
+        });
+    </script>
+</body>
+</html>
