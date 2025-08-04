@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -48,6 +49,28 @@
             align-items: center;
             justify-content: center;
         }
+        .placeholder.qr-placeholder {
+            border-style: solid;
+            border-color: #9333ea;
+            background-color: rgba(147, 51, 234, 0.2);
+            color: #581c87;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .qr-placeholder-preview {
+            font-weight: 500;
+            text-align: center;
+            font-size: 12px;
+            padding: 4px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="%239333ea" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><rect x="7" y="7" width="3" height="3"></rect><rect x="14" y="7" width="3" height="3"></rect><rect x="7" y="14" width="3" height="3"></rect><rect x="14" y="14" width="3" height="3"></rect></svg>');
+            background-repeat: no-repeat;
+            background-position: center 2px;
+            background-size: 24px 24px;
+            padding-top: 28px;
+        }
+
         .placeholder.active {
             border-style: solid;
             border-color: #db2777;
@@ -130,7 +153,7 @@
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Orientation</label>
                         <div class="flex justify-around bg-gray-100 rounded-lg p-1">
-                            <button id="orientation-horizontal-btn" class="w-full px-3 py-2 rounded-md">Horizontal</button>
+                            <button id="orientation-horizontal-btn" class="w-full px-3 py-2 rounded-md bg-blue-500 text-white">Horizontal</button>
                             <button id="orientation-vertical-btn" class="w-full px-3 py-2 rounded-md">Vertical</button>
                         </div>
                     </div>
@@ -169,6 +192,16 @@
                         </div>
                         <button id="add-text-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Add Text Field</button>
                         <button id="add-photo-btn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Add Photo Field</button>
+                        
+                        <!-- QR Code Field Selection -->
+                        <div id="qr-field-container" class="border border-purple-300 rounded-md p-3 bg-purple-50 opacity-70">
+                            <label for="qr-field-select" class="block text-sm font-medium text-purple-700 mb-1">QR Code Field:</label>
+                            <select id="qr-field-select" class="w-full p-2 border border-purple-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 mb-2" disabled>
+                                <option value="">Upload data to see fields</option>
+                                <!-- Options will be populated when data is loaded -->
+                            </select>
+                            <button id="add-qr-btn" class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">Add QR Code</button>
+                        </div>
                     </div>
                 </div>
                 <!-- Edit Panel -->
@@ -188,7 +221,7 @@
             </div>
             <!-- Canvas Column -->
             <div class="lg:col-span-2 space-y-8">
-                <div id="front-canvas-wrapper" class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto">
+                <div id="front-canvas-wrapper" class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto active">
                     <h3 class="text-center font-bold text-lg sm:text-xl mb-2">FRONT</h3>
                     <canvas id="front-canvas" class="w-full h-full rounded-md bg-gray-200"></canvas>
                     <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full"></div>
@@ -214,6 +247,7 @@
             const fieldNameInput = document.getElementById('field-name-input');
             const addTextBtn = document.getElementById('add-text-btn');
             const addPhotoBtn = document.getElementById('add-photo-btn');
+            const addQrBtn = document.getElementById('add-qr-btn');
             const previewBtn = document.getElementById('preview-btn');
             const generateZipBtn = document.getElementById('generate-zip-btn');
             const generatePdfBtn = document.getElementById('generate-pdf-btn');
@@ -237,6 +271,8 @@
             const errorText = document.getElementById('error-text');
             const orientationHorizontalBtn = document.getElementById('orientation-horizontal-btn');
             const orientationVerticalBtn = document.getElementById('orientation-vertical-btn');
+            const qrFieldSelect = document.getElementById('qr-field-select');
+            
             // --- State ---
             let bgImages = { front: new Image(), back: new Image() };
             let data = [];
@@ -267,12 +303,164 @@
                     if (!value) continue;
                     const x = p.x * width;
                     const y = p.y * height;
-                    if (p.type === 'photo') {
+                    
+                    if (p.type === 'qr') {
+                        const pWidth = p.width * width;
+                        const pHeight = p.height * height;
+                        try {
+                            console.log(`Rendering QR code for value: ${value}`);
+                            
+                            // Create a QR code using QRCode.js
+                            // Force a large enough size to be visible, minimum 150px
+                            const qrSize = Math.max(Math.min(pWidth, pHeight), 150);
+                            
+                            // Create a hidden container for QR code generation
+                            const qrContainer = document.createElement('div');
+                            qrContainer.id = 'qr-container-temp';
+                            qrContainer.style.position = 'absolute';
+                            qrContainer.style.top = '-9999px';  // Hide it off-screen
+                            qrContainer.style.left = '-9999px'; // Hide it off-screen
+                            qrContainer.style.width = qrSize + 'px';
+                            qrContainer.style.height = qrSize + 'px';
+                            qrContainer.style.backgroundColor = '#ffffff';
+                            qrContainer.style.padding = '0'; // Remove padding
+                            qrContainer.style.boxSizing = 'border-box';
+                            document.body.appendChild(qrContainer);
+                            
+                            // Create QR code instance with enhanced settings for visibility
+                            new QRCode(qrContainer, {
+                                text: value,
+                                width: qrSize,
+                                height: qrSize,
+                                colorDark: '#000000', // Force black for best contrast
+                                colorLight: '#ffffff', // White background
+                                correctLevel: QRCode.CorrectLevel.L, // Lower error correction for cleaner codes
+                                margin: 4 // Add margin to improve scannability
+                            });
+                            
+                            // Add a label to the QR container to confirm what's being generated
+                            const qrLabel = document.createElement('div');
+                            qrLabel.textContent = `QR Code: ${value}`;
+                            qrLabel.style.textAlign = 'center';
+                            qrLabel.style.marginTop = '5px';
+                            qrContainer.appendChild(qrLabel);
+                            
+                            // Get the QR code image from the container
+                            const qrImage = qrContainer.querySelector('img');
+                            if (qrImage) {
+                                // Make sure to wait for the image to be fully loaded before drawing
+                                await new Promise((resolve, reject) => {
+                                    if (qrImage.complete) {
+                                        resolve();
+                                    } else {
+                                        qrImage.onload = resolve;
+                                        qrImage.onerror = reject;
+                                        // Set a timeout just in case
+                                        setTimeout(resolve, 500);
+                                    }
+                                });
+                                
+                                // Force the position to be in the upper right corner of the card
+                                // Instead of using the placeholder position, we'll place it directly
+                                // Use absolute positioning for more consistent results
+                                const qrX = width * 0.65; // Right side of card - 65% from left edge
+                                const qrY = height * 0.15; // Top part of card - 15% from top
+                                const qrWidth = width * 0.25; // 25% of card width
+                                const qrHeight = height * 0.25; // 25% of card height
+                                
+                                // Center the QR code within its area
+                                const offsetX = (qrWidth - qrSize) / 2;
+                                const offsetY = (qrHeight - qrSize) / 2;
+                                
+                                console.log(`Drawing QR at fixed position: x=${qrX}, y=${qrY}, width=${qrWidth}, height=${qrHeight}`);
+                                
+                                // Make it very visible with white background
+                                targetCtx.fillStyle = '#ffffff';
+                                targetCtx.fillRect(qrX, qrY, qrWidth, qrHeight);
+                                
+                                // Add a visible border around the QR area
+                                targetCtx.strokeStyle = '#000000';
+                                targetCtx.lineWidth = 2;
+                                targetCtx.strokeRect(qrX, qrY, qrWidth, qrHeight);
+                                
+                                // Draw the QR code centered in the area
+                                targetCtx.drawImage(qrImage, qrX + offsetX, qrY + offsetY, qrSize, qrSize);
+                                
+                                // Add a label at the bottom of the QR placeholder
+                                targetCtx.fillStyle = '#000000';
+                                targetCtx.font = 'bold 14px Inter';
+                                targetCtx.textAlign = 'center';
+                                targetCtx.textBaseline = 'top';
+                                
+                                // Position text at bottom of QR area
+                                const textY = qrY + qrHeight - 20;
+                                const textX = qrX + qrWidth / 2;
+                                
+                                // Draw QR label text
+                                targetCtx.fillText(`${p.key}`, textX, textY);
+                            }
+                            
+                            // Add debugging info
+                            console.log(`QR Code rendered successfully for field: ${p.key}, value: ${value}`);
+                            console.log(`QR Code position: x=${qrX}, y=${qrY}, width=${qrWidth}, height=${qrHeight}, qrSize=${qrSize}`);
+                            
+                            // Take a snapshot of the generated QR code for debugging
+                            const qrDataUrl = qrImage.src;
+                            console.log("QR code image data:", qrDataUrl.substring(0, 100) + "...");
+                            
+                            // Remove the QR container immediately after drawing to avoid interference
+                            const container = document.getElementById('qr-container-temp');
+                            if (container) document.body.removeChild(container);
+                            
+                        } catch (error) {
+                            console.error(`Could not generate QR code for: ${value}`, error);
+                            targetCtx.fillStyle = '#fee2e2'; 
+                            targetCtx.fillRect(x, y, pWidth, pHeight);
+                            targetCtx.fillStyle = '#ef4444'; 
+                            targetCtx.textAlign = 'center'; 
+                            targetCtx.fillText('QR Error', x + pWidth / 2, y + pHeight / 2);
+                        }
+                    } else if (p.type === 'photo') {
                         const pWidth = p.width * width;
                         const pHeight = p.height * height;
                         try {
                             const img = await loadImage(value);
-                            targetCtx.drawImage(img, x, y, pWidth, pHeight);
+                            
+                            // Add rounded corners or circular mask
+                            if (p.shape === 'circle') {
+                                // For circular photos
+                                targetCtx.save();
+                                targetCtx.beginPath();
+                                const centerX = x + pWidth / 2;
+                                const centerY = y + pHeight / 2;
+                                const radius = Math.min(pWidth, pHeight) / 2;
+                                targetCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                                targetCtx.closePath();
+                                targetCtx.clip();
+                                targetCtx.drawImage(img, x, y, pWidth, pHeight);
+                                targetCtx.restore();
+                            } else if (p.shape === 'rounded') {
+                                // For rounded rectangle photos
+                                targetCtx.save();
+                                targetCtx.beginPath();
+                                const radius = Math.min(20, pWidth/4, pHeight/4);
+                                targetCtx.moveTo(x + radius, y);
+                                targetCtx.lineTo(x + pWidth - radius, y);
+                                targetCtx.quadraticCurveTo(x + pWidth, y, x + pWidth, y + radius);
+                                targetCtx.lineTo(x + pWidth, y + pHeight - radius);
+                                targetCtx.quadraticCurveTo(x + pWidth, y + pHeight, x + pWidth - radius, y + pHeight);
+                                targetCtx.lineTo(x + radius, y + pHeight);
+                                targetCtx.quadraticCurveTo(x, y + pHeight, x, y + pHeight - radius);
+                                targetCtx.lineTo(x, y + radius);
+                                targetCtx.quadraticCurveTo(x, y, x + radius, y);
+                                targetCtx.closePath();
+                                targetCtx.clip();
+                                targetCtx.drawImage(img, x, y, pWidth, pHeight);
+                                targetCtx.restore();
+                            } else {
+                                // Default square/rectangle
+                                targetCtx.drawImage(img, x, y, pWidth, pHeight);
+                            }
                         } catch (error) {
                             console.error(`Could not load image: ${value}`, error);
                             targetCtx.fillStyle = '#fee2e2'; targetCtx.fillRect(x, y, pWidth, pHeight);
@@ -314,12 +502,42 @@
                 const img = new Image();
                 img.crossOrigin = "Anonymous";
                 img.onload = () => resolve(img);
-                img.onerror = reject;
+                img.onerror = (e) => {
+                    console.error("Original image failed to load:", e);
+                    // Try using a proxy service if direct loading fails
+                    // Only attempt for external URLs (not data URLs)
+                    if (src.startsWith('http')) {
+                        console.log("Trying with CORS proxy for:", src);
+                        const proxyImg = new Image();
+                        proxyImg.crossOrigin = "Anonymous";
+                        proxyImg.onload = () => resolve(proxyImg);
+                        proxyImg.onerror = reject;
+                        // Using a more reliable CORS proxy service
+                        proxyImg.src = `https://corsproxy.io/?${encodeURIComponent(src)}`;
+                    } else {
+                        reject(e);
+                    }
+                };
                 img.src = src;
             });
             // --- Placeholder Management ---
             const addPlaceholder = (pData) => {
-                const base = { id: `p_${crypto.randomUUID()}`, key: '', type: 'text', x: 0.1, y: 0.1, width: 0.3, height: 0.1, fontSize: 15, lineHeight: 18, color: '#000000', align: 'left' };
+                // Include shape property for photo placeholders and QR codes
+                const base = { 
+                    id: `p_${crypto.randomUUID()}`, 
+                    key: '', 
+                    type: 'text', 
+                    x: 0.1, 
+                    y: 0.1, 
+                    width: 0.3, 
+                    height: 0.1, 
+                    fontSize: 15, 
+                    lineHeight: 18, 
+                    color: '#000000', 
+                    align: 'left',
+                    shape: 'square', // Default shape for photos
+                    qrColor: '#000000' // Default QR code color
+                };
                 const newPlaceholder = { ...base, ...pData };
                 placeholders[activeSide].push(newPlaceholder);
                 setActivePlaceholder(newPlaceholder.id);
@@ -338,7 +556,23 @@
                         el.style.height = `${p.height * 100}%`;
                                                 
                         const displayText = p.staticText ? p.staticText : `{{${p.key}}}`;
-                        el.innerHTML = `<span>${displayText}</span>`;
+                        if (p.type === 'qr') {
+                            // Enhanced QR placeholder to make it more visible
+                            el.innerHTML = `<div class="qr-placeholder-preview">QR: ${p.key}</div>`;
+                            
+                            // Add a mini visual representation of a QR code
+                            const miniQR = document.createElement('div');
+                            miniQR.style.width = '30px';
+                            miniQR.style.height = '30px';
+                            miniQR.style.margin = '4px auto';
+                            miniQR.style.backgroundImage = 'linear-gradient(to right, #9333ea 30%, transparent 30%), linear-gradient(to bottom, #9333ea 30%, transparent 30%)';
+                            miniQR.style.backgroundSize = '5px 5px';
+                            miniQR.style.backgroundPosition = '0 0, 0 0';
+                            miniQR.style.opacity = '0.7';
+                            el.appendChild(miniQR);
+                        } else {
+                            el.innerHTML = `<span>${displayText}</span>`;
+                        }
                         const deleteBtn = document.createElement('button');
                         deleteBtn.className = 'delete-btn';
                         deleteBtn.innerHTML = '×';
@@ -396,6 +630,27 @@
                             <button onclick="updatePlaceholderProp('${p.id}', 'align', 'center')" class="px-3 py-1 rounded ${p.align === 'center' ? 'bg-blue-500 text-white' : ''}">Center</button>
                             <button onclick="updatePlaceholderProp('${p.id}', 'align', 'right')" class="px-3 py-1 rounded ${p.align === 'right' ? 'bg-blue-500 text-white' : ''}">Right</button>
                         </div></div>`;
+                } else if (p.type === 'photo') {
+                    // Add shape controls for photo fields
+                    p.shape = p.shape || 'square'; // Default to square if not set
+                    content += `
+                        <div><label class="block text-sm font-medium">Photo Shape</label>
+                            <div class="flex justify-around bg-gray-100 rounded-lg p-1 mt-2">
+                                <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'square')" class="px-3 py-1 rounded ${p.shape === 'square' ? 'bg-blue-500 text-white' : ''}">Square</button>
+                                <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'rounded')" class="px-3 py-1 rounded ${p.shape === 'rounded' ? 'bg-blue-500 text-white' : ''}">Rounded</button>
+                                <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'circle')" class="px-3 py-1 rounded ${p.shape === 'circle' ? 'bg-blue-500 text-white' : ''}">Circle</button>
+                            </div>
+                        </div>`;
+
+                } else if (p.type === 'qr') {
+                    // Add QR code specific controls
+                    p.qrColor = p.qrColor || '#000000'; // Default to black if not set
+                    content += `
+                        <div><label class="block text-sm font-medium">QR Code Color</label>
+                        <input type="color" value="${p.qrColor}" oninput="updatePlaceholderProp('${p.id}', 'qrColor', this.value)" class="w-full p-2 h-10 border rounded"></div>
+                        <div class="mt-2 p-2 bg-yellow-50 text-sm text-yellow-800 rounded">
+                            QR codes will be generated with the data from field: <strong>${p.key}</strong>
+                        </div>`;
                 }
                 editControls.innerHTML = content;
             };
@@ -405,7 +660,14 @@
                     const numValue = parseFloat(value);
                     p[prop] = isNaN(numValue) ? value : numValue;
                     renderPlaceholders();
-                    if(prop === 'align') renderEditPanel();
+                    // Re-render edit panel when alignment or shape changes
+                    if(prop === 'align' || prop === 'shape') {
+                        renderEditPanel();
+                        // Also redraw the canvas when shape changes to see the effect immediately
+                        if (prop === 'shape') {
+                            drawAllCanvases();
+                        }
+                    }
                 }
             };
             // --- Interaction Logic ---
@@ -495,8 +757,20 @@
             // --- Gemini API Call ---
             const callGemini = async (prompt, jsonSchema = null) => {
                 loadingModal.classList.remove('hidden');
-                const apiKey = ""; // API key will be injected by the environment
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
+                // You need to get your own API key from https://aistudio.google.com/
+                // This is left blank deliberately and will need to be filled in
+                // with your own API key or handled through environment variables
+                const apiKey = prompt("Please enter your Gemini API key to use AI features:"); 
+                
+                if (!apiKey) {
+                    loadingModal.classList.add('hidden');
+                    errorText.textContent = "API key is required for AI features.";
+                    errorModal.classList.remove('hidden');
+                    return null;
+                }
+                
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
                 if (jsonSchema) {
                     payload.generationConfig = { responseMimeType: "application/json", responseSchema: jsonSchema };
@@ -505,7 +779,7 @@
                     const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     if (!response.ok) {
                         const errorBody = await response.json();
-                        throw new Error(`API Error: ${errorBody.error.message}`);
+                        throw new Error(`API Error: ${errorBody.error?.message || 'Unknown error'}`);
                     }
                     const result = await response.json();
                     const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -557,20 +831,74 @@
             setupBgImageInput(bgImageBackInput, 'back');
             dataFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
+                if (!file) return;
+                
                 const reader = new FileReader();
                 reader.onload = (event) => {
-                    const workbook = XLSX.read(event.target.result, { type: 'binary' });
-                    const sheetName = workbook.SheetNames[0];
-                    data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                    if (data.length > 0) {
-                        headers = Object.keys(data[0]);
-                        aiControls.classList.remove('opacity-50');
-                        aiLayoutBtn.disabled = false; aiTitleBtn.disabled = false; addAllHeadersBtn.disabled = false;
-                        previewBtn.disabled = false; generateZipBtn.disabled = false; generatePdfBtn.disabled = false;
-                        alert(`${data.length} records loaded successfully!`);
-                    } else { alert('The file seems to be empty or in an incorrect format.'); }
+                    try {
+                        let parsedData = [];
+                        if (file.name.endsWith('.csv')) {
+                            // Basic CSV parsing
+                            const content = event.target.result;
+                            const lines = content.split('\n');
+                            const headerLine = lines[0];
+                            const csvHeaders = headerLine.split(',').map(h => h.trim());
+                            
+                            for (let i = 1; i < lines.length; i++) {
+                                if (!lines[i].trim()) continue;
+                                const values = lines[i].split(',').map(v => v.trim());
+                                const rowData = {};
+                                csvHeaders.forEach((header, index) => {
+                                    rowData[header] = values[index] || '';
+                                });
+                                parsedData.push(rowData);
+                            }
+                        } else {
+                            // XLSX parsing
+                            const workbook = XLSX.read(event.target.result, { type: 'binary' });
+                            const sheetName = workbook.SheetNames[0];
+                            parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                        }
+                        
+                        data = parsedData;
+                        if (data.length > 0) {
+                            headers = Object.keys(data[0]);
+                            
+                            // Populate QR code field select dropdown
+                            qrFieldSelect.innerHTML = '<option value="">Select a field from data</option>';
+                            headers.forEach(header => {
+                                const option = document.createElement('option');
+                                option.value = header;
+                                option.textContent = header;
+                                qrFieldSelect.appendChild(option);
+                            });
+                            
+                            // Enable QR field select
+                            qrFieldSelect.disabled = false;
+                            document.getElementById('qr-field-container').classList.remove('opacity-70');
+                            
+                            aiControls.classList.remove('opacity-50');
+                            aiLayoutBtn.disabled = false;
+                            aiTitleBtn.disabled = false;
+                            addAllHeadersBtn.disabled = false;
+                            previewBtn.disabled = false;
+                            generateZipBtn.disabled = false;
+                            generatePdfBtn.disabled = false;
+                            alert(`${data.length} records loaded successfully!`);
+                        } else { 
+                            alert('The file seems to be empty or in an incorrect format.'); 
+                        }
+                    } catch (error) {
+                        console.error("Failed to parse data file:", error);
+                        alert(`Error parsing file: ${error.message}`);
+                    }
                 };
-                reader.readAsBinaryString(file);
+                
+                if (file.name.endsWith('.csv')) {
+                    reader.readAsText(file);
+                } else {
+                    reader.readAsBinaryString(file);
+                }
             });
                         
             aiLayoutBtn.addEventListener('click', async () => {
@@ -581,12 +909,18 @@
                 const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { key: { type: "STRING" }, type: { type: "STRING", enum: ["text", "photo"] }, x: { type: "NUMBER" }, y: { type: "NUMBER" }, width: { type: "NUMBER" }, height: { type: "NUMBER" } }, required: ["key", "type", "x", "y", "width", "height"] } };
                 const result = await callGemini(prompt, schema);
                 if (result) {
-                    placeholders[activeSide] = [];
-                    const layout = JSON.parse(result);
-                    layout.forEach(p => {
-                        const base = p.type === 'text' ? { fontSize: 15, lineHeight: 18, color: '#000000', align: 'left' } : {};
-                        addPlaceholder({ ...p, ...base });
-                    });
+                    try {
+                        placeholders[activeSide] = [];
+                        const layout = JSON.parse(result);
+                        layout.forEach(p => {
+                            const base = p.type === 'text' ? { fontSize: 15, lineHeight: 18, color: '#000000', align: 'left' } : {};
+                            addPlaceholder({ ...p, ...base });
+                        });
+                    } catch (error) {
+                        console.error("Failed to parse AI layout:", error);
+                        errorText.textContent = "Could not process the AI-generated layout. Try again.";
+                        errorModal.classList.remove('hidden');
+                    }
                 }
             });
             aiTitleBtn.addEventListener('click', async () => {
@@ -601,8 +935,18 @@
                 if (headers.length === 0) return;
                 let yOffset = 0.1;
                 headers.forEach(header => {
-                    addPlaceholder({ key: header, type: 'text', y: yOffset });
-                    yOffset += 0.1;
+                    // Check if the header name contains "photo" or "image" and make it a photo field
+                    const type = header.toLowerCase().includes('photo') || header.toLowerCase().includes('image') ? 'photo' : 'text';
+                    
+                    // For photo fields, adjust the height and width proportions and make it circular
+                    const options = type === 'photo' ? 
+                        { width: 0.25, height: 0.3, x: 0.7, y: 0.1, shape: 'circle' } : 
+                        { y: yOffset };
+                    
+                    addPlaceholder({ key: header, type, ...options });
+                    
+                    // Only increment yOffset for text fields
+                    if (type === 'text') yOffset += 0.1;
                 });
             });
             orientationHorizontalBtn.addEventListener('click', () => setOrientation('horizontal'));
@@ -610,22 +954,62 @@
             frontCanvasWrapper.addEventListener('click', () => setActiveSide('front'));
             backCanvasWrapper.addEventListener('click', () => setActiveSide('back'));
             addTextBtn.addEventListener('click', () => addPlaceholder({ key: fieldNameInput.value || 'New Text', type: 'text' }));
-            addPhotoBtn.addEventListener('click', () => addPlaceholder({ key: fieldNameInput.value || 'New Photo', type: 'photo' }));
+            addPhotoBtn.addEventListener('click', () => addPlaceholder({ key: fieldNameInput.value || 'New Photo', type: 'photo', shape: 'circle' }));
+            addQrBtn.addEventListener('click', () => {
+                // Get the field from the QR select dropdown or fall back to the input field if empty
+                const qrField = qrFieldSelect.value || fieldNameInput.value || 'ID';
+                
+                // Check if this field exists in the data
+                if (data.length > 0 && !headers.includes(qrField) && qrField !== 'ID') {
+                    alert(`Warning: The field "${qrField}" doesn't exist in your data. QR code may not appear in preview or export.`);
+                }
+                
+                // Add QR code with more specific positioning
+                addPlaceholder({ 
+                    key: qrField, 
+                    type: 'qr', 
+                    width: 0.25,   // 25% of card width
+                    height: 0.25,  // 25% of card height
+                    x: 0.65,       // Right side of card
+                    y: 0.20,       // Upper part of card
+                    qrColor: '#000000' // Force black for better contrast
+                });
+                
+                // Create alert to confirm QR code was added
+                alert(`QR code for field "${qrField}" added. For best results:\n1. Preview to check visibility\n2. Adjust size/position if needed\n3. Make sure field exists in your data`);
+                
+                // Log to help with debugging
+                console.log(`Added QR code for field: ${qrField}`);
+                console.log(`Available data fields: ${headers.join(', ')}`);
+            });
+            // QR Code button event handler already defined above
                         
             previewBtn.addEventListener('click', async () => {
                 if (data.length === 0) { alert('Please upload data to preview.'); return; }
                 setActivePlaceholder(null);
                 frontPlaceholderWrapper.style.display = 'none';
                 backPlaceholderWrapper.style.display = 'none';
+                
+                // Force redraw of canvases with the first record
+                console.log("Previewing with data:", data[0]);
+                console.log("Current QR placeholder settings:", placeholders.front.filter(p => p.type === 'qr'));
+                
+                // Force redraw with hard-coded position for QR
                 await drawAllCanvases(data[0]);
+                
                 const backButton = document.createElement('button');
                 backButton.innerText = 'Back to Edit';
                 backButton.className = 'absolute top-2 right-2 bg-yellow-400 text-black font-bold py-1 px-3 rounded z-30';
-                backButton.onclick = () => { frontPlaceholderWrapper.style.display = 'block'; backPlaceholderWrapper.style.display = 'block'; drawAllCanvases(); backButton.remove(); };
+                backButton.onclick = () => { 
+                    frontPlaceholderWrapper.style.display = 'block'; 
+                    backPlaceholderWrapper.style.display = 'block'; 
+                    drawAllCanvases(); 
+                    backButton.remove(); 
+                };
                 document.getElementById('front-canvas-wrapper').appendChild(backButton);
             });
 
-            // COMPLETELY NEW PDF GENERATION LOGIC - SIMPLE AND RELIABLE
+            // PDF Generation Logic
             generatePdfBtn.addEventListener('click', async () => {
                 if (data.length === 0) { 
                     alert('Please upload data and add fields before generating.'); 
@@ -635,114 +1019,158 @@
                 loadingModal.classList.remove('hidden');
                 loadingText.textContent = 'Generating A4 PDF...';
                     
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
-                    
-                const isHorizontal = orientation === 'horizontal';
-                const cardWidthMM = isHorizontal ? 85.6 : 54.0;
-                const cardHeightMM = isHorizontal ? 54.0 : 85.6;
-                    
-                // Optimized for 5 cards per row on A4 landscape (297mm x 210mm)
-                const cardsPerRow = 5;
-                const pageWidth = 297;
-                const pageHeight = 210;
-                
-                // Calculate optimal spacing for 5 cards
-                const totalCardsWidth = cardsPerRow * cardWidthMM;
-                const availableSpaceForGaps = pageWidth - totalCardsWidth;
-                const cardSpacing = availableSpaceForGaps / (cardsPerRow + 1); // Equal spacing including margins
-                
-                const frontRowY = 15; // Top margin
-                const backRowY = frontRowY + cardHeightMM + 15; // Space between front and back rows
-                
-                // Create temporary canvas for rendering
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
-                tempCanvas.height = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
-                const tempCtx = tempCanvas.getContext('2d');
-
-                // Process cards in batches of 5
-                for (let i = 0; i < data.length; i += cardsPerRow) {
-                    if (i > 0) pdf.addPage(); // New page for each batch
-                    
-                    // Process each card in this batch
-                    for (let j = 0; j < cardsPerRow && (i + j) < data.length; j++) {
-                        const cardData = data[i + j];
-                        const cardX = cardSpacing + (j * (cardWidthMM + cardSpacing));
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
                         
-                        // Draw FRONT card (top row)
-                        await drawCardOnContext(tempCtx, 'front', tempCanvas.width, tempCanvas.height, cardData);
-                        const frontDataUrl = tempCanvas.toDataURL('image/png');
-                        pdf.addImage(frontDataUrl, 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM);
+                    const isHorizontal = orientation === 'horizontal';
+                    const cardWidthMM = isHorizontal ? 85.6 : 54.0;
+                    const cardHeightMM = isHorizontal ? 54.0 : 85.6;
                         
-                        // Draw BACK card (bottom row, rotated 180 degrees for proper double-sided printing)
-                        // Create a temporary canvas for rotation
-                        const rotatedCanvas = document.createElement('canvas');
-                        rotatedCanvas.width = tempCanvas.width;
-                        rotatedCanvas.height = tempCanvas.height;
-                        const rotatedCtx = rotatedCanvas.getContext('2d');
+                    // Optimized for 5 cards per row on A4 landscape (297mm x 210mm)
+                    const cardsPerRow = 5;
+                    const pageWidth = 297;
+                    const pageHeight = 210;
+                    
+                    // Calculate optimal spacing for 5 cards
+                    const totalCardsWidth = cardsPerRow * cardWidthMM;
+                    const availableSpaceForGaps = pageWidth - totalCardsWidth;
+                    const cardSpacing = availableSpaceForGaps / (cardsPerRow + 1); // Equal spacing including margins
+                    
+                    const frontRowY = 15; // Top margin
+                    const backRowY = frontRowY + cardHeightMM + 15; // Space between front and back rows
+                    
+                    // Create temporary canvas for rendering
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                    tempCanvas.height = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                    const tempCtx = tempCanvas.getContext('2d');
 
-                        // Draw the back card normally first
-                        await drawCardOnContext(tempCtx, 'back', tempCanvas.width, tempCanvas.height, cardData);
+                    // Process cards in batches of 5
+                    for (let i = 0; i < data.length; i += cardsPerRow) {
+                        if (i > 0) pdf.addPage(); // New page for each batch
+                        
+                        // Process each card in this batch
+                        for (let j = 0; j < cardsPerRow && (i + j) < data.length; j++) {
+                            const cardData = data[i + j];
+                            const cardX = cardSpacing + (j * (cardWidthMM + cardSpacing));
+                            
+                            // Draw FRONT card (top row)
+                            await drawCardOnContext(tempCtx, 'front', tempCanvas.width, tempCanvas.height, cardData);
+                            const frontDataUrl = tempCanvas.toDataURL('image/png');
+                            pdf.addImage(frontDataUrl, 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM);
+                            
+                            // Draw BACK card (bottom row, rotated 180 degrees for proper double-sided printing)
+                            // Create a temporary canvas for rotation
+                            const rotatedCanvas = document.createElement('canvas');
+                            rotatedCanvas.width = tempCanvas.width;
+                            rotatedCanvas.height = tempCanvas.height;
+                            const rotatedCtx = rotatedCanvas.getContext('2d');
 
-                        // Now rotate and draw it on the rotated canvas
-                        rotatedCtx.translate(rotatedCanvas.width/2, rotatedCanvas.height/2);
-                        rotatedCtx.rotate(Math.PI); // 180 degrees
-                        rotatedCtx.translate(-rotatedCanvas.width/2, -rotatedCanvas.height/2);
-                        rotatedCtx.drawImage(tempCanvas, 0, 0);
+                            // Draw the back card normally first
+                            await drawCardOnContext(tempCtx, 'back', tempCanvas.width, tempCanvas.height, cardData);
 
-                        const backDataUrl = rotatedCanvas.toDataURL('image/png');
-                        pdf.addImage(backDataUrl, 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+                            // Now rotate and draw it on the rotated canvas
+                            rotatedCtx.translate(rotatedCanvas.width/2, rotatedCanvas.height/2);
+                            rotatedCtx.rotate(Math.PI); // 180 degrees
+                            rotatedCtx.translate(-rotatedCanvas.width/2, -rotatedCanvas.height/2);
+                            rotatedCtx.drawImage(tempCanvas, 0, 0);
+
+                            const backDataUrl = rotatedCanvas.toDataURL('image/png');
+                            pdf.addImage(backDataUrl, 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+                        }
                     }
-                }
 
-                pdf.save('ID_Cards_Double_Sided_5_Per_Sheet.pdf');
-                loadingModal.classList.add('hidden');
+                    pdf.save('ID_Cards_Double_Sided_5_Per_Sheet.pdf');
+                } catch (error) {
+                    console.error("Failed to generate PDF:", error);
+                    errorText.textContent = `Error generating PDF: ${error.message}`;
+                    errorModal.classList.remove('hidden');
+                } finally {
+                    loadingModal.classList.add('hidden');
+                }
             });
 
+            // ZIP Generation Logic
             generateZipBtn.addEventListener('click', async () => {
                 if (data.length === 0) { alert('Please upload data and add fields before generating.'); return; }
                 setActivePlaceholder(null);
                 loadingModal.classList.remove('hidden');
                 loadingText.textContent = 'Generating ZIP...';
-                                
-                const zip = new JSZip();
-                const tempCanvas = document.createElement('canvas');
-                const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
-                const h = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
-                tempCanvas.width = w;
-                tempCanvas.height = h;
-                const tempCtx = tempCanvas.getContext('2d');
-                for (let i = 0; i < data.length; i++) {
-                    const baseName = `ID_Card_${data[i].ID || data[i].id || i + 1}`;
-                                        
-                    await drawCardOnContext(tempCtx, 'front', w, h, data[i]);
-                    zip.file(`${baseName}_Front.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
-                                        
-                    await drawCardOnContext(tempCtx, 'back', w, h, data[i]);
-                    zip.file(`${baseName}_Back.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
-                }
-                zip.generateAsync({ type: 'blob' }).then((content) => {
+                
+                try {                
+                    const zip = new JSZip();
+                    const tempCanvas = document.createElement('canvas');
+                    const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                    const h = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                    tempCanvas.width = w;
+                    tempCanvas.height = h;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    
+                    for (let i = 0; i < data.length; i++) {
+                        const baseName = `ID_Card_${data[i].ID || data[i].id || i + 1}`;
+                                            
+                        await drawCardOnContext(tempCtx, 'front', w, h, data[i]);
+                        zip.file(`${baseName}_Front.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
+                                            
+                        await drawCardOnContext(tempCtx, 'back', w, h, data[i]);
+                        zip.file(`${baseName}_Back.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
+                        
+                        // Update loading message
+                        if (i % 5 === 0) {
+                            loadingText.textContent = `Generating ZIP... (${i+1}/${data.length} cards)`;
+                        }
+                    }
+                    
+                    const content = await zip.generateAsync({ type: 'blob' });
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(content);
                     link.download = 'ID_Cards_Double_Sided.zip';
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
+                } catch (error) {
+                    console.error("Failed to generate ZIP:", error);
+                    errorText.textContent = `Error generating ZIP: ${error.message}`;
+                    errorModal.classList.remove('hidden');
+                } finally {
                     loadingModal.classList.add('hidden');
-                });
+                }
             });
+            
             // --- Initial Setup ---
             const initialSetup = () => {
+                // Set canvas dimensions based on orientation
+                const w = HORIZONTAL_WIDTH;
+                const h = HORIZONTAL_HEIGHT;
+                [frontCanvas, backCanvas].forEach(c => {
+                    c.width = w;
+                    c.height = h;
+                });
+                [frontCanvasWrapper, backCanvasWrapper].forEach(w => {
+                    w.style.aspectRatio = `${HORIZONTAL_WIDTH} / ${HORIZONTAL_HEIGHT}`;
+                });
+                
+                // Setup background image loading
                 bgImages.front.onload = () => drawAllCanvases();
                 bgImages.back.onload = () => drawAllCanvases();
-                                
+                
+                // Load default backgrounds
                 bgImages.front.src = defaultBgDataUrl;
                 bgImages.back.src = defaultBackBgDataUrl;
-                                
+                
+                // Set initial state
                 setOrientation('horizontal');
                 setActiveSide('front');
+                
+                // Create basic demo data if needed
+                if (data.length === 0) {
+                    // Optional: add some sample data for demo purposes
+                    // data = [{ Name: "John Doe", ID: "12345", Position: "Developer", Photo: "path/to/sample.jpg" }];
+                    // headers = Object.keys(data[0]);
+                }
             };
+            
             initialSetup();
         });
     </script>
