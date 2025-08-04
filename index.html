@@ -209,6 +209,42 @@
                     <h2 class="text-xl sm:text-2xl font-semibold mb-4">Edit Selected Field</h2>
                     <div id="edit-controls" class="space-y-4"></div>
                 </div>
+                <!-- Layout Management -->
+                <div id="layout-management" class="bg-white p-6 rounded-xl shadow-md step-card">
+                    <div class="flex items-center mb-4">
+                        <span class="bg-green-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">S</span>
+                        <h2 class="text-xl sm:text-2xl font-semibold">Layout Management</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="layout-name" class="block text-sm font-medium text-gray-700 mb-1">Layout Name:</label>
+                            <input type="text" id="layout-name" placeholder="e.g., Science Class, Math Class" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-2">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="save-layout-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Save Layout</button>
+                            <button id="load-layout-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Load Layout</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="export-layouts-btn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Export Layouts</button>
+                            <button id="import-layouts-btn" class="bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors">Import Layouts</button>
+                        </div>
+                        <div>
+                            <label for="layout-select" class="block text-sm font-medium text-gray-700 mb-1">Saved Layouts:</label>
+                            <div class="flex gap-2">
+                                <select id="layout-select" class="flex-grow p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Select a saved layout...</option>
+                                </select>
+                                <button id="delete-layout-btn" class="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Step 4: Generate -->
                 <div id="step4" class="bg-white p-6 rounded-xl shadow-md step-card">
                     <div class="flex items-center mb-4"><span class="bg-purple-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">4</span><h2 class="text-xl sm:text-2xl font-semibold">Generate Cards</h2></div>
@@ -251,6 +287,14 @@
             const previewBtn = document.getElementById('preview-btn');
             const generateZipBtn = document.getElementById('generate-zip-btn');
             const generatePdfBtn = document.getElementById('generate-pdf-btn');
+            // Layout management elements
+            const layoutNameInput = document.getElementById('layout-name');
+            const saveLayoutBtn = document.getElementById('save-layout-btn');
+            const loadLayoutBtn = document.getElementById('load-layout-btn');
+            const deleteLayoutBtn = document.getElementById('delete-layout-btn');
+            const layoutSelect = document.getElementById('layout-select');
+            const exportLayoutsBtn = document.getElementById('export-layouts-btn');
+            const importLayoutsBtn = document.getElementById('import-layouts-btn');
             const frontCanvas = document.getElementById('front-canvas');
             const backCanvas = document.getElementById('back-canvas');
             const frontCtx = frontCanvas.getContext('2d');
@@ -1138,6 +1182,230 @@
                 }
             });
             
+            // --- Layout Management ---
+            const saveLayout = () => {
+                const layoutName = layoutNameInput.value.trim();
+                if (!layoutName) {
+                    alert("Please enter a name for your layout!");
+                    return;
+                }
+                
+                // Create an object with all layout data
+                const layoutData = {
+                    name: layoutName,
+                    orientation: orientation,
+                    placeholders: {
+                        front: placeholders.front,
+                        back: placeholders.back
+                    },
+                    dateCreated: new Date().toISOString()
+                };
+                
+                // Get existing layouts from localStorage or initialize empty object
+                const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
+                
+                // Add/update this layout
+                savedLayouts[layoutName] = layoutData;
+                
+                // Save back to localStorage
+                localStorage.setItem('idCardLayouts', JSON.stringify(savedLayouts));
+                
+                // Update the dropdown
+                updateLayoutSelect();
+                
+                alert(`Layout "${layoutName}" saved successfully!`);
+            };
+            
+            const loadLayout = (layoutName) => {
+                const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
+                const layout = savedLayouts[layoutName];
+                
+                if (!layout) {
+                    alert("Layout not found!");
+                    return;
+                }
+                
+                // Set orientation
+                setOrientation(layout.orientation);
+                
+                // Load placeholders
+                placeholders.front = JSON.parse(JSON.stringify(layout.placeholders.front));
+                placeholders.back = JSON.parse(JSON.stringify(layout.placeholders.back));
+                
+                // Redraw everything
+                renderPlaceholders();
+                drawAllCanvases();
+                
+                alert(`Layout "${layoutName}" loaded successfully!`);
+            };
+            
+            const updateLayoutSelect = () => {
+                // Clear existing options except the first default one
+                while (layoutSelect.options.length > 1) {
+                    layoutSelect.remove(1);
+                }
+                
+                // Get saved layouts
+                const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
+                
+                // Add each layout to the dropdown
+                for (const layoutName in savedLayouts) {
+                    const option = document.createElement('option');
+                    option.value = layoutName;
+                    option.textContent = layoutName;
+                    layoutSelect.appendChild(option);
+                }
+            };
+            
+            // --- Event Listeners for Layout Management ---
+            saveLayoutBtn.addEventListener('click', saveLayout);
+            
+            loadLayoutBtn.addEventListener('click', () => {
+                const selectedLayout = layoutSelect.value;
+                if (!selectedLayout) {
+                    alert("Please select a layout to load!");
+                    return;
+                }
+                loadLayout(selectedLayout);
+            });
+            
+            deleteLayoutBtn.addEventListener('click', () => {
+                const selectedLayout = layoutSelect.value;
+                if (!selectedLayout) {
+                    alert("Please select a layout to delete!");
+                    return;
+                }
+                
+                if (confirm(`Are you sure you want to delete the layout "${selectedLayout}"? This cannot be undone.`)) {
+                    const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
+                    
+                    // Remove the selected layout
+                    delete savedLayouts[selectedLayout];
+                    
+                    // Save back to localStorage
+                    localStorage.setItem('idCardLayouts', JSON.stringify(savedLayouts));
+                    
+                    // Update the dropdown
+                    updateLayoutSelect();
+                    
+                    // Clear the name input
+                    layoutNameInput.value = '';
+                    
+                    alert(`Layout "${selectedLayout}" has been deleted.`);
+                }
+            });
+            
+            layoutSelect.addEventListener('change', () => {
+                const selectedLayout = layoutSelect.value;
+                if (selectedLayout) {
+                    layoutNameInput.value = selectedLayout;
+                }
+            });
+            
+            exportLayoutsBtn.addEventListener('click', () => {
+                const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
+                
+                if (Object.keys(savedLayouts).length === 0) {
+                    alert("No layouts to export. Please create and save a layout first.");
+                    return;
+                }
+                
+                // Create a data object with metadata
+                const exportData = {
+                    type: "ID_Card_Generator_Layouts",
+                    version: "1.0",
+                    timestamp: new Date().toISOString(),
+                    layouts: savedLayouts
+                };
+                
+                // Convert to JSON string
+                const jsonStr = JSON.stringify(exportData, null, 2);
+                
+                // Create a downloadable file
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ID_Card_Layouts_' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }, 0);
+            });
+            
+            importLayoutsBtn.addEventListener('click', () => {
+                // Create a hidden file input
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'application/json';
+                fileInput.style.display = 'none';
+                
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const importedData = JSON.parse(event.target.result);
+                            
+                            // Validate that it's an ID card layout file
+                            if (!importedData.type || importedData.type !== "ID_Card_Generator_Layouts") {
+                                throw new Error("Invalid layout file format");
+                            }
+                            
+                            // Get current layouts
+                            const currentLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
+                            
+                            // Count imported layouts
+                            const importCount = Object.keys(importedData.layouts).length;
+                            
+                            // Handle conflicts or merge
+                            let conflictCount = 0;
+                            let mergeCount = 0;
+                            
+                            for (const [name, layout] of Object.entries(importedData.layouts)) {
+                                if (currentLayouts[name]) {
+                                    conflictCount++;
+                                    // Let's overwrite by default, but you could add more complex logic here
+                                } else {
+                                    mergeCount++;
+                                }
+                                currentLayouts[name] = layout;
+                            }
+                            
+                            // Save merged layouts
+                            localStorage.setItem('idCardLayouts', JSON.stringify(currentLayouts));
+                            
+                            // Update the dropdown
+                            updateLayoutSelect();
+                            
+                            alert(`Successfully imported ${importCount} layouts!\n- ${mergeCount} new layouts added\n- ${conflictCount} existing layouts updated`);
+                            
+                        } catch (error) {
+                            console.error("Import error:", error);
+                            alert(`Error importing layouts: ${error.message}`);
+                        }
+                    };
+                    
+                    reader.readAsText(file);
+                });
+                
+                // Append and trigger click
+                document.body.appendChild(fileInput);
+                fileInput.click();
+                
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(fileInput);
+                }, 0);
+            });
+            
             // --- Initial Setup ---
             const initialSetup = () => {
                 // Set canvas dimensions based on orientation
@@ -1162,6 +1430,9 @@
                 // Set initial state
                 setOrientation('horizontal');
                 setActiveSide('front');
+                
+                // Load saved layouts into the dropdown
+                updateLayoutSelect();
                 
                 // Create basic demo data if needed
                 if (data.length === 0) {
