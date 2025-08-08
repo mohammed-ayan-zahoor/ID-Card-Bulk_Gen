@@ -32,6 +32,8 @@
             background-color: rgba(59, 130, 246, 0.2);
             padding: 4px;
             box-sizing: border-box;
+            min-width: 20px;
+            min-height: 20px;
         }
         .placeholder.text-placeholder {
             color: #1e40af;
@@ -82,10 +84,10 @@
         }
         .delete-btn {
             position: absolute;
-            top: -12px;
-            right: -12px;
-            width: 24px;
-            height: 24px;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
             background: #ef4444;
             color: white;
             border-radius: 50%;
@@ -95,15 +97,18 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            opacity: 0.7;
-            transition: opacity 0.2s ease;
+            opacity: 0.9;
+            transition: all 0.2s ease;
             line-height: 1;
-            z-index: 30;
+            z-index: 100;
             pointer-events: auto;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .placeholder:hover .delete-btn,
         .placeholder.active .delete-btn {
             opacity: 1;
+            transform: scale(1.1);
         }
         .resize-handle {
             position: absolute;
@@ -456,7 +461,8 @@
                         if (p.type === 'text') {
                             targetCtx.fillStyle = p.color;
                             const fontFamily = p.fontFamily || 'Inter';
-                            targetCtx.font = `${p.fontSize}px ${fontFamily}`;
+                            const fontWeight = p.fontWeight || 'normal';
+                            targetCtx.font = `${fontWeight} ${p.fontSize}px ${fontFamily}`;
                             targetCtx.textAlign = p.align;
                             targetCtx.textBaseline = 'top';
                             const maxWidth = p.width * width;
@@ -684,7 +690,8 @@
                     } else {
                         targetCtx.fillStyle = p.color;
                         const fontFamily = p.fontFamily || 'Inter';
-                        targetCtx.font = `${p.fontSize}px ${fontFamily}`;
+                        const fontWeight = p.fontWeight || 'normal';
+                        targetCtx.font = `${fontWeight} ${p.fontSize}px ${fontFamily}`;
                         targetCtx.textAlign = p.align;
                         targetCtx.textBaseline = 'top';
                         const maxWidth = p.width * width;
@@ -843,25 +850,35 @@
                 });
             };
 
-            // --- Synchronization Function ---
+            // --- Synchronization Function (CORRECTED) ---
             const syncPlaceholderWrappers = () => {
-                // Ensure placeholder wrappers exactly match canvas position and size
-                [frontCanvasWrapper, backCanvasWrapper].forEach((wrapper, index) => {
+                // This function now ensures the placeholder overlay PERFECTLY matches the canvas's
+                // position, size, and transformation, eliminating any offsets.
+                [frontCanvasWrapper, backCanvasWrapper].forEach((wrapper) => {
                     const canvas = wrapper.querySelector('canvas');
                     const placeholderWrapper = wrapper.querySelector('[id*="placeholder-wrapper"]');
                     
                     if (canvas && placeholderWrapper) {
-                        const canvasRect = canvas.getBoundingClientRect();
-                        const wrapperRect = wrapper.getBoundingClientRect();
+                        const canvasStyle = window.getComputedStyle(canvas);
+                        const canvasTransform = canvasStyle.transform;
+                        const canvasOrigin = canvasStyle.transformOrigin;
+
+                        // --- FIX START ---
+                        // Align the top-left corner of the overlay with the canvas's top-left corner.
+                        // This accounts for any other elements (like the H3 title) or padding on the parent.
+                        placeholderWrapper.style.top = `${canvas.offsetTop}px`;
+                        placeholderWrapper.style.left = `${canvas.offsetLeft}px`;
+                        // --- FIX END ---
                         
-                        // Position placeholder wrapper to exactly match canvas
-                        placeholderWrapper.style.position = 'absolute';
-                        placeholderWrapper.style.left = '0px';
-                        placeholderWrapper.style.top = '0px';
+                        // Set the size of the overlay to match the canvas's rendered size.
                         placeholderWrapper.style.width = `${canvas.offsetWidth}px`;
                         placeholderWrapper.style.height = `${canvas.offsetHeight}px`;
-                        placeholderWrapper.style.transform = canvas.style.transform || '';
-                        placeholderWrapper.style.transformOrigin = canvas.style.transformOrigin || '';
+                        
+                        // Apply the same transform (for zoom) to keep them in sync.
+                        placeholderWrapper.style.transform = canvasTransform;
+                        placeholderWrapper.style.transformOrigin = canvasOrigin;
+                        
+                        console.log(`Synced ${wrapper.id}: canvas offset(${canvas.offsetLeft}, ${canvas.offsetTop}), transform=${canvasTransform}, size=${canvas.offsetWidth}x${canvas.offsetHeight}`);
                     }
                 });
             };
@@ -882,6 +899,7 @@
                     color: '#000000', 
                     align: 'left',
                     fontFamily: 'Inter',
+                    fontWeight: 'normal', // Default to normal weight
                     shape: 'square', // Default shape for photos
                     qrColor: '#000000' // Default QR code color
                 };
@@ -908,6 +926,8 @@
                         el.style.width = `${p.width * 100}%`;
                         el.style.height = `${p.height * 100}%`;
                         el.style.position = 'absolute';
+                        
+                        console.log(`Rendering placeholder ${p.id} at ${(p.x * 100).toFixed(1)}%, ${(p.y * 100).toFixed(1)}%`);
                                                 
                         const displayText = p.staticText ? p.staticText : `{{${p.key}}}`;
                         if (p.type === 'qr') {
@@ -931,26 +951,68 @@
                         deleteBtn.className = 'delete-btn';
                         deleteBtn.innerHTML = '×';
                         deleteBtn.title = 'Delete this field';
-                        deleteBtn.type = 'button'; // Prevent form submission
-                        deleteBtn.onclick = (e) => {
+                        deleteBtn.type = 'button';
+                        
+                        // Enhanced delete button event handling
+                        deleteBtn.addEventListener('click', (e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            console.log('Deleting placeholder:', p.id);
+                            e.stopImmediatePropagation();
+                            
+                            console.log('Delete button clicked for placeholder:', p.id);
+                            
+                            // Remove from placeholders array
                             placeholders[side] = placeholders[side].filter(pl => pl.id !== p.id);
+                            
+                            // Clear active selection if this was the active placeholder
                             if (activePlaceholderId === p.id) {
                                 setActivePlaceholder(null);
                             }
+                            
+                            // Re-render everything
                             renderPlaceholders();
-                            drawAllCanvases(); // Redraw canvas after deletion
-                        };
+                            drawAllCanvases();
+                            
+                            console.log(`Placeholder ${p.id} deleted successfully`);
+                        });
+                        
+                        // Prevent all drag-related events on delete button
+                        deleteBtn.addEventListener('mousedown', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                        });
+                        
+                        deleteBtn.addEventListener('dragstart', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        });
+                        
                         el.appendChild(deleteBtn);
-                                                
+                        
                         const resizeHandle = document.createElement('div');
                         resizeHandle.className = 'resize-handle';
                         resizeHandle.addEventListener('mousedown', onResizeStart);
                         el.appendChild(resizeHandle);
-                                                
-                        el.addEventListener('mousedown', onDragStart);
+                        
+                        // Add drag event listener to the main element, but exclude delete button and resize handle
+                        el.addEventListener('mousedown', (e) => {
+                            // Don't start drag if clicking on delete button or resize handle
+                            if (e.target === deleteBtn || e.target.classList.contains('delete-btn') || 
+                                e.target === resizeHandle || e.target.classList.contains('resize-handle')) {
+                                console.log('Mousedown on control element, skipping drag');
+                                return;
+                            }
+                            
+                            // Only start drag if clicking on the placeholder element itself or its direct text content
+                            if (e.target === el || e.target.tagName === 'SPAN' || e.target.classList.contains('qr-placeholder-preview')) {
+                                console.log('Starting drag for placeholder:', p.id);
+                                onDragStart(e);
+                            } else {
+                                console.log('Mousedown on unexpected element, skipping drag:', e.target);
+                            }
+                        });
+                        
                         wrapper.appendChild(el);
                     });
                 }
@@ -997,11 +1059,17 @@
                                 </select>
                             </div>
                         </div>
-                        <div><label class="block text-sm font-medium">Alignment</label><div class="flex justify-around bg-gray-100 rounded-lg p-1">
-                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'left')" class="px-3 py-1 rounded ${p.align === 'left' ? 'bg-blue-500 text-white' : ''}">Left</button>
-                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'center')" class="px-3 py-1 rounded ${p.align === 'center' ? 'bg-blue-500 text-white' : ''}">Center</button>
-                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'right')" class="px-3 py-1 rounded ${p.align === 'right' ? 'bg-blue-500 text-white' : ''}">Right</button>
-                        </div></div>`;
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium">Alignment</label><div class="flex justify-around bg-gray-100 rounded-lg p-1">
+                                <button onclick="updatePlaceholderProp('${p.id}', 'align', 'left')" class="px-3 py-1 rounded ${p.align === 'left' ? 'bg-blue-500 text-white' : ''}">Left</button>
+                                <button onclick="updatePlaceholderProp('${p.id}', 'align', 'center')" class="px-3 py-1 rounded ${p.align === 'center' ? 'bg-blue-500 text-white' : ''}">Center</button>
+                                <button onclick="updatePlaceholderProp('${p.id}', 'align', 'right')" class="px-3 py-1 rounded ${p.align === 'right' ? 'bg-blue-500 text-white' : ''}">Right</button>
+                            </div></div>
+                            <div><label class="block text-sm font-medium">Font Weight</label><div class="flex justify-around bg-gray-100 rounded-lg p-1">
+                                <button onclick="updatePlaceholderProp('${p.id}', 'fontWeight', 'normal')" class="px-3 py-1 rounded ${(p.fontWeight || 'normal') === 'normal' ? 'bg-blue-500 text-white' : ''}">Normal</button>
+                                <button onclick="updatePlaceholderProp('${p.id}', 'fontWeight', 'bold')" class="px-3 py-1 rounded ${p.fontWeight === 'bold' ? 'bg-blue-500 text-white' : ''}">Bold</button>
+                            </div></div>
+                        </div>`;
                 } else if (p.type === 'photo') {
                     // Add shape controls for photo fields
                     p.shape = p.shape || 'square'; // Default to square if not set
@@ -1032,8 +1100,8 @@
                     const numValue = parseFloat(value);
                     p[prop] = isNaN(numValue) ? value : numValue;
                     renderPlaceholders();
-                    // Re-render edit panel when alignment or shape changes
-                    if(prop === 'align' || prop === 'shape') {
+                    // Re-render edit panel when alignment, shape, or fontWeight changes
+                    if(prop === 'align' || prop === 'shape' || prop === 'fontWeight') {
                         renderEditPanel();
                         // Also redraw the canvas when shape changes to see the effect immediately
                         if (prop === 'shape') {
@@ -1041,114 +1109,116 @@
                         }
                     }
                     // Redraw canvas when font properties change
-                    if(prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight') {
+                    if(prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight' || prop === 'fontWeight') {
                         drawAllCanvases();
                     }
                 }
             };
             // --- Interaction Logic ---
             const onDragStart = (e) => {
-                if (isResizing) return;
-                e.preventDefault(); e.stopPropagation();
+                if (isResizing || e.target.classList.contains('delete-btn') || e.target.classList.contains('resize-handle')) return;
+                e.preventDefault();
+                e.stopPropagation();
+
                 const target = e.target.closest('.placeholder');
                 if (!target) return;
-                if (activePlaceholderId !== target.id) setActivePlaceholder(target.id);
-                const elementToDrag = document.getElementById(target.id);
-                if (!elementToDrag) return;
                 
-                // Get the current element's position relative to its wrapper
+                if (activePlaceholderId !== target.id) {
+                    setActivePlaceholder(target.id);
+                }
+
+                const elementToDrag = document.getElementById(target.id);
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
-                const wrapperRect = wrapper.getBoundingClientRect();
                 const elementRect = elementToDrag.getBoundingClientRect();
                 
-                // Get the current scale from the wrapper's transform
-                const transform = wrapper.style.transform;
+                // --- FIX START ---
+                // Get the current scale factor from the wrapper's transform style
+                const transform = window.getComputedStyle(wrapper).transform;
                 let scale = 1;
-                if (transform && transform.includes('scale(')) {
-                    const scaleMatch = transform.match(/scale\(([^)]+)\)/);
+                if (transform && transform !== 'none') {
+                    // Assumes transform is "scale(value)"
+                    const scaleMatch = transform.match(/matrix\(([^,]+),/);
                     if (scaleMatch) {
                         scale = parseFloat(scaleMatch[1]);
                     }
                 }
-                
-                // Calculate offset from mouse to element's top-left corner
-                // Account for scale factor in the offset calculation
+
+                // Calculate the offset of the mouse relative to the element's top-left corner,
+                // but in the UN-SCALED coordinate space.
                 dragOffsetX = (e.clientX - elementRect.left) / scale;
                 dragOffsetY = (e.clientY - elementRect.top) / scale;
-                
+                // --- FIX END ---
+
                 document.addEventListener('mousemove', onDragMove);
                 document.addEventListener('mouseup', onDragEnd);
             };
             const onDragMove = (e) => {
                 const activeEl = document.getElementById(activePlaceholderId);
-                if (!activeEl) return;
+                const pData = placeholders[activeSide].find(p => p.id === activePlaceholderId);
+                if (!activeEl || !pData) return;
+
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                 const wrapperRect = wrapper.getBoundingClientRect();
-                
-                // Get the current scale from the wrapper's transform
-                const transform = wrapper.style.transform;
+
+                // --- NEW LOGIC START ---
+                // This logic ensures smooth dragging by calculating the percentage on every move,
+                // avoiding any conflict between pixel and percentage positioning.
+
+                // 1. Get the current scale factor
+                const transform = window.getComputedStyle(wrapper).transform;
                 let scale = 1;
-                if (transform && transform.includes('scale(')) {
-                    const scaleMatch = transform.match(/scale\(([^)]+)\)/);
+                if (transform && transform !== 'none') {
+                    const scaleMatch = transform.match(/matrix\(([^,]+),/);
                     if (scaleMatch) {
                         scale = parseFloat(scaleMatch[1]);
                     }
                 }
+
+                // 2. Calculate the mouse's position within the un-scaled wrapper
+                const mouseX_unscaled = (e.clientX - wrapperRect.left) / scale;
+                const mouseY_unscaled = (e.clientY - wrapperRect.top) / scale;
+
+                // 3. Determine the new top-left corner in un-scaled pixels by applying the initial offset
+                const newLeft_unscaled = mouseX_unscaled - dragOffsetX;
+                const newTop_unscaled = mouseY_unscaled - dragOffsetY;
+
+                // 4. Convert this new pixel position into a percentage of the wrapper's un-scaled dimensions
+                const unscaledWrapperWidth = wrapper.offsetWidth / scale;
+                const unscaledWrapperHeight = wrapper.offsetHeight / scale;
                 
-                // Calculate new position based on mouse position minus offset
-                // Since dragOffset is already scaled, we apply scale to the mouse position calculation
-                let x = (e.clientX - wrapperRect.left) / scale - dragOffsetX;
-                let y = (e.clientY - wrapperRect.top) / scale - dragOffsetY;
+                pData.x = newLeft_unscaled / unscaledWrapperWidth;
+                pData.y = newTop_unscaled / unscaledWrapperHeight;
                 
-                // Use the unscaled wrapper dimensions for constraints
-                const unscaledWidth = wrapperRect.width / scale;
-                const unscaledHeight = wrapperRect.height / scale;
-                
-                // More permissive constraints - allow movement across full wrapper area
-                const elementWidth = activeEl.offsetWidth;
-                const elementHeight = activeEl.offsetHeight;
-                x = Math.max(-elementWidth * 0.8, Math.min(x, unscaledWidth - elementWidth * 0.2));
-                y = Math.max(-elementHeight * 0.8, Math.min(y, unscaledHeight - elementHeight * 0.2));
-                
-                // Apply position immediately without percentage conversion
-                activeEl.style.left = `${x}px`;
-                activeEl.style.top = `${y}px`;
+                // --- NEW CODE START ---
+                // 4a. Add gentle constraints to prevent the element from being dragged too far off-screen.
+                // This allows placing elements right at the edge without them snapping aggressively.
+                // We calculate the percentage equivalent of 20 pixels to use as a visible buffer.
+                const bufferX = 20 / unscaledWrapperWidth;
+                const bufferY = 20 / unscaledWrapperHeight;
+
+                const minX = -pData.width + bufferX; // Allow it to go mostly off the left edge
+                const maxX = 1 - bufferX;            // Allow it to go mostly off the right edge
+
+                const minY = -pData.height + bufferY; // Allow it to go mostly off the top edge
+                const maxY = 1 - bufferY;             // Allow it to go mostly off the bottom edge
+
+                pData.x = Math.max(minX, Math.min(pData.x, maxX));
+                pData.y = Math.max(minY, Math.min(pData.y, maxY));
+                // --- NEW CODE END ---
+
+                // 5. Immediately apply the new, constrained percentage to the element's style.
+                // This makes the drag perfectly smooth.
+                activeEl.style.left = `${pData.x * 100}%`;
+                activeEl.style.top = `${pData.y * 100}%`;
+                // --- NEW LOGIC END ---
             };
             const onDragEnd = () => {
-                const activeEl = document.getElementById(activePlaceholderId);
-                if (activeEl) {
-                    const pData = placeholders[activeSide].find(p => p.id === activePlaceholderId);
-                    if (pData) {
-                        const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
-                        const wrapperRect = wrapper.getBoundingClientRect();
-                        
-                        // Get the current scale from the wrapper's transform
-                        const transform = wrapper.style.transform;
-                        let scale = 1;
-                        if (transform && transform.includes('scale(')) {
-                            const scaleMatch = transform.match(/scale\(([^)]+)\)/);
-                            if (scaleMatch) {
-                                scale = parseFloat(scaleMatch[1]);
-                            }
-                        }
-                        
-                        // Use the unscaled wrapper dimensions for percentage calculation
-                        const unscaledWidth = wrapperRect.width / scale;
-                        const unscaledHeight = wrapperRect.height / scale;
-                        
-                        // Update placeholder data with final position as percentages
-                        pData.x = activeEl.offsetLeft / unscaledWidth;
-                        pData.y = activeEl.offsetTop / unscaledHeight;
-                        
-                        // Immediately sync with canvas rendering
-                        drawAllCanvases();
-                        
-                        // Also update the placeholder display to match exactly
-                        renderPlaceholders();
-                    }
-                }
                 document.removeEventListener('mousemove', onDragMove);
                 document.removeEventListener('mouseup', onDragEnd);
+
+                // The position is already correctly set in onDragMove.
+                // We just need to trigger a final canvas redraw to ensure it's up-to-date.
+                drawAllCanvases();
             };
             const onResizeStart = (e) => {
                 e.preventDefault(); e.stopPropagation();
@@ -1347,8 +1417,12 @@
                     }
                 });
                 
-                // Sync placeholder wrappers after zoom changes
-                syncPlaceholderWrappers();
+                // Always sync placeholder wrappers after zoom changes and re-render
+                setTimeout(() => {
+                    syncPlaceholderWrappers();
+                    renderPlaceholders();
+                    drawAllCanvases();
+                }, 10);
             };
             
             // --- Event Listeners ---
@@ -1538,27 +1612,50 @@
             // QR Code button event handler already defined above
                         
             previewBtn.addEventListener('click', async () => {
-                if (data.length === 0) { alert('Please upload data to preview.'); return; }
+                if (data.length === 0) { 
+                    alert('Please upload data to preview.'); 
+                    return; 
+                }
+                
+                // Clear any active selections first
                 setActivePlaceholder(null);
+                
+                // Ensure positioning is synchronized before preview
+                syncPlaceholderWrappers();
+                
+                // Hide placeholder wrappers for clean preview
                 frontPlaceholderWrapper.style.display = 'none';
                 backPlaceholderWrapper.style.display = 'none';
                 
-                // Force redraw of canvases with the first record
                 console.log("Previewing with data:", data[0]);
-                console.log("Current QR placeholder settings:", placeholders.front.filter(p => p.type === 'qr'));
+                console.log("Current placeholders:", {
+                    front: placeholders.front.map(p => ({id: p.id, type: p.type, x: p.x, y: p.y, width: p.width, height: p.height})),
+                    back: placeholders.back.map(p => ({id: p.id, type: p.type, x: p.x, y: p.y, width: p.width, height: p.height}))
+                });
                 
-                // Force redraw with hard-coded position for QR
+                // Force redraw with first record data
                 await drawAllCanvases(data[0]);
                 
+                // Add back to edit button
                 const backButton = document.createElement('button');
                 backButton.innerText = 'Back to Edit';
-                backButton.className = 'absolute top-2 right-2 bg-yellow-400 text-black font-bold py-1 px-3 rounded z-30';
+                backButton.className = 'absolute top-2 right-2 bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg shadow-lg z-50 transition-colors';
                 backButton.onclick = () => { 
+                    // Show placeholder wrappers again
                     frontPlaceholderWrapper.style.display = 'block'; 
                     backPlaceholderWrapper.style.display = 'block'; 
+                    
+                    // Redraw canvas without data to show placeholders
                     drawAllCanvases(); 
+                    
+                    // Re-sync positioning after returning to edit mode
+                    syncPlaceholderWrappers();
+                    renderPlaceholders();
+                    
+                    // Remove the back button
                     backButton.remove(); 
                 };
+                
                 document.getElementById('front-canvas-wrapper').appendChild(backButton);
             });
 
