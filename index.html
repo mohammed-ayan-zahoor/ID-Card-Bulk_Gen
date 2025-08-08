@@ -95,12 +95,14 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            opacity: 0;
+            opacity: 0.7;
             transition: opacity 0.2s ease;
             line-height: 1;
-            z-index: 20;
+            z-index: 30;
+            pointer-events: auto;
         }
-        .placeholder:hover .delete-btn {
+        .placeholder:hover .delete-btn,
+        .placeholder.active .delete-btn {
             opacity: 1;
         }
         .resize-handle {
@@ -173,6 +175,20 @@
                     <div class="flex items-center mb-4"><span class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">2</span><h2 class="text-xl sm:text-2xl font-semibold">Upload Data</h2></div>
                     <p class="text-gray-600 mb-4">Upload your Excel (.xlsx) or CSV file.</p>
                     <input type="file" id="data-file-input" accept=".xlsx, .csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    
+                    <!-- Photo Tips -->
+                    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                            </svg>
+                            <div class="text-sm text-blue-800">
+                                <strong>Photo Tips:</strong><br>
+                                • If your Excel has a Photo column with numbers (e.g., 3956, 1234), use the Photo Folder feature below<br>
+                                • For full image URLs/paths, those will work directly in the Excel file
+                            </div>
+                        </div>
+                    </div>
                 </div>
                                 
                 <!-- Step 3: AI/Manual Design -->
@@ -191,6 +207,7 @@
                             <input type="text" id="field-name-input" placeholder="e.g., FullName, Address" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <button id="add-text-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Add Text Field</button>
+                        <button id="add-label-btn" class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">Add Label (Static Text)</button>
                         <button id="add-photo-btn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Add Photo Field</button>
                         
                         <!-- QR Code Field Selection -->
@@ -209,6 +226,62 @@
                     <h2 class="text-xl sm:text-2xl font-semibold mb-4">Edit Selected Field</h2>
                     <div id="edit-controls" class="space-y-4"></div>
                 </div>
+                <!-- Photo Folder Selection -->
+                <div id="photo-folder-tool" class="bg-white p-6 rounded-xl shadow-md step-card">
+                    <div class="flex items-center mb-4">
+                        <span class="bg-orange-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">📁</span>
+                        <h2 class="text-xl sm:text-2xl font-semibold">Photo Folder</h2>
+                    </div>
+                    <p class="text-gray-600 mb-4">Select folder containing photos. Photos will be matched by number (e.g., 3956.jpg matches Excel value "3956")</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Photo Folder:</label>
+                            <input type="file" id="photo-folder-input" webkitdirectory multiple class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+                        </div>
+                        <div id="photo-folder-status" class="hidden">
+                            <div class="p-3 bg-green-50 border border-green-200 rounded-md">
+                                <div class="flex items-center">
+                                    <svg class="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span class="text-green-800 font-medium">Photo folder loaded!</span>
+                                </div>
+                                <div id="photo-count" class="text-sm text-green-700 mt-1"></div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
+                            <strong>How it works:</strong><br>
+                            1. Select a folder containing your photos<br>
+                            2. Photos should be named with numbers (e.g., 3956.jpg, 1234.png, 0045.JPG)<br>
+                            3. Excel should have photo numbers in the photo column (e.g., 3956, 1234, 45)<br>
+                            4. App will automatically match and insert correct photos<br><br>
+                            
+                            <strong>Supported formats:</strong> JPG, JPEG, PNG, GIF, BMP, WEBP<br>
+                            <strong>Name examples:</strong> 3956.jpg, IMG_1234.png, photo0045.JPG, 987.jpeg
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Image Helper Tool -->
+                <div id="image-helper" class="bg-white p-6 rounded-xl shadow-md step-card">
+                    <div class="flex items-center mb-4">
+                        <span class="bg-amber-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">�</span>
+                        <h2 class="text-xl sm:text-2xl font-semibold">Image Helper</h2>
+                    </div>
+                    <p class="text-gray-600 mb-4">Convert local images to Excel-compatible format</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Images to Convert:</label>
+                            <input type="file" id="image-converter-input" accept="image/*" multiple class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+                        </div>
+                        <button id="convert-images-btn" class="w-full bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors">Convert & Download CSV Template</button>
+                        <div id="conversion-output" class="hidden">
+                            <h3 class="font-semibold text-gray-700 mb-2">Converted Images:</h3>
+                            <div id="converted-list" class="max-h-40 overflow-y-auto text-xs"></div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Layout Management -->
                 <div id="layout-management" class="bg-white p-6 rounded-xl shadow-md step-card">
                     <div class="flex items-center mb-4">
@@ -257,6 +330,24 @@
             </div>
             <!-- Canvas Column -->
             <div class="lg:col-span-2 space-y-8">
+                <!-- Zoom Controls -->
+                <div class="bg-white p-4 rounded-xl shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-lg">View Controls</h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm font-medium">Zoom:</label>
+                            <select id="zoom-select" class="p-1 border border-gray-300 rounded text-sm">
+                                <option value="actual">Optimized Size</option>
+                                <option value="0.3">30%</option>
+                                <option value="0.5">50%</option>
+                                <option value="0.7" selected>70% (Default)</option>
+                                <option value="1.0">100%</option>
+                                <option value="1.5">150%</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
                 <div id="front-canvas-wrapper" class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto active">
                     <h3 class="text-center font-bold text-lg sm:text-xl mb-2">FRONT</h3>
                     <canvas id="front-canvas" class="w-full h-full rounded-md bg-gray-200"></canvas>
@@ -282,6 +373,7 @@
             const dataFileInput = document.getElementById('data-file-input');
             const fieldNameInput = document.getElementById('field-name-input');
             const addTextBtn = document.getElementById('add-text-btn');
+            const addLabelBtn = document.getElementById('add-label-btn');
             const addPhotoBtn = document.getElementById('add-photo-btn');
             const addQrBtn = document.getElementById('add-qr-btn');
             const previewBtn = document.getElementById('preview-btn');
@@ -295,6 +387,15 @@
             const layoutSelect = document.getElementById('layout-select');
             const exportLayoutsBtn = document.getElementById('export-layouts-btn');
             const importLayoutsBtn = document.getElementById('import-layouts-btn');
+            // Image helper elements
+            const imageConverterInput = document.getElementById('image-converter-input');
+            const convertImagesBtn = document.getElementById('convert-images-btn');
+            const conversionOutput = document.getElementById('conversion-output');
+            const convertedList = document.getElementById('converted-list');
+            // Photo folder elements
+            const photoFolderInput = document.getElementById('photo-folder-input');
+            const photoFolderStatus = document.getElementById('photo-folder-status');
+            const photoCount = document.getElementById('photo-count');
             const frontCanvas = document.getElementById('front-canvas');
             const backCanvas = document.getElementById('back-canvas');
             const frontCtx = frontCanvas.getContext('2d');
@@ -316,6 +417,7 @@
             const orientationHorizontalBtn = document.getElementById('orientation-horizontal-btn');
             const orientationVerticalBtn = document.getElementById('orientation-vertical-btn');
             const qrFieldSelect = document.getElementById('qr-field-select');
+            const zoomSelect = document.getElementById('zoom-select');
             
             // --- State ---
             let bgImages = { front: new Image(), back: new Image() };
@@ -327,6 +429,9 @@
             let dragOffsetX, dragOffsetY;
             let isResizing = false;
             let orientation = 'horizontal';
+            // Photo folder management
+            let photoFiles = new Map(); // Map of photo numbers to file objects
+            let photoFolderLoaded = false;
             // --- Constants ---
             const HORIZONTAL_WIDTH = 856;
             const HORIZONTAL_HEIGHT = 540;
@@ -339,11 +444,54 @@
                 if (bg && bg.complete) {
                     targetCtx.drawImage(bg, 0, 0, width, height);
                 }
+                
+                // Always render static text placeholders, even without data
+                for (const p of placeholders[side]) {
+                    // Handle static text (labels and titles)
+                    if (p.staticText) {
+                        const value = p.staticText;
+                        const x = p.x * width;
+                        const y = p.y * height;
+                        
+                        if (p.type === 'text') {
+                            targetCtx.fillStyle = p.color;
+                            const fontFamily = p.fontFamily || 'Inter';
+                            targetCtx.font = `${p.fontSize}px ${fontFamily}`;
+                            targetCtx.textAlign = p.align;
+                            targetCtx.textBaseline = 'top';
+                            const maxWidth = p.width * width;
+                            
+                            // Calculate x position based on alignment
+                            let textX = x;
+                            if (p.align === 'center') {
+                                textX = x + (p.width * width) / 2;
+                            } else if (p.align === 'right') {
+                                textX = x + (p.width * width);
+                            }
+                            
+                            wrapText(targetCtx, value, textX, y, maxWidth, p.lineHeight);
+                        }
+                    }
+                }
                                 
                 if (!rowData) return;
                 for (const p of placeholders[side]) {
-                    const isStaticTitle = p.key === 'title' && p.staticText;
-                    const value = isStaticTitle ? p.staticText : String(rowData[p.key] || '');
+                    const isStaticText = (p.key === 'title' && p.staticText) || (p.key === 'label' && p.staticText) || p.staticText;
+                    let value = isStaticText ? p.staticText : String(rowData[p.key] || '');
+                    
+                    // Format date fields if they contain DOB, Date, or similar
+                    if (!isStaticText && value && (p.key.toLowerCase().includes('dob') || p.key.toLowerCase().includes('date') || p.key.toLowerCase().includes('birth'))) {
+                        try {
+                            // Try to parse as date and format it
+                            const date = new Date(value);
+                            if (!isNaN(date.getTime())) {
+                                value = date.toLocaleDateString(); // Format as local date
+                            }
+                        } catch (e) {
+                            // If parsing fails, keep original value
+                        }
+                    }
+                    
                     if (!value) continue;
                     const x = p.x * width;
                     const y = p.y * height;
@@ -404,19 +552,17 @@
                                     }
                                 });
                                 
-                                // Force the position to be in the upper right corner of the card
-                                // Instead of using the placeholder position, we'll place it directly
-                                // Use absolute positioning for more consistent results
-                                const qrX = width * 0.65; // Right side of card - 65% from left edge
-                                const qrY = height * 0.15; // Top part of card - 15% from top
-                                const qrWidth = width * 0.25; // 25% of card width
-                                const qrHeight = height * 0.25; // 25% of card height
+                                // Use the actual placeholder position instead of hard-coded coordinates
+                                const qrX = x; // Use placeholder's x position
+                                const qrY = y; // Use placeholder's y position
+                                const qrWidth = pWidth; // Use placeholder's width
+                                const qrHeight = pHeight; // Use placeholder's height
                                 
                                 // Center the QR code within its area
                                 const offsetX = (qrWidth - qrSize) / 2;
                                 const offsetY = (qrHeight - qrSize) / 2;
                                 
-                                console.log(`Drawing QR at fixed position: x=${qrX}, y=${qrY}, width=${qrWidth}, height=${qrHeight}`);
+                                console.log(`Drawing QR at placeholder position: x=${qrX}, y=${qrY}, width=${qrWidth}, height=${qrHeight}`);
                                 
                                 // Make it very visible with white background
                                 targetCtx.fillStyle = '#ffffff';
@@ -507,16 +653,51 @@
                             }
                         } catch (error) {
                             console.error(`Could not load image: ${value}`, error);
-                            targetCtx.fillStyle = '#fee2e2'; targetCtx.fillRect(x, y, pWidth, pHeight);
-                            targetCtx.fillStyle = '#ef4444'; targetCtx.textAlign = 'center'; targetCtx.fillText('X', x + pWidth / 2, y + pHeight / 2);
+                            
+                            // Enhanced error display for photo numbers
+                            targetCtx.fillStyle = '#fee2e2'; 
+                            targetCtx.fillRect(x, y, pWidth, pHeight);
+                            
+                            // Add border
+                            targetCtx.strokeStyle = '#ef4444';
+                            targetCtx.lineWidth = 2;
+                            targetCtx.strokeRect(x, y, pWidth, pHeight);
+                            
+                            // Show the photo number that couldn't be found
+                            targetCtx.fillStyle = '#ef4444'; 
+                            targetCtx.font = 'bold 14px Inter';
+                            targetCtx.textAlign = 'center';
+                            targetCtx.textBaseline = 'middle';
+                            
+                            // Check if it looks like a photo number
+                            const isPhotoNumber = /^\d+$/.test(String(value).trim());
+                            const errorText = isPhotoNumber ? `Photo\n${value}\nNot Found` : 'Image\nError';
+                            
+                            const lines = errorText.split('\n');
+                            const lineHeight = 16;
+                            const startY = y + pHeight / 2 - (lines.length - 1) * lineHeight / 2;
+                            
+                            lines.forEach((line, index) => {
+                                targetCtx.fillText(line, x + pWidth / 2, startY + index * lineHeight);
+                            });
                         }
                     } else {
                         targetCtx.fillStyle = p.color;
-                        targetCtx.font = `${p.fontSize}px Inter`;
+                        const fontFamily = p.fontFamily || 'Inter';
+                        targetCtx.font = `${p.fontSize}px ${fontFamily}`;
                         targetCtx.textAlign = p.align;
                         targetCtx.textBaseline = 'top';
                         const maxWidth = p.width * width;
-                        wrapText(targetCtx, value, x, y, maxWidth, p.lineHeight);
+                        
+                        // Calculate x position based on alignment
+                        let textX = x;
+                        if (p.align === 'center') {
+                            textX = x + (p.width * width) / 2;
+                        } else if (p.align === 'right') {
+                            textX = x + (p.width * width);
+                        }
+                        
+                        wrapText(targetCtx, value, textX, y, maxWidth, p.lineHeight);
                     }
                 }
             };
@@ -542,28 +723,149 @@
                 }
                 context.fillText(line, x, currentY);
             };
-            const loadImage = (src) => new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = "Anonymous";
-                img.onload = () => resolve(img);
-                img.onerror = (e) => {
-                    console.error("Original image failed to load:", e);
-                    // Try using a proxy service if direct loading fails
-                    // Only attempt for external URLs (not data URLs)
-                    if (src.startsWith('http')) {
-                        console.log("Trying with CORS proxy for:", src);
-                        const proxyImg = new Image();
-                        proxyImg.crossOrigin = "Anonymous";
-                        proxyImg.onload = () => resolve(proxyImg);
-                        proxyImg.onerror = reject;
-                        // Using a more reliable CORS proxy service
-                        proxyImg.src = `https://corsproxy.io/?${encodeURIComponent(src)}`;
+            const loadImage = async (src) => {
+                // If this looks like a photo number and we have a photo folder loaded, try to match it
+                if (photoFolderLoaded && /^\d+$/.test(String(src).trim())) {
+                    const photoFile = getPhotoByNumber(src);
+                    if (photoFile) {
+                        try {
+                            const dataURL = await createPhotoDataURL(photoFile);
+                            console.log(`Successfully loaded photo for number ${src}`);
+                            
+                            return new Promise((resolve, reject) => {
+                                const img = new Image();
+                                img.onload = () => resolve(img);
+                                img.onerror = reject;
+                                img.src = dataURL;
+                            });
+                        } catch (error) {
+                            console.error(`Error creating data URL for photo ${src}:`, error);
+                        }
                     } else {
-                        reject(e);
+                        console.warn(`No photo found for number ${src} in loaded folder`);
                     }
-                };
-                img.src = src;
-            });
+                }
+                
+                // Fallback to original loadImage logic for URLs and data URIs
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = "Anonymous";
+                    img.onload = () => resolve(img);
+                    img.onerror = (e) => {
+                        console.error("Original image failed to load:", e);
+                        // Try using a proxy service if direct loading fails
+                        // Only attempt for external URLs (not data URLs)
+                        if (src.toString().startsWith('http')) {
+                            console.log("Trying with CORS proxy for:", src);
+                            const proxyImg = new Image();
+                            proxyImg.crossOrigin = "Anonymous";
+                            proxyImg.onload = () => resolve(proxyImg);
+                            proxyImg.onerror = reject;
+                            // Using a more reliable CORS proxy service
+                            proxyImg.src = `https://corsproxy.io/?${encodeURIComponent(src)}`;
+                        } else {
+                            reject(e);
+                        }
+                    };
+                    img.src = src;
+                });
+            };
+            // --- Photo Folder Management ---
+            const processPhotoFolder = (files) => {
+                photoFiles.clear();
+                let validPhotoCount = 0;
+                
+                for (const file of files) {
+                    // Check if it's an image file
+                    if (file.type.startsWith('image/')) {
+                        // Extract number from filename (remove extension and non-numeric characters)
+                        const fileName = file.name;
+                        const nameWithoutExt = fileName.split('.')[0];
+                        
+                        // Try to extract a number from the filename
+                        const numberMatch = nameWithoutExt.match(/\d+/);
+                        if (numberMatch) {
+                            const photoNumber = numberMatch[0];
+                            photoFiles.set(photoNumber, file);
+                            validPhotoCount++;
+                            
+                            console.log(`Mapped photo number ${photoNumber} to file ${fileName}`);
+                        }
+                    }
+                }
+                
+                photoFolderLoaded = validPhotoCount > 0;
+                
+                // Update UI
+                if (photoFolderLoaded) {
+                    photoFolderStatus.classList.remove('hidden');
+                    photoCount.textContent = `Found ${validPhotoCount} photos ready for matching`;
+                    
+                    console.log(`Photo folder loaded with ${validPhotoCount} photos`);
+                    console.log('Photo numbers available:', Array.from(photoFiles.keys()).sort().join(', '));
+                } else {
+                    photoFolderStatus.classList.add('hidden');
+                    alert('No valid photos found. Please ensure photos are named with numbers (e.g., 3956.jpg)');
+                }
+            };
+            
+            const getPhotoByNumber = (photoNumber) => {
+                // Convert to string and try different variations
+                const numberStr = String(photoNumber).trim();
+                
+                // Try exact match first
+                if (photoFiles.has(numberStr)) {
+                    return photoFiles.get(numberStr);
+                }
+                
+                // Try with leading zeros removed
+                const withoutLeadingZeros = numberStr.replace(/^0+/, '') || '0';
+                if (photoFiles.has(withoutLeadingZeros)) {
+                    return photoFiles.get(withoutLeadingZeros);
+                }
+                
+                // Try with leading zeros added (common in some numbering systems)
+                const withLeadingZeros = numberStr.padStart(4, '0');
+                if (photoFiles.has(withLeadingZeros)) {
+                    return photoFiles.get(withLeadingZeros);
+                }
+                
+                console.warn(`Photo not found for number: ${photoNumber}`);
+                return null;
+            };
+            
+            const createPhotoDataURL = async (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            // --- Synchronization Function ---
+            const syncPlaceholderWrappers = () => {
+                // Ensure placeholder wrappers exactly match canvas position and size
+                [frontCanvasWrapper, backCanvasWrapper].forEach((wrapper, index) => {
+                    const canvas = wrapper.querySelector('canvas');
+                    const placeholderWrapper = wrapper.querySelector('[id*="placeholder-wrapper"]');
+                    
+                    if (canvas && placeholderWrapper) {
+                        const canvasRect = canvas.getBoundingClientRect();
+                        const wrapperRect = wrapper.getBoundingClientRect();
+                        
+                        // Position placeholder wrapper to exactly match canvas
+                        placeholderWrapper.style.position = 'absolute';
+                        placeholderWrapper.style.left = '0px';
+                        placeholderWrapper.style.top = '0px';
+                        placeholderWrapper.style.width = `${canvas.offsetWidth}px`;
+                        placeholderWrapper.style.height = `${canvas.offsetHeight}px`;
+                        placeholderWrapper.style.transform = canvas.style.transform || '';
+                        placeholderWrapper.style.transformOrigin = canvas.style.transformOrigin || '';
+                    }
+                });
+            };
+
             // --- Placeholder Management ---
             const addPlaceholder = (pData) => {
                 // Include shape property for photo placeholders and QR codes
@@ -579,6 +881,7 @@
                     lineHeight: 18, 
                     color: '#000000', 
                     align: 'left',
+                    fontFamily: 'Inter',
                     shape: 'square', // Default shape for photos
                     qrColor: '#000000' // Default QR code color
                 };
@@ -587,17 +890,24 @@
                 setActivePlaceholder(newPlaceholder.id);
             };
             const renderPlaceholders = () => {
+                // First sync the wrapper positioning
+                syncPlaceholderWrappers();
+                
                 const renderSide = (side) => {
                     const wrapper = side === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                     wrapper.innerHTML = '';
+                    
                     placeholders[side].forEach(p => {
                         const el = document.createElement('div');
                         el.id = p.id;
                         el.className = `placeholder ${p.type}-placeholder ${p.id === activePlaceholderId ? 'active' : ''}`;
+                        
+                        // Use percentage positioning to match canvas exactly
                         el.style.left = `${p.x * 100}%`;
                         el.style.top = `${p.y * 100}%`;
                         el.style.width = `${p.width * 100}%`;
                         el.style.height = `${p.height * 100}%`;
+                        el.style.position = 'absolute';
                                                 
                         const displayText = p.staticText ? p.staticText : `{{${p.key}}}`;
                         if (p.type === 'qr') {
@@ -620,11 +930,18 @@
                         const deleteBtn = document.createElement('button');
                         deleteBtn.className = 'delete-btn';
                         deleteBtn.innerHTML = '×';
+                        deleteBtn.title = 'Delete this field';
+                        deleteBtn.type = 'button'; // Prevent form submission
                         deleteBtn.onclick = (e) => {
+                            e.preventDefault();
                             e.stopPropagation();
+                            console.log('Deleting placeholder:', p.id);
                             placeholders[side] = placeholders[side].filter(pl => pl.id !== p.id);
-                            if (activePlaceholderId === p.id) setActivePlaceholder(null);
-                            else renderPlaceholders();
+                            if (activePlaceholderId === p.id) {
+                                setActivePlaceholder(null);
+                            }
+                            renderPlaceholders();
+                            drawAllCanvases(); // Redraw canvas after deletion
                         };
                         el.appendChild(deleteBtn);
                                                 
@@ -668,6 +985,17 @@
                             <div><label class="block text-sm font-medium">Font Size</label><input type="number" value="${p.fontSize}" oninput="updatePlaceholderProp('${p.id}', 'fontSize', this.value)" class="w-full p-2 border rounded"></div>
                             <div><label class="block text-sm font-medium">Color</label><input type="color" value="${p.color}" oninput="updatePlaceholderProp('${p.id}', 'color', this.value)" class="w-full p-2 h-10 border rounded"></div>
                             <div><label class="block text-sm font-medium">Line Height</label><input type="number" value="${p.lineHeight}" oninput="updatePlaceholderProp('${p.id}', 'lineHeight', this.value)" class="w-full p-2 border rounded"></div>
+                            <div><label class="block text-sm font-medium">Font Family</label>
+                                <select onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded">
+                                    <option value="Inter" ${(p.fontFamily || 'Inter') === 'Inter' ? 'selected' : ''}>Inter (Default)</option>
+                                    <option value="Arial" ${p.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>
+                                    <option value="Times New Roman" ${p.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
+                                    <option value="Helvetica" ${p.fontFamily === 'Helvetica' ? 'selected' : ''}>Helvetica</option>
+                                    <option value="Georgia" ${p.fontFamily === 'Georgia' ? 'selected' : ''}>Georgia</option>
+                                    <option value="Verdana" ${p.fontFamily === 'Verdana' ? 'selected' : ''}>Verdana</option>
+                                    <option value="Courier New" ${p.fontFamily === 'Courier New' ? 'selected' : ''}>Courier New</option>
+                                </select>
+                            </div>
                         </div>
                         <div><label class="block text-sm font-medium">Alignment</label><div class="flex justify-around bg-gray-100 rounded-lg p-1">
                             <button onclick="updatePlaceholderProp('${p.id}', 'align', 'left')" class="px-3 py-1 rounded ${p.align === 'left' ? 'bg-blue-500 text-white' : ''}">Left</button>
@@ -712,6 +1040,10 @@
                             drawAllCanvases();
                         }
                     }
+                    // Redraw canvas when font properties change
+                    if(prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight') {
+                        drawAllCanvases();
+                    }
                 }
             };
             // --- Interaction Logic ---
@@ -723,8 +1055,27 @@
                 if (activePlaceholderId !== target.id) setActivePlaceholder(target.id);
                 const elementToDrag = document.getElementById(target.id);
                 if (!elementToDrag) return;
-                dragOffsetX = e.clientX - elementToDrag.getBoundingClientRect().left;
-                dragOffsetY = e.clientY - elementToDrag.getBoundingClientRect().top;
+                
+                // Get the current element's position relative to its wrapper
+                const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
+                const wrapperRect = wrapper.getBoundingClientRect();
+                const elementRect = elementToDrag.getBoundingClientRect();
+                
+                // Get the current scale from the wrapper's transform
+                const transform = wrapper.style.transform;
+                let scale = 1;
+                if (transform && transform.includes('scale(')) {
+                    const scaleMatch = transform.match(/scale\(([^)]+)\)/);
+                    if (scaleMatch) {
+                        scale = parseFloat(scaleMatch[1]);
+                    }
+                }
+                
+                // Calculate offset from mouse to element's top-left corner
+                // Account for scale factor in the offset calculation
+                dragOffsetX = (e.clientX - elementRect.left) / scale;
+                dragOffsetY = (e.clientY - elementRect.top) / scale;
+                
                 document.addEventListener('mousemove', onDragMove);
                 document.addEventListener('mouseup', onDragEnd);
             };
@@ -733,10 +1084,33 @@
                 if (!activeEl) return;
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                 const wrapperRect = wrapper.getBoundingClientRect();
-                let x = e.clientX - wrapperRect.left - dragOffsetX;
-                let y = e.clientY - wrapperRect.top - dragOffsetY;
-                x = Math.max(0, Math.min(x, wrapperRect.width - activeEl.offsetWidth));
-                y = Math.max(0, Math.min(y, wrapperRect.height - activeEl.offsetHeight));
+                
+                // Get the current scale from the wrapper's transform
+                const transform = wrapper.style.transform;
+                let scale = 1;
+                if (transform && transform.includes('scale(')) {
+                    const scaleMatch = transform.match(/scale\(([^)]+)\)/);
+                    if (scaleMatch) {
+                        scale = parseFloat(scaleMatch[1]);
+                    }
+                }
+                
+                // Calculate new position based on mouse position minus offset
+                // Since dragOffset is already scaled, we apply scale to the mouse position calculation
+                let x = (e.clientX - wrapperRect.left) / scale - dragOffsetX;
+                let y = (e.clientY - wrapperRect.top) / scale - dragOffsetY;
+                
+                // Use the unscaled wrapper dimensions for constraints
+                const unscaledWidth = wrapperRect.width / scale;
+                const unscaledHeight = wrapperRect.height / scale;
+                
+                // More permissive constraints - allow movement across full wrapper area
+                const elementWidth = activeEl.offsetWidth;
+                const elementHeight = activeEl.offsetHeight;
+                x = Math.max(-elementWidth * 0.8, Math.min(x, unscaledWidth - elementWidth * 0.2));
+                y = Math.max(-elementHeight * 0.8, Math.min(y, unscaledHeight - elementHeight * 0.2));
+                
+                // Apply position immediately without percentage conversion
                 activeEl.style.left = `${x}px`;
                 activeEl.style.top = `${y}px`;
             };
@@ -747,8 +1121,30 @@
                     if (pData) {
                         const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                         const wrapperRect = wrapper.getBoundingClientRect();
-                        pData.x = activeEl.offsetLeft / wrapperRect.width;
-                        pData.y = activeEl.offsetTop / wrapperRect.height;
+                        
+                        // Get the current scale from the wrapper's transform
+                        const transform = wrapper.style.transform;
+                        let scale = 1;
+                        if (transform && transform.includes('scale(')) {
+                            const scaleMatch = transform.match(/scale\(([^)]+)\)/);
+                            if (scaleMatch) {
+                                scale = parseFloat(scaleMatch[1]);
+                            }
+                        }
+                        
+                        // Use the unscaled wrapper dimensions for percentage calculation
+                        const unscaledWidth = wrapperRect.width / scale;
+                        const unscaledHeight = wrapperRect.height / scale;
+                        
+                        // Update placeholder data with final position as percentages
+                        pData.x = activeEl.offsetLeft / unscaledWidth;
+                        pData.y = activeEl.offsetTop / unscaledHeight;
+                        
+                        // Immediately sync with canvas rendering
+                        drawAllCanvases();
+                        
+                        // Also update the placeholder display to match exactly
+                        renderPlaceholders();
                     }
                 }
                 document.removeEventListener('mousemove', onDragMove);
@@ -769,12 +1165,22 @@
                 if (!activeEl || !pData) return;
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                 const wrapperRect = wrapper.getBoundingClientRect();
-                const newWidth = e.clientX - activeEl.getBoundingClientRect().left;
-                const newHeight = e.clientY - activeEl.getBoundingClientRect().top;
+                
+                // Calculate new dimensions based on mouse position
+                const elementRect = activeEl.getBoundingClientRect();
+                const newWidth = Math.max(20, e.clientX - elementRect.left);
+                const newHeight = Math.max(20, e.clientY - elementRect.top);
+                
+                // Update placeholder data immediately
                 pData.width = Math.max(20 / wrapperRect.width, newWidth / wrapperRect.width);
                 pData.height = Math.max(20 / wrapperRect.height, newHeight / wrapperRect.height);
-                renderPlaceholders();
-                renderEditPanel();
+                
+                // Update visual representation
+                activeEl.style.width = `${pData.width * 100}%`;
+                activeEl.style.height = `${pData.height * 100}%`;
+                
+                // Update canvas in real-time
+                drawAllCanvases();
             };
             const onResizeEnd = () => {
                 isResizing = false;
@@ -846,20 +1252,105 @@
                 const isHorizontal = newOrientation === 'horizontal';
                 const newW = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
                 const newH = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                
+                // Reset canvas dimensions and styles
                 [frontCanvas, backCanvas].forEach(c => {
                     c.width = newW;
                     c.height = newH;
+                    c.style.transform = '';
                 });
+                
+                // Reset wrapper styles
                 [frontCanvasWrapper, backCanvasWrapper].forEach(w => {
                     w.style.aspectRatio = `${newW} / ${newH}`;
+                    w.style.width = '';
+                    w.style.height = '';
                 });
+                
+                // Reset placeholder wrapper styles
+                [frontPlaceholderWrapper, backPlaceholderWrapper].forEach(w => {
+                    w.style.transform = '';
+                });
+                
+                // Update orientation buttons
                 orientationHorizontalBtn.classList.toggle('bg-blue-500', isHorizontal);
                 orientationHorizontalBtn.classList.toggle('text-white', isHorizontal);
                 orientationVerticalBtn.classList.toggle('bg-blue-500', !isHorizontal);
                 orientationVerticalBtn.classList.toggle('text-white', !isHorizontal);
+                
+                // Redraw canvases with new dimensions
                 drawAllCanvases();
                 renderPlaceholders();
+                
+                // Reapply current zoom level
+                const currentZoom = zoomSelect.value === 'actual' ? 'actual' : parseFloat(zoomSelect.value);
+                applyZoom(currentZoom);
             };
+            // --- Zoom Management ---
+            const applyZoom = (zoomLevel) => {
+                let actualZoom = zoomLevel;
+                
+                // Calculate actual card size if "actual" is selected
+                if (zoomLevel === 'actual') {
+                    // Standard ID card size: 85.6mm x 54mm (3.375" x 2.125")
+                    // Convert to pixels assuming 96 DPI (standard screen DPI)
+                    const actualCardWidthPx = (85.6 / 25.4) * 96;  // ~325px
+                    const actualCardHeightPx = (54 / 25.4) * 96;   // ~204px
+                    
+                    // For better viewing experience, let's use a more reasonable "actual size"
+                    // that represents the card at a good viewing scale rather than tiny physical size
+                    const canvasWidth = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                    const canvasHeight = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                    
+                    // Instead of true physical size, use a proportion that makes the card 
+                    // appear at a reasonable viewing size (roughly 60% of canvas)
+                    actualZoom = 0.6;
+                    
+                    console.log(`Actual size view: Canvas ${canvasWidth}x${canvasHeight}, Zoom: ${actualZoom}`);
+                }
+                
+                [frontCanvasWrapper, backCanvasWrapper].forEach(wrapper => {
+                    const canvas = wrapper.querySelector('canvas');
+                    const placeholderWrapper = wrapper.querySelector('[id*="placeholder-wrapper"]');
+                    
+                    // Reset any previous transforms first
+                    canvas.style.transform = '';
+                    placeholderWrapper.style.transform = '';
+                    wrapper.style.width = '';
+                    wrapper.style.height = '';
+                    
+                    // Apply zoom transform
+                    canvas.style.transform = `scale(${actualZoom})`;
+                    canvas.style.transformOrigin = 'top left';
+                    placeholderWrapper.style.transform = `scale(${actualZoom})`;
+                    placeholderWrapper.style.transformOrigin = 'top left';
+                    
+                    // Adjust wrapper size to accommodate zoom
+                    const baseWidth = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                    const baseHeight = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                    
+                    wrapper.style.width = `${baseWidth * actualZoom}px`;
+                    wrapper.style.height = `${baseHeight * actualZoom + 60}px`; // +60 for title
+                    
+                    // Remove any existing size notes
+                    const existingSizeNote = wrapper.querySelector('.size-note');
+                    if (existingSizeNote) {
+                        existingSizeNote.remove();
+                    }
+                    
+                    // Add a note for actual size
+                    if (zoomLevel === 'actual') {
+                        const sizeNote = document.createElement('div');
+                        sizeNote.className = 'size-note text-xs text-green-600 font-semibold text-center mt-2';
+                        sizeNote.textContent = '📏 Optimized viewing size for card design';
+                        wrapper.appendChild(sizeNote);
+                    }
+                });
+                
+                // Sync placeholder wrappers after zoom changes
+                syncPlaceholderWrappers();
+            };
+            
             // --- Event Listeners ---
             const setupBgImageInput = (input, side) => {
                 input.addEventListener('change', (e) => {
@@ -873,6 +1364,14 @@
             };
             setupBgImageInput(bgImageFrontInput, 'front');
             setupBgImageInput(bgImageBackInput, 'back');
+            
+            // Photo folder input handler
+            photoFolderInput.addEventListener('change', (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length > 0) {
+                    processPhotoFolder(files);
+                }
+            });
             dataFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -998,6 +1497,10 @@
             frontCanvasWrapper.addEventListener('click', () => setActiveSide('front'));
             backCanvasWrapper.addEventListener('click', () => setActiveSide('back'));
             addTextBtn.addEventListener('click', () => addPlaceholder({ key: fieldNameInput.value || 'New Text', type: 'text' }));
+            addLabelBtn.addEventListener('click', () => {
+                const labelText = fieldNameInput.value || prompt('Enter label text (e.g., "Name:", "ID:")') || 'Label:';
+                addPlaceholder({ key: 'label', type: 'text', staticText: labelText });
+            });
             addPhotoBtn.addEventListener('click', () => addPlaceholder({ key: fieldNameInput.value || 'New Photo', type: 'photo', shape: 'circle' }));
             addQrBtn.addEventListener('click', () => {
                 // Get the field from the QR select dropdown or fall back to the input field if empty
@@ -1025,6 +1528,12 @@
                 // Log to help with debugging
                 console.log(`Added QR code for field: ${qrField}`);
                 console.log(`Available data fields: ${headers.join(', ')}`);
+            });
+            
+            // Zoom control
+            zoomSelect.addEventListener('change', (e) => {
+                const zoomLevel = e.target.value === 'actual' ? 'actual' : parseFloat(e.target.value);
+                applyZoom(zoomLevel);
             });
             // QR Code button event handler already defined above
                         
@@ -1182,6 +1691,95 @@
                 }
             });
             
+            // --- Image Helper Functions ---
+            const convertImagesToDataUrls = async () => {
+                const files = imageConverterInput.files;
+                if (files.length === 0) {
+                    alert("Please select at least one image file.");
+                    return;
+                }
+                
+                const conversions = [];
+                let completed = 0;
+                
+                // Show progress
+                conversionOutput.classList.remove('hidden');
+                convertedList.innerHTML = '<div class="text-blue-600">Converting images...</div>';
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    
+                    // Create a promise for each file conversion
+                    const conversionPromise = new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        
+                        reader.onload = (e) => {
+                            const dataUrl = e.target.result;
+                            const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+                            
+                            conversions.push({
+                                originalName: file.name,
+                                fileName: fileName,
+                                dataUrl: dataUrl,
+                                size: Math.round(file.size / 1024) + ' KB'
+                            });
+                            
+                            completed++;
+                            convertedList.innerHTML = `<div class="text-blue-600">Converting... ${completed}/${files.length}</div>`;
+                            
+                            resolve();
+                        };
+                        
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                    
+                    await conversionPromise;
+                }
+                
+                // Create CSV content
+                let csvContent = 'Name,ID,Position,Photo\n'; // Header row
+                
+                conversions.forEach((conversion, index) => {
+                    const sampleName = `Student ${index + 1}`;
+                    const sampleID = `ID${(index + 1).toString().padStart(3, '0')}`;
+                    const samplePosition = 'Student';
+                    
+                    // Escape quotes in data URL and wrap in quotes
+                    const escapedDataUrl = '"' + conversion.dataUrl.replace(/"/g, '""') + '"';
+                    
+                    csvContent += `${sampleName},${sampleID},${samplePosition},${escapedDataUrl}\n`;
+                });
+                
+                // Create and download CSV file
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'ID_Card_Data_with_Photos.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                // Show summary
+                convertedList.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="text-green-600 font-semibold">✅ Conversion completed!</div>
+                        <div class="text-sm text-gray-600">Converted ${conversions.length} images</div>
+                        <div class="text-sm text-gray-600">CSV file downloaded with sample data</div>
+                        <div class="text-xs text-gray-500 mt-2 p-2 bg-yellow-50 rounded">
+                            <strong>Next steps:</strong><br>
+                            1. Edit the downloaded CSV with real student data<br>
+                            2. Upload the edited CSV to this generator<br>
+                            3. Images will display properly in your ID cards
+                        </div>
+                    </div>
+                `;
+                
+                alert(`Successfully converted ${conversions.length} images!\n\nA CSV file has been downloaded with your photos embedded. Edit the file with real student data, then upload it back to the generator.`);
+            };
+            
             // --- Layout Management ---
             const saveLayout = () => {
                 const layoutName = layoutNameInput.value.trim();
@@ -1190,13 +1788,17 @@
                     return;
                 }
                 
-                // Create an object with all layout data
+                // Create an object with all layout data including backgrounds
                 const layoutData = {
                     name: layoutName,
                     orientation: orientation,
                     placeholders: {
                         front: placeholders.front,
                         back: placeholders.back
+                    },
+                    backgrounds: {
+                        front: bgImages.front.src,
+                        back: bgImages.back.src
                     },
                     dateCreated: new Date().toISOString()
                 };
@@ -1213,7 +1815,7 @@
                 // Update the dropdown
                 updateLayoutSelect();
                 
-                alert(`Layout "${layoutName}" saved successfully!`);
+                alert(`Layout "${layoutName}" saved successfully with background designs!`);
             };
             
             const loadLayout = (layoutName) => {
@@ -1232,11 +1834,21 @@
                 placeholders.front = JSON.parse(JSON.stringify(layout.placeholders.front));
                 placeholders.back = JSON.parse(JSON.stringify(layout.placeholders.back));
                 
+                // Load background images if they exist
+                if (layout.backgrounds) {
+                    if (layout.backgrounds.front) {
+                        bgImages.front.src = layout.backgrounds.front;
+                    }
+                    if (layout.backgrounds.back) {
+                        bgImages.back.src = layout.backgrounds.back;
+                    }
+                }
+                
                 // Redraw everything
                 renderPlaceholders();
                 drawAllCanvases();
                 
-                alert(`Layout "${layoutName}" loaded successfully!`);
+                alert(`Layout "${layoutName}" loaded successfully with backgrounds!`);
             };
             
             const updateLayoutSelect = () => {
@@ -1256,6 +1868,9 @@
                     layoutSelect.appendChild(option);
                 }
             };
+            
+            // --- Image Helper Event Listeners ---
+            convertImagesBtn.addEventListener('click', convertImagesToDataUrls);
             
             // --- Event Listeners for Layout Management ---
             saveLayoutBtn.addEventListener('click', saveLayout);
@@ -1414,9 +2029,17 @@
                 [frontCanvas, backCanvas].forEach(c => {
                     c.width = w;
                     c.height = h;
+                    c.style.transform = ''; // Reset any transforms
                 });
-                [frontCanvasWrapper, backCanvasWrapper].forEach(w => {
-                    w.style.aspectRatio = `${HORIZONTAL_WIDTH} / ${HORIZONTAL_HEIGHT}`;
+                [frontCanvasWrapper, backCanvasWrapper].forEach(wrapper => {
+                    wrapper.style.aspectRatio = `${HORIZONTAL_WIDTH} / ${HORIZONTAL_HEIGHT}`;
+                    wrapper.style.width = ''; // Reset width
+                    wrapper.style.height = ''; // Reset height
+                });
+                
+                // Reset placeholder wrapper styles
+                [frontPlaceholderWrapper, backPlaceholderWrapper].forEach(w => {
+                    w.style.transform = '';
                 });
                 
                 // Setup background image loading
@@ -1433,6 +2056,9 @@
                 
                 // Load saved layouts into the dropdown
                 updateLayoutSelect();
+                
+                // Apply default zoom
+                applyZoom(0.7);
                 
                 // Create basic demo data if needed
                 if (data.length === 0) {
