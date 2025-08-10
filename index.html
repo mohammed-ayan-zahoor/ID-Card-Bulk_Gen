@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,16 +15,20 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+
         .step-card {
             transition: all 0.3s ease;
         }
+
         .canvas-wrapper {
             border: 4px solid transparent;
             transition: border-color 0.3s ease;
         }
+
         .canvas-wrapper.active {
             border-color: #ec4899;
         }
+
         .placeholder {
             position: absolute;
             border: 2px dashed #3b82f6;
@@ -35,6 +40,7 @@
             min-width: 20px;
             min-height: 20px;
         }
+
         .placeholder.text-placeholder {
             color: #1e40af;
             font-weight: 500;
@@ -42,6 +48,7 @@
             align-items: flex-start;
             justify-content: flex-start;
         }
+
         .placeholder.photo-placeholder {
             border-style: solid;
             border-color: #16a34a;
@@ -51,6 +58,7 @@
             align-items: center;
             justify-content: center;
         }
+
         .placeholder.qr-placeholder {
             border-style: solid;
             border-color: #9333ea;
@@ -61,6 +69,7 @@
             justify-content: center;
             position: relative;
         }
+
         .qr-placeholder-preview {
             font-weight: 500;
             text-align: center;
@@ -79,9 +88,11 @@
             background-color: rgba(219, 39, 119, 0.2);
             z-index: 10;
         }
+
         .placeholder.active .resize-handle {
             display: block;
         }
+
         .delete-btn {
             position: absolute;
             top: -8px;
@@ -103,13 +114,15 @@
             z-index: 100;
             pointer-events: auto;
             font-size: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
+
         .placeholder:hover .delete-btn,
         .placeholder.active .delete-btn {
             opacity: 1;
             transform: scale(1.1);
         }
+
         .resize-handle {
             position: absolute;
             bottom: 0;
@@ -122,18 +135,20 @@
             display: none;
             z-index: 15;
         }
+
         .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 1000;
         }
+
         .modal-content {
             background: white;
             padding: 2rem;
@@ -143,86 +158,126 @@
         }
     </style>
 </head>
+
 <body class="bg-gray-100 text-gray-800">
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-900">AI-Powered ID Card Generator</h1>
-            <p class="text-base md:text-lg text-gray-600 mt-2">Design both sides of your card, upload data, and generate print-ready sheets.</p>
+            <p class="text-base md:text-lg text-gray-600 mt-2">Design both sides of your card, upload data, and generate
+                print-ready sheets.</p>
         </header>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Controls Column -->
             <div class="lg:col-span-1 space-y-6">
                 <!-- Step 1: Card Design -->
                 <div id="step1" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4"><span class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">1</span><h2 class="text-xl sm:text-2xl font-semibold">Card Setup</h2></div>
-                    <p class="text-gray-600 mb-4">Choose an orientation. Default designs are provided, which you can replace.</p>
-                                        
+                    <div class="flex items-center mb-4"><span
+                            class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">1</span>
+                        <h2 class="text-xl sm:text-2xl font-semibold">Card Setup</h2>
+                    </div>
+                    <p class="text-gray-600 mb-4">Choose an orientation. Default designs are provided, which you can
+                        replace.</p>
+
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Orientation</label>
                         <div class="flex justify-around bg-gray-100 rounded-lg p-1">
-                            <button id="orientation-horizontal-btn" class="w-full px-3 py-2 rounded-md bg-blue-500 text-white">Horizontal</button>
+                            <button id="orientation-horizontal-btn"
+                                class="w-full px-3 py-2 rounded-md bg-blue-500 text-white">Horizontal</button>
                             <button id="orientation-vertical-btn" class="w-full px-3 py-2 rounded-md">Vertical</button>
                         </div>
                     </div>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Front Design</label>
-                            <input type="file" id="bg-image-front-input" accept="image/jpeg, image/png" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            <input type="file" id="bg-image-front-input" accept="image/jpeg, image/png"
+                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Back Design</label>
-                            <input type="file" id="bg-image-back-input" accept="image/jpeg, image/png" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            <input type="file" id="bg-image-back-input" accept="image/jpeg, image/png"
+                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                         </div>
                     </div>
                 </div>
                 <!-- Step 2: Upload Data -->
                 <div id="step2" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4"><span class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">2</span><h2 class="text-xl sm:text-2xl font-semibold">Upload Data</h2></div>
+                    <div class="flex items-center mb-4"><span
+                            class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">2</span>
+                        <h2 class="text-xl sm:text-2xl font-semibold">Upload Data</h2>
+                    </div>
                     <p class="text-gray-600 mb-4">Upload your Excel (.xlsx) or CSV file.</p>
-                    <input type="file" id="data-file-input" accept=".xlsx, .csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                    
+                    <input type="file" id="data-file-input" accept=".xlsx, .csv"
+                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+
                     <!-- Photo Tips -->
                     <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                         <div class="flex items-start">
                             <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                <path fill-rule="evenodd"
+                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                    clip-rule="evenodd"></path>
                             </svg>
                             <div class="text-sm text-blue-800">
                                 <strong>Photo Tips:</strong><br>
-                                • If your Excel has a Photo column with numbers (e.g., 3956, 1234), use the Photo Folder feature below<br>
+                                • If your Excel has a Photo column with numbers (e.g., 3956, 1234), use the Photo Folder
+                                feature below<br>
                                 • For full image URLs/paths, those will work directly in the Excel file
                             </div>
                         </div>
                     </div>
                 </div>
-                                
+
                 <!-- Step 3: AI/Manual Design -->
                 <div id="step3" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4"><span class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">3</span><h2 class="text-xl sm:text-2xl font-semibold">Design Card</h2></div>
-                    <p class="text-gray-600 mb-4">Click on a canvas (Front/Back) to edit it. Use AI or add fields manually.</p>
-                    <div id="ai-controls" class="space-y-3 opacity-50">
-                        <button id="ai-layout-btn" class="w-full bg-teal-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-600 transition-colors flex items-center justify-center" disabled>✨ Suggest Layout</button>
-                        <button id="ai-title-btn" class="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors flex items-center justify-center" disabled>✨ Generate Title</button>
-                        <button id="add-all-headers-btn" class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center" disabled>Add All Data Fields</button>
+                    <div class="flex items-center mb-4"><span
+                            class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">3</span>
+                        <h2 class="text-xl sm:text-2xl font-semibold">Design Card</h2>
                     </div>
-                     <hr class="my-4">
+                    <p class="text-gray-600 mb-4">Click on a canvas (Front/Back) to edit it. Use AI or add fields
+                        manually.</p>
+                    <div id="ai-controls" class="space-y-3 opacity-50">
+                        <button id="ai-layout-btn"
+                            class="w-full bg-teal-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-600 transition-colors flex items-center justify-center"
+                            disabled>✨ Suggest Layout</button>
+                        <button id="ai-title-btn"
+                            class="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors flex items-center justify-center"
+                            disabled>✨ Generate Title</button>
+                        <button id="add-all-headers-btn"
+                            class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center"
+                            disabled>Add All Data Fields</button>
+                    </div>
+                    <hr class="my-4">
                     <div id="add-placeholder-controls" class="space-y-4">
                         <div>
-                            <label for="field-name-input" class="block text-sm font-medium text-gray-700 mb-1">Field Name:</label>
-                            <input type="text" id="field-name-input" placeholder="e.g., FullName, Address" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <label for="field-name-input" class="block text-sm font-medium text-gray-700 mb-1">Field
+                                Name:</label>
+                            <input type="text" id="field-name-input" placeholder="e.g., FullName, Address"
+                                class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
-                        <button id="add-text-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Add Text Field</button>
-                        <button id="add-label-btn" class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">Add Label (Static Text)</button>
-                        <button id="add-photo-btn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Add Photo Field</button>
-                        
+                        <button id="add-text-btn"
+                            class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Add
+                            Text Field</button>
+                        <button id="add-label-btn"
+                            class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">Add
+                            Label (Static Text)</button>
+                        <button id="add-photo-btn"
+                            class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Add
+                            Photo Field</button>
+
                         <!-- QR Code Field Selection -->
-                        <div id="qr-field-container" class="border border-purple-300 rounded-md p-3 bg-purple-50 opacity-70">
-                            <label for="qr-field-select" class="block text-sm font-medium text-purple-700 mb-1">QR Code Field:</label>
-                            <select id="qr-field-select" class="w-full p-2 border border-purple-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 mb-2" disabled>
+                        <div id="qr-field-container"
+                            class="border border-purple-300 rounded-md p-3 bg-purple-50 opacity-70">
+                            <label for="qr-field-select" class="block text-sm font-medium text-purple-700 mb-1">QR Code
+                                Field:</label>
+                            <select id="qr-field-select"
+                                class="w-full p-2 border border-purple-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 mb-2"
+                                disabled>
                                 <option value="">Upload data to see fields</option>
                                 <!-- Options will be populated when data is loaded -->
                             </select>
-                            <button id="add-qr-btn" class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">Add QR Code</button>
+                            <button id="add-qr-btn"
+                                class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">Add
+                                QR Code</button>
                         </div>
                     </div>
                 </div>
@@ -234,20 +289,25 @@
                 <!-- Photo Folder Selection -->
                 <div id="photo-folder-tool" class="bg-white p-6 rounded-xl shadow-md step-card">
                     <div class="flex items-center mb-4">
-                        <span class="bg-orange-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">📁</span>
+                        <span
+                            class="bg-orange-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">📁</span>
                         <h2 class="text-xl sm:text-2xl font-semibold">Photo Folder</h2>
                     </div>
-                    <p class="text-gray-600 mb-4">Select folder containing photos. Photos will be matched by number (e.g., 3956.jpg matches Excel value "3956")</p>
+                    <p class="text-gray-600 mb-4">Select folder containing photos. Photos will be matched by number
+                        (e.g., 3956.jpg matches Excel value "3956")</p>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Select Photo Folder:</label>
-                            <input type="file" id="photo-folder-input" webkitdirectory multiple class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+                            <input type="file" id="photo-folder-input" webkitdirectory multiple
+                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
                         </div>
                         <div id="photo-folder-status" class="hidden">
                             <div class="p-3 bg-green-50 border border-green-200 rounded-md">
                                 <div class="flex items-center">
                                     <svg class="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                        <path fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clip-rule="evenodd"></path>
                                     </svg>
                                     <span class="text-green-800 font-medium">Photo folder loaded!</span>
                                 </div>
@@ -260,76 +320,107 @@
                             2. Photos should be named with numbers (e.g., 3956.jpg, 1234.png, 0045.JPG)<br>
                             3. Excel should have photo numbers in the photo column (e.g., 3956, 1234, 45)<br>
                             4. App will automatically match and insert correct photos<br><br>
-                            
+
                             <strong>Supported formats:</strong> JPG, JPEG, PNG, GIF, BMP, WEBP<br>
                             <strong>Name examples:</strong> 3956.jpg, IMG_1234.png, photo0045.JPG, 987.jpeg
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Image Helper Tool -->
                 <div id="image-helper" class="bg-white p-6 rounded-xl shadow-md step-card">
                     <div class="flex items-center mb-4">
-                        <span class="bg-amber-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">�</span>
+                        <span
+                            class="bg-amber-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">�</span>
                         <h2 class="text-xl sm:text-2xl font-semibold">Image Helper</h2>
                     </div>
                     <p class="text-gray-600 mb-4">Convert local images to Excel-compatible format</p>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Images to Convert:</label>
-                            <input type="file" id="image-converter-input" accept="image/*" multiple class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Images to
+                                Convert:</label>
+                            <input type="file" id="image-converter-input" accept="image/*" multiple
+                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
                         </div>
-                        <button id="convert-images-btn" class="w-full bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors">Convert & Download CSV Template</button>
+                        <button id="convert-images-btn"
+                            class="w-full bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors">Convert
+                            & Download CSV Template</button>
                         <div id="conversion-output" class="hidden">
                             <h3 class="font-semibold text-gray-700 mb-2">Converted Images:</h3>
                             <div id="converted-list" class="max-h-40 overflow-y-auto text-xs"></div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Layout Management -->
                 <div id="layout-management" class="bg-white p-6 rounded-xl shadow-md step-card">
                     <div class="flex items-center mb-4">
-                        <span class="bg-green-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">S</span>
+                        <span
+                            class="bg-green-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">S</span>
                         <h2 class="text-xl sm:text-2xl font-semibold">Layout Management</h2>
                     </div>
                     <div class="space-y-4">
                         <div>
-                            <label for="layout-name" class="block text-sm font-medium text-gray-700 mb-1">Layout Name:</label>
-                            <input type="text" id="layout-name" placeholder="e.g., Science Class, Math Class" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-2">
+                            <label for="layout-name" class="block text-sm font-medium text-gray-700 mb-1">Layout
+                                Name:</label>
+                            <input type="text" id="layout-name" placeholder="e.g., Science Class, Math Class"
+                                class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-2">
                         </div>
                         <div class="grid grid-cols-2 gap-2">
-                            <button id="save-layout-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Save Layout</button>
-                            <button id="load-layout-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Load Layout</button>
+                            <button id="save-layout-btn"
+                                class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Save
+                                Layout</button>
+                            <button id="load-layout-btn"
+                                class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Load
+                                Layout</button>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
-                            <button id="export-layouts-btn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Export Layouts</button>
-                            <button id="import-layouts-btn" class="bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors">Import Layouts</button>
+                            <button id="export-layouts-btn"
+                                class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Export
+                                Layouts</button>
+                            <button id="import-layouts-btn"
+                                class="bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors">Import
+                                Layouts</button>
                         </div>
                         <div>
-                            <label for="layout-select" class="block text-sm font-medium text-gray-700 mb-1">Saved Layouts:</label>
+                            <label for="layout-select" class="block text-sm font-medium text-gray-700 mb-1">Saved
+                                Layouts:</label>
                             <div class="flex gap-2">
-                                <select id="layout-select" class="flex-grow p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <select id="layout-select"
+                                    class="flex-grow p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                     <option value="">Select a saved layout...</option>
                                 </select>
-                                <button id="delete-layout-btn" class="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                <button id="delete-layout-btn"
+                                    class="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        class="bi bi-trash" viewBox="0 0 16 16">
+                                        <path
+                                            d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+                                        <path fill-rule="evenodd"
+                                            d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
                                     </svg>
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Step 4: Generate -->
                 <div id="step4" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4"><span class="bg-purple-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">4</span><h2 class="text-xl sm:text-2xl font-semibold">Generate Cards</h2></div>
+                    <div class="flex items-center mb-4"><span
+                            class="bg-purple-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">4</span>
+                        <h2 class="text-xl sm:text-2xl font-semibold">Generate Cards</h2>
+                    </div>
                     <div class="space-y-4">
-                        <button id="preview-btn" class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors" disabled>Preview First Card</button>
-                        <button id="generate-pdf-btn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors text-lg" disabled>Export to A4 PDF</button>
-                        <button id="generate-zip-btn" class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors" disabled>Generate & Download ZIP</button>
+                        <button id="preview-btn"
+                            class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"
+                            disabled>Preview First Card</button>
+                        <button id="generate-pdf-btn"
+                            class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors text-lg"
+                            disabled>Export to A4 PDF</button>
+                        <button id="generate-zip-btn"
+                            class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                            disabled>Generate & Download ZIP</button>
                     </div>
                 </div>
             </div>
@@ -352,23 +443,53 @@
                         </div>
                     </div>
                 </div>
-                
-                <div id="front-canvas-wrapper" class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto active">
+
+                <div id="front-canvas-wrapper"
+                    class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto active">
                     <h3 class="text-center font-bold text-lg sm:text-xl mb-2">FRONT</h3>
                     <canvas id="front-canvas" class="w-full h-full rounded-md bg-gray-200"></canvas>
                     <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full"></div>
                 </div>
-                <div id="back-canvas-wrapper" class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto">
+                <div id="back-canvas-wrapper"
+                    class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto">
                     <h3 class="text-center font-bold text-lg sm:text-xl mb-2">BACK</h3>
                     <canvas id="back-canvas" class="w-full h-full rounded-md bg-gray-200"></canvas>
                     <div id="back-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full"></div>
                 </div>
             </div>
         </div>
-                
+
         <!-- Modals -->
-        <div id="loading-modal" class="modal-overlay hidden"><div class="modal-content flex flex-col items-center"><div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4"></div><p id="loading-text" class="text-lg font-semibold text-gray-700">Thinking...</p><style>.loader { border-top-color: #4f46e5; animation: spinner 1.5s linear infinite; } @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style></div></div>
-        <div id="error-modal" class="modal-overlay hidden"><div class="modal-content"><h3 class="text-2xl font-bold text-red-600 mb-4">Error</h3><p id="error-text" class="text-gray-700"></p><button onclick="document.getElementById('error-modal').classList.add('hidden')" class="mt-6 bg-red-500 text-white font-bold py-2 px-6 rounded-lg">Close</button></div></div>
+        <div id="loading-modal" class="modal-overlay hidden">
+            <div class="modal-content flex flex-col items-center">
+                <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4"></div>
+                <p id="loading-text" class="text-lg font-semibold text-gray-700">Thinking...</p>
+                <style>
+                    .loader {
+                        border-top-color: #4f46e5;
+                        animation: spinner 1.5s linear infinite;
+                    }
+
+                    @keyframes spinner {
+                        0% {
+                            transform: rotate(0deg);
+                        }
+
+                        100% {
+                            transform: rotate(360deg);
+                        }
+                    }
+                </style>
+            </div>
+        </div>
+        <div id="error-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h3 class="text-2xl font-bold text-red-600 mb-4">Error</h3>
+                <p id="error-text" class="text-gray-700"></p><button
+                    onclick="document.getElementById('error-modal').classList.add('hidden')"
+                    class="mt-6 bg-red-500 text-white font-bold py-2 px-6 rounded-lg">Close</button>
+            </div>
+        </div>
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -423,7 +544,7 @@
             const orientationVerticalBtn = document.getElementById('orientation-vertical-btn');
             const qrFieldSelect = document.getElementById('qr-field-select');
             const zoomSelect = document.getElementById('zoom-select');
-            
+
             // --- State ---
             let bgImages = { front: new Image(), back: new Image() };
             let data = [];
@@ -449,7 +570,7 @@
                 if (bg && bg.complete) {
                     targetCtx.drawImage(bg, 0, 0, width, height);
                 }
-                
+
                 // Always render static text placeholders, even without data
                 for (const p of placeholders[side]) {
                     // Handle static text (labels and titles)
@@ -457,7 +578,7 @@
                         const value = p.staticText;
                         const x = p.x * width;
                         const y = p.y * height;
-                        
+
                         if (p.type === 'text') {
                             targetCtx.fillStyle = p.color;
                             const fontFamily = p.fontFamily || 'Inter';
@@ -466,7 +587,7 @@
                             targetCtx.textAlign = p.align;
                             targetCtx.textBaseline = 'top';
                             const maxWidth = p.width * width;
-                            
+
                             // Calculate x position based on alignment
                             let textX = x;
                             if (p.align === 'center') {
@@ -474,28 +595,28 @@
                             } else if (p.align === 'right') {
                                 textX = x + (p.width * width);
                             }
-                            
+
                             wrapText(targetCtx, value, textX, y, maxWidth, p.lineHeight);
                         }
                     }
                 }
-                                
+
                 if (!rowData) return;
                 for (const p of placeholders[side]) {
                     const isStaticText = (p.key === 'title' && p.staticText) || (p.key === 'label' && p.staticText) || p.staticText;
                     let value = isStaticText ? p.staticText : String(rowData[p.key] || '');
-                    
+
                     // Format date fields if they contain DOB, Date, or similar
                     if (!isStaticText && value && (p.key.toLowerCase().includes('dob') || p.key.toLowerCase().includes('date') || p.key.toLowerCase().includes('birth'))) {
                         try {
                             console.log(`Processing date field "${p.key}" with value:`, value, `(type: ${typeof value})`);
-                            
+
                             // Enhanced date parsing to handle various formats
                             let parsedDate = null;
-                            
+
                             // Convert string numbers to actual numbers for Excel date detection
                             const numValue = parseFloat(value);
-                            
+
                             // Handle Excel serial dates (numbers like 44927)
                             // Only treat as Excel date if in a realistic range (10,000–50,000 covers years 1927–2036)
                             if (!isNaN(numValue) && numValue >= 10000 && numValue <= 50000) {
@@ -515,7 +636,7 @@
                                 // Clean the string first
                                 const cleanValue = value.trim();
                                 console.log(`Processing string date: "${cleanValue}"`);
-                                
+
                                 // Try parsing different date formats
                                 if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanValue)) {
                                     // MM/DD/YYYY or DD/MM/YYYY format
@@ -523,9 +644,9 @@
                                     const month = parseInt(parts[0]) - 1; // Month is 0-indexed
                                     const day = parseInt(parts[1]);
                                     const year = parseInt(parts[2]);
-                                    
-                                    console.log(`Parsed MM/DD/YYYY: month=${month+1}, day=${day}, year=${year}`);
-                                    
+
+                                    console.log(`Parsed MM/DD/YYYY: month=${month + 1}, day=${day}, year=${year}`);
+
                                     // Validate year range (reasonable birth years)
                                     if (year >= 1900 && year <= new Date().getFullYear()) {
                                         parsedDate = new Date(year, month, day);
@@ -538,9 +659,9 @@
                                     const year = parseInt(parts[0]);
                                     const month = parseInt(parts[1]) - 1; // Month is 0-indexed
                                     const day = parseInt(parts[2]);
-                                    
-                                    console.log(`Parsed YYYY-MM-DD: year=${year}, month=${month+1}, day=${day}`);
-                                    
+
+                                    console.log(`Parsed YYYY-MM-DD: year=${year}, month=${month + 1}, day=${day}`);
+
                                     // Validate year range
                                     if (year >= 1900 && year <= new Date().getFullYear()) {
                                         parsedDate = new Date(year, month, day);
@@ -559,15 +680,15 @@
                                     }
                                 }
                             }
-                            
+
                             // If we successfully parsed a date, format it
                             if (parsedDate && !isNaN(parsedDate.getTime())) {
-                                // Format as MM/DD/YYYY for consistency
+                                // Format as DD/MM/YYYY for consistency
                                 const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
                                 const day = parsedDate.getDate().toString().padStart(2, '0');
                                 const year = parsedDate.getFullYear();
-                                value = `${month}/${day}/${year}`;
-                                
+                                value = `${day}/${month}/${year}`;
+
                                 console.log(`✅ Successfully formatted date: ${value} (original: ${rowData[p.key]})`);
                             } else {
                                 console.warn(`❌ Could not parse date: "${value}" for field: ${p.key} - keeping original value`);
@@ -578,21 +699,21 @@
                             console.error(`Date parsing error for ${p.key}:`, e);
                         }
                     }
-                    
+
                     if (!value) continue;
                     const x = p.x * width;
                     const y = p.y * height;
-                    
+
                     if (p.type === 'qr') {
                         const pWidth = p.width * width;
                         const pHeight = p.height * height;
                         try {
                             console.log(`Rendering QR code for value: ${value}`);
-                            
+
                             // Create a QR code using QRCode.js
                             // Force a large enough size to be visible, minimum 150px
                             const qrSize = Math.max(Math.min(pWidth, pHeight), 150);
-                            
+
                             // Create a hidden container for QR code generation
                             const qrContainer = document.createElement('div');
                             qrContainer.id = 'qr-container-temp';
@@ -605,7 +726,7 @@
                             qrContainer.style.padding = '0'; // Remove padding
                             qrContainer.style.boxSizing = 'border-box';
                             document.body.appendChild(qrContainer);
-                            
+
                             // Create QR code instance with enhanced settings for visibility
                             new QRCode(qrContainer, {
                                 text: value,
@@ -616,14 +737,14 @@
                                 correctLevel: QRCode.CorrectLevel.L, // Lower error correction for cleaner codes
                                 margin: 4 // Add margin to improve scannability
                             });
-                            
+
                             // Add a label to the QR container to confirm what's being generated
                             const qrLabel = document.createElement('div');
                             qrLabel.textContent = `QR Code: ${value}`;
                             qrLabel.style.textAlign = 'center';
                             qrLabel.style.marginTop = '5px';
                             qrContainer.appendChild(qrLabel);
-                            
+
                             // Get the QR code image from the container
                             const qrImage = qrContainer.querySelector('img');
                             if (qrImage) {
@@ -638,63 +759,63 @@
                                         setTimeout(resolve, 500);
                                     }
                                 });
-                                
+
                                 // Use the actual placeholder position instead of hard-coded coordinates
                                 const qrX = x; // Use placeholder's x position
                                 const qrY = y; // Use placeholder's y position
                                 const qrWidth = pWidth; // Use placeholder's width
                                 const qrHeight = pHeight; // Use placeholder's height
-                                
+
                                 // Center the QR code within its area
                                 const offsetX = (qrWidth - qrSize) / 2;
                                 const offsetY = (qrHeight - qrSize) / 2;
-                                
+
                                 console.log(`Drawing QR at placeholder position: x=${qrX}, y=${qrY}, width=${qrWidth}, height=${qrHeight}`);
-                                
+
                                 // Make it very visible with white background
                                 targetCtx.fillStyle = '#ffffff';
                                 targetCtx.fillRect(qrX, qrY, qrWidth, qrHeight);
-                                
+
                                 // Add a visible border around the QR area
                                 targetCtx.strokeStyle = '#000000';
                                 targetCtx.lineWidth = 2;
                                 targetCtx.strokeRect(qrX, qrY, qrWidth, qrHeight);
-                                
+
                                 // Draw the QR code centered in the area
                                 targetCtx.drawImage(qrImage, qrX + offsetX, qrY + offsetY, qrSize, qrSize);
-                                
+
                                 // Add a label at the bottom of the QR placeholder
                                 targetCtx.fillStyle = '#000000';
                                 targetCtx.font = 'bold 14px Inter';
                                 targetCtx.textAlign = 'center';
                                 targetCtx.textBaseline = 'top';
-                                
+
                                 // Position text at bottom of QR area
                                 const textY = qrY + qrHeight - 20;
                                 const textX = qrX + qrWidth / 2;
-                                
+
                                 // Draw QR label text
                                 targetCtx.fillText(`${p.key}`, textX, textY);
                             }
-                            
+
                             // Add debugging info
                             console.log(`QR Code rendered successfully for field: ${p.key}, value: ${value}`);
                             console.log(`QR Code position: x=${qrX}, y=${qrY}, width=${qrWidth}, height=${qrHeight}, qrSize=${qrSize}`);
-                            
+
                             // Take a snapshot of the generated QR code for debugging
                             const qrDataUrl = qrImage.src;
                             console.log("QR code image data:", qrDataUrl.substring(0, 100) + "...");
-                            
+
                             // Remove the QR container immediately after drawing to avoid interference
                             const container = document.getElementById('qr-container-temp');
                             if (container) document.body.removeChild(container);
-                            
+
                         } catch (error) {
                             console.error(`Could not generate QR code for: ${value}`, error);
-                            targetCtx.fillStyle = '#fee2e2'; 
+                            targetCtx.fillStyle = '#fee2e2';
                             targetCtx.fillRect(x, y, pWidth, pHeight);
-                            targetCtx.fillStyle = '#ef4444'; 
-                            targetCtx.textAlign = 'center'; 
+                            targetCtx.fillStyle = '#ef4444';
+                            targetCtx.textAlign = 'center';
                             targetCtx.fillText('QR Error', x + pWidth / 2, y + pHeight / 2);
                         }
                     } else if (p.type === 'photo') {
@@ -702,7 +823,7 @@
                         const pHeight = p.height * height;
                         try {
                             const img = await loadImage(value);
-                            
+
                             // Add rounded corners or circular mask
                             if (p.shape === 'circle') {
                                 // For circular photos
@@ -720,7 +841,7 @@
                                 // For rounded rectangle photos
                                 targetCtx.save();
                                 targetCtx.beginPath();
-                                const radius = Math.min(20, pWidth/4, pHeight/4);
+                                const radius = Math.min(20, pWidth / 4, pHeight / 4);
                                 targetCtx.moveTo(x + radius, y);
                                 targetCtx.lineTo(x + pWidth - radius, y);
                                 targetCtx.quadraticCurveTo(x + pWidth, y, x + pWidth, y + radius);
@@ -740,30 +861,30 @@
                             }
                         } catch (error) {
                             console.error(`Could not load image: ${value}`, error);
-                            
+
                             // Enhanced error display for photo numbers
-                            targetCtx.fillStyle = '#fee2e2'; 
+                            targetCtx.fillStyle = '#fee2e2';
                             targetCtx.fillRect(x, y, pWidth, pHeight);
-                            
+
                             // Add border
                             targetCtx.strokeStyle = '#ef4444';
                             targetCtx.lineWidth = 2;
                             targetCtx.strokeRect(x, y, pWidth, pHeight);
-                            
+
                             // Show the photo number that couldn't be found
-                            targetCtx.fillStyle = '#ef4444'; 
+                            targetCtx.fillStyle = '#ef4444';
                             targetCtx.font = 'bold 14px Inter';
                             targetCtx.textAlign = 'center';
                             targetCtx.textBaseline = 'middle';
-                            
+
                             // Check if it looks like a photo number
                             const isPhotoNumber = /^\d+$/.test(String(value).trim());
                             const errorText = isPhotoNumber ? `Photo\n${value}\nNot Found` : 'Image\nError';
-                            
+
                             const lines = errorText.split('\n');
                             const lineHeight = 16;
                             const startY = y + pHeight / 2 - (lines.length - 1) * lineHeight / 2;
-                            
+
                             lines.forEach((line, index) => {
                                 targetCtx.fillText(line, x + pWidth / 2, startY + index * lineHeight);
                             });
@@ -776,7 +897,7 @@
                         targetCtx.textAlign = p.align;
                         targetCtx.textBaseline = 'top';
                         const maxWidth = p.width * width;
-                        
+
                         // Calculate x position based on alignment
                         let textX = x;
                         if (p.align === 'center') {
@@ -784,7 +905,7 @@
                         } else if (p.align === 'right') {
                             textX = x + (p.width * width);
                         }
-                        
+
                         wrapText(targetCtx, value, textX, y, maxWidth, p.lineHeight);
                     }
                 }
@@ -819,7 +940,7 @@
                         try {
                             const dataURL = await createPhotoDataURL(photoFile);
                             console.log(`Successfully loaded photo for number ${src}`);
-                            
+
                             return new Promise((resolve, reject) => {
                                 const img = new Image();
                                 img.onload = () => resolve(img);
@@ -833,7 +954,7 @@
                         console.warn(`No photo found for number ${src} in loaded folder`);
                     }
                 }
-                
+
                 // Fallback to original loadImage logic for URLs and data URIs
                 return new Promise((resolve, reject) => {
                     const img = new Image();
@@ -862,33 +983,33 @@
             const processPhotoFolder = (files) => {
                 photoFiles.clear();
                 let validPhotoCount = 0;
-                
+
                 for (const file of files) {
                     // Check if it's an image file
                     if (file.type.startsWith('image/')) {
                         // Extract number from filename (remove extension and non-numeric characters)
                         const fileName = file.name;
                         const nameWithoutExt = fileName.split('.')[0];
-                        
+
                         // Try to extract a number from the filename
                         const numberMatch = nameWithoutExt.match(/\d+/);
                         if (numberMatch) {
                             const photoNumber = numberMatch[0];
                             photoFiles.set(photoNumber, file);
                             validPhotoCount++;
-                            
+
                             console.log(`Mapped photo number ${photoNumber} to file ${fileName}`);
                         }
                     }
                 }
-                
+
                 photoFolderLoaded = validPhotoCount > 0;
-                
+
                 // Update UI
                 if (photoFolderLoaded) {
                     photoFolderStatus.classList.remove('hidden');
                     photoCount.textContent = `Found ${validPhotoCount} photos ready for matching`;
-                    
+
                     console.log(`Photo folder loaded with ${validPhotoCount} photos`);
                     console.log('Photo numbers available:', Array.from(photoFiles.keys()).sort().join(', '));
                 } else {
@@ -896,32 +1017,32 @@
                     alert('No valid photos found. Please ensure photos are named with numbers (e.g., 3956.jpg)');
                 }
             };
-            
+
             const getPhotoByNumber = (photoNumber) => {
                 // Convert to string and try different variations
                 const numberStr = String(photoNumber).trim();
-                
+
                 // Try exact match first
                 if (photoFiles.has(numberStr)) {
                     return photoFiles.get(numberStr);
                 }
-                
+
                 // Try with leading zeros removed
                 const withoutLeadingZeros = numberStr.replace(/^0+/, '') || '0';
                 if (photoFiles.has(withoutLeadingZeros)) {
                     return photoFiles.get(withoutLeadingZeros);
                 }
-                
+
                 // Try with leading zeros added (common in some numbering systems)
                 const withLeadingZeros = numberStr.padStart(4, '0');
                 if (photoFiles.has(withLeadingZeros)) {
                     return photoFiles.get(withLeadingZeros);
                 }
-                
+
                 console.warn(`Photo not found for number: ${photoNumber}`);
                 return null;
             };
-            
+
             const createPhotoDataURL = async (file) => {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -938,7 +1059,7 @@
                 [frontCanvasWrapper, backCanvasWrapper].forEach((wrapper) => {
                     const canvas = wrapper.querySelector('canvas');
                     const placeholderWrapper = wrapper.querySelector('[id*="placeholder-wrapper"]');
-                    
+
                     if (canvas && placeholderWrapper) {
                         const canvasStyle = window.getComputedStyle(canvas);
                         const canvasTransform = canvasStyle.transform;
@@ -950,15 +1071,15 @@
                         placeholderWrapper.style.top = `${canvas.offsetTop}px`;
                         placeholderWrapper.style.left = `${canvas.offsetLeft}px`;
                         // --- FIX END ---
-                        
+
                         // Set the size of the overlay to match the canvas's rendered size.
                         placeholderWrapper.style.width = `${canvas.offsetWidth}px`;
                         placeholderWrapper.style.height = `${canvas.offsetHeight}px`;
-                        
+
                         // Apply the same transform (for zoom) to keep them in sync.
                         placeholderWrapper.style.transform = canvasTransform;
                         placeholderWrapper.style.transformOrigin = canvasOrigin;
-                        
+
                         console.log(`Synced ${wrapper.id}: canvas offset(${canvas.offsetLeft}, ${canvas.offsetTop}), transform=${canvasTransform}, size=${canvas.offsetWidth}x${canvas.offsetHeight}`);
                     }
                 });
@@ -967,17 +1088,17 @@
             // --- Placeholder Management ---
             const addPlaceholder = (pData) => {
                 // Include shape property for photo placeholders and QR codes
-                const base = { 
-                    id: `p_${crypto.randomUUID()}`, 
-                    key: '', 
-                    type: 'text', 
-                    x: 0.1, 
-                    y: 0.1, 
-                    width: 0.3, 
-                    height: 0.1, 
-                    fontSize: 15, 
-                    lineHeight: 18, 
-                    color: '#000000', 
+                const base = {
+                    id: `p_${crypto.randomUUID()}`,
+                    key: '',
+                    type: 'text',
+                    x: 0.1,
+                    y: 0.1,
+                    width: 0.3,
+                    height: 0.1,
+                    fontSize: 15,
+                    lineHeight: 18,
+                    color: '#000000',
                     align: 'left',
                     fontFamily: 'Inter',
                     fontWeight: 'normal', // Default to normal weight
@@ -991,30 +1112,30 @@
             const renderPlaceholders = () => {
                 // First sync the wrapper positioning
                 syncPlaceholderWrappers();
-                
+
                 const renderSide = (side) => {
                     const wrapper = side === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                     wrapper.innerHTML = '';
-                    
+
                     placeholders[side].forEach(p => {
                         const el = document.createElement('div');
                         el.id = p.id;
                         el.className = `placeholder ${p.type}-placeholder ${p.id === activePlaceholderId ? 'active' : ''}`;
-                        
+
                         // Use percentage positioning to match canvas exactly
                         el.style.left = `${p.x * 100}%`;
                         el.style.top = `${p.y * 100}%`;
                         el.style.width = `${p.width * 100}%`;
                         el.style.height = `${p.height * 100}%`;
                         el.style.position = 'absolute';
-                        
+
                         console.log(`Rendering placeholder ${p.id} at ${(p.x * 100).toFixed(1)}%, ${(p.y * 100).toFixed(1)}%`);
-                                                
+
                         const displayText = p.staticText ? p.staticText : `{{${p.key}}}`;
                         if (p.type === 'qr') {
                             // Enhanced QR placeholder to make it more visible
                             el.innerHTML = `<div class="qr-placeholder-preview">QR: ${p.key}</div>`;
-                            
+
                             // Add a mini visual representation of a QR code
                             const miniQR = document.createElement('div');
                             miniQR.style.width = '30px';
@@ -1033,58 +1154,58 @@
                         deleteBtn.innerHTML = '×';
                         deleteBtn.title = 'Delete this field';
                         deleteBtn.type = 'button';
-                        
+
                         // Enhanced delete button event handling
                         deleteBtn.addEventListener('click', (e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             e.stopImmediatePropagation();
-                            
+
                             console.log('Delete button clicked for placeholder:', p.id);
-                            
+
                             // Remove from placeholders array
                             placeholders[side] = placeholders[side].filter(pl => pl.id !== p.id);
-                            
+
                             // Clear active selection if this was the active placeholder
                             if (activePlaceholderId === p.id) {
                                 setActivePlaceholder(null);
                             }
-                            
+
                             // Re-render everything
                             renderPlaceholders();
                             drawAllCanvases();
-                            
+
                             console.log(`Placeholder ${p.id} deleted successfully`);
                         });
-                        
+
                         // Prevent all drag-related events on delete button
                         deleteBtn.addEventListener('mousedown', (e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             e.stopImmediatePropagation();
                         });
-                        
+
                         deleteBtn.addEventListener('dragstart', (e) => {
                             e.preventDefault();
                             e.stopPropagation();
                         });
-                        
+
                         el.appendChild(deleteBtn);
-                        
+
                         const resizeHandle = document.createElement('div');
                         resizeHandle.className = 'resize-handle';
                         resizeHandle.addEventListener('mousedown', onResizeStart);
                         el.appendChild(resizeHandle);
-                        
+
                         // Add drag event listener to the main element, but exclude delete button and resize handle
                         el.addEventListener('mousedown', (e) => {
                             // Don't start drag if clicking on delete button or resize handle
-                            if (e.target === deleteBtn || e.target.classList.contains('delete-btn') || 
+                            if (e.target === deleteBtn || e.target.classList.contains('delete-btn') ||
                                 e.target === resizeHandle || e.target.classList.contains('resize-handle')) {
                                 console.log('Mousedown on control element, skipping drag');
                                 return;
                             }
-                            
+
                             // Only start drag if clicking on the placeholder element itself or its direct text content
                             if (e.target === el || e.target.tagName === 'SPAN' || e.target.classList.contains('qr-placeholder-preview')) {
                                 console.log('Starting drag for placeholder:', p.id);
@@ -1093,7 +1214,7 @@
                                 console.log('Mousedown on unexpected element, skipping drag:', e.target);
                             }
                         });
-                        
+
                         wrapper.appendChild(el);
                     });
                 }
@@ -1112,16 +1233,16 @@
                 if (id) renderEditPanel();
                 renderPlaceholders();
             };
-                        
+
             // --- Edit Panel ---
             const renderEditPanel = () => {
                 const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
                 if (!p) return;
-                                
+
                 const keyInputLabel = p.staticText ? "Static Text" : "Field Name (from data)";
                 const keyInputValue = p.staticText ? p.staticText : p.key;
                 let content = `<div><label class="block text-sm font-medium">${keyInputLabel}</label><input type="text" value="${keyInputValue}" oninput="updatePlaceholderProp('${p.id}', '${p.staticText ? 'staticText' : 'key'}', this.value)" class="w-full p-2 border rounded"></div>`;
-                                
+
                 if (p.type === 'text') {
                     content += `
                         <div class="grid grid-cols-2 gap-4">
@@ -1182,7 +1303,7 @@
                     p[prop] = isNaN(numValue) ? value : numValue;
                     renderPlaceholders();
                     // Re-render edit panel when alignment, shape, or fontWeight changes
-                    if(prop === 'align' || prop === 'shape' || prop === 'fontWeight') {
+                    if (prop === 'align' || prop === 'shape' || prop === 'fontWeight') {
                         renderEditPanel();
                         // Also redraw the canvas when shape changes to see the effect immediately
                         if (prop === 'shape') {
@@ -1190,7 +1311,7 @@
                         }
                     }
                     // Redraw canvas when font properties change
-                    if(prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight' || prop === 'fontWeight') {
+                    if (prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight' || prop === 'fontWeight') {
                         drawAllCanvases();
                     }
                 }
@@ -1203,7 +1324,7 @@
 
                 const target = e.target.closest('.placeholder');
                 if (!target) return;
-                
+
                 if (activePlaceholderId !== target.id) {
                     setActivePlaceholder(target.id);
                 }
@@ -1211,7 +1332,7 @@
                 const elementToDrag = document.getElementById(target.id);
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                 const elementRect = elementToDrag.getBoundingClientRect();
-                
+
                 // --- FIX START ---
                 // Get the current scale factor from the wrapper's transform style
                 const transform = window.getComputedStyle(wrapper).transform;
@@ -1266,10 +1387,10 @@
                 // 4. Convert this new pixel position into a percentage of the wrapper's un-scaled dimensions
                 const unscaledWrapperWidth = wrapper.offsetWidth / scale;
                 const unscaledWrapperHeight = wrapper.offsetHeight / scale;
-                
+
                 pData.x = newLeft_unscaled / unscaledWrapperWidth;
                 pData.y = newTop_unscaled / unscaledWrapperHeight;
-                
+
                 // --- NEW CODE START ---
                 // 4a. Add gentle constraints to prevent the element from being dragged too far off-screen.
                 // This allows placing elements right at the edge without them snapping aggressively.
@@ -1316,20 +1437,20 @@
                 if (!activeEl || !pData) return;
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                 const wrapperRect = wrapper.getBoundingClientRect();
-                
+
                 // Calculate new dimensions based on mouse position
                 const elementRect = activeEl.getBoundingClientRect();
                 const newWidth = Math.max(20, e.clientX - elementRect.left);
                 const newHeight = Math.max(20, e.clientY - elementRect.top);
-                
+
                 // Update placeholder data immediately
                 pData.width = Math.max(20 / wrapperRect.width, newWidth / wrapperRect.width);
                 pData.height = Math.max(20 / wrapperRect.height, newHeight / wrapperRect.height);
-                
+
                 // Update visual representation
                 activeEl.style.width = `${pData.width * 100}%`;
                 activeEl.style.height = `${pData.height * 100}%`;
-                
+
                 // Update canvas in real-time
                 drawAllCanvases();
             };
@@ -1358,19 +1479,19 @@
             // --- Gemini API Call ---
             const callGemini = async (prompt, jsonSchema = null) => {
                 loadingModal.classList.remove('hidden');
-                
+
                 // You need to get your own API key from https://aistudio.google.com/
                 // This is left blank deliberately and will need to be filled in
                 // with your own API key or handled through environment variables
-                const apiKey = prompt("Please enter your Gemini API key to use AI features:"); 
-                
+                const apiKey = prompt("Please enter your Gemini API key to use AI features:");
+
                 if (!apiKey) {
                     loadingModal.classList.add('hidden');
                     errorText.textContent = "API key is required for AI features.";
                     errorModal.classList.remove('hidden');
                     return null;
                 }
-                
+
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
                 if (jsonSchema) {
@@ -1399,40 +1520,40 @@
             const setOrientation = (newOrientation) => {
                 if (orientation === newOrientation) return;
                 orientation = newOrientation;
-                                
+
                 const isHorizontal = newOrientation === 'horizontal';
                 const newW = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
                 const newH = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
-                
+
                 // Reset canvas dimensions and styles
                 [frontCanvas, backCanvas].forEach(c => {
                     c.width = newW;
                     c.height = newH;
                     c.style.transform = '';
                 });
-                
+
                 // Reset wrapper styles
                 [frontCanvasWrapper, backCanvasWrapper].forEach(w => {
                     w.style.aspectRatio = `${newW} / ${newH}`;
                     w.style.width = '';
                     w.style.height = '';
                 });
-                
+
                 // Reset placeholder wrapper styles
                 [frontPlaceholderWrapper, backPlaceholderWrapper].forEach(w => {
                     w.style.transform = '';
                 });
-                
+
                 // Update orientation buttons
                 orientationHorizontalBtn.classList.toggle('bg-blue-500', isHorizontal);
                 orientationHorizontalBtn.classList.toggle('text-white', isHorizontal);
                 orientationVerticalBtn.classList.toggle('bg-blue-500', !isHorizontal);
                 orientationVerticalBtn.classList.toggle('text-white', !isHorizontal);
-                
+
                 // Redraw canvases with new dimensions
                 drawAllCanvases();
                 renderPlaceholders();
-                
+
                 // Reapply current zoom level
                 const currentZoom = zoomSelect.value === 'actual' ? 'actual' : parseFloat(zoomSelect.value);
                 applyZoom(currentZoom);
@@ -1440,55 +1561,55 @@
             // --- Zoom Management ---
             const applyZoom = (zoomLevel) => {
                 let actualZoom = zoomLevel;
-                
+
                 // Calculate actual card size if "actual" is selected
                 if (zoomLevel === 'actual') {
                     // Standard ID card size: 85.6mm x 54mm (3.375" x 2.125")
                     // Convert to pixels assuming 96 DPI (standard screen DPI)
                     const actualCardWidthPx = (85.6 / 25.4) * 96;  // ~325px
                     const actualCardHeightPx = (54 / 25.4) * 96;   // ~204px
-                    
+
                     // For better viewing experience, let's use a more reasonable "actual size"
                     // that represents the card at a good viewing scale rather than tiny physical size
                     const canvasWidth = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
                     const canvasHeight = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
-                    
+
                     // Instead of true physical size, use a proportion that makes the card 
                     // appear at a reasonable viewing size (roughly 60% of canvas)
                     actualZoom = 0.6;
-                    
+
                     console.log(`Actual size view: Canvas ${canvasWidth}x${canvasHeight}, Zoom: ${actualZoom}`);
                 }
-                
+
                 [frontCanvasWrapper, backCanvasWrapper].forEach(wrapper => {
                     const canvas = wrapper.querySelector('canvas');
                     const placeholderWrapper = wrapper.querySelector('[id*="placeholder-wrapper"]');
-                    
+
                     // Reset any previous transforms first
                     canvas.style.transform = '';
                     placeholderWrapper.style.transform = '';
                     wrapper.style.width = '';
                     wrapper.style.height = '';
-                    
+
                     // Apply zoom transform
                     canvas.style.transform = `scale(${actualZoom})`;
                     canvas.style.transformOrigin = 'top left';
                     placeholderWrapper.style.transform = `scale(${actualZoom})`;
                     placeholderWrapper.style.transformOrigin = 'top left';
-                    
+
                     // Adjust wrapper size to accommodate zoom
                     const baseWidth = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
                     const baseHeight = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
-                    
+
                     wrapper.style.width = `${baseWidth * actualZoom}px`;
                     wrapper.style.height = `${baseHeight * actualZoom + 60}px`; // +60 for title
-                    
+
                     // Remove any existing size notes
                     const existingSizeNote = wrapper.querySelector('.size-note');
                     if (existingSizeNote) {
                         existingSizeNote.remove();
                     }
-                    
+
                     // Add a note for actual size
                     if (zoomLevel === 'actual') {
                         const sizeNote = document.createElement('div');
@@ -1497,7 +1618,7 @@
                         wrapper.appendChild(sizeNote);
                     }
                 });
-                
+
                 // Always sync placeholder wrappers after zoom changes and re-render
                 setTimeout(() => {
                     syncPlaceholderWrappers();
@@ -1505,7 +1626,7 @@
                     drawAllCanvases();
                 }, 10);
             };
-            
+
             // --- Event Listeners ---
             const setupBgImageInput = (input, side) => {
                 input.addEventListener('change', (e) => {
@@ -1519,7 +1640,7 @@
             };
             setupBgImageInput(bgImageFrontInput, 'front');
             setupBgImageInput(bgImageBackInput, 'back');
-            
+
             // Photo folder input handler
             photoFolderInput.addEventListener('change', (e) => {
                 const files = Array.from(e.target.files);
@@ -1530,7 +1651,7 @@
             dataFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                
+
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     try {
@@ -1541,7 +1662,7 @@
                             const lines = content.split('\n');
                             const headerLine = lines[0];
                             const csvHeaders = headerLine.split(',').map(h => h.trim());
-                            
+
                             for (let i = 1; i < lines.length; i++) {
                                 if (!lines[i].trim()) continue;
                                 const values = lines[i].split(',').map(v => v.trim());
@@ -1557,11 +1678,11 @@
                             const sheetName = workbook.SheetNames[0];
                             parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
                         }
-                        
+
                         data = parsedData;
                         if (data.length > 0) {
                             headers = Object.keys(data[0]);
-                            
+
                             // Populate QR code field select dropdown
                             qrFieldSelect.innerHTML = '<option value="">Select a field from data</option>';
                             headers.forEach(header => {
@@ -1570,11 +1691,11 @@
                                 option.textContent = header;
                                 qrFieldSelect.appendChild(option);
                             });
-                            
+
                             // Enable QR field select
                             qrFieldSelect.disabled = false;
                             document.getElementById('qr-field-container').classList.remove('opacity-70');
-                            
+
                             aiControls.classList.remove('opacity-50');
                             aiLayoutBtn.disabled = false;
                             aiTitleBtn.disabled = false;
@@ -1583,22 +1704,22 @@
                             generateZipBtn.disabled = false;
                             generatePdfBtn.disabled = false;
                             alert(`${data.length} records loaded successfully!`);
-                        } else { 
-                            alert('The file seems to be empty or in an incorrect format.'); 
+                        } else {
+                            alert('The file seems to be empty or in an incorrect format.');
                         }
                     } catch (error) {
                         console.error("Failed to parse data file:", error);
                         alert(`Error parsing file: ${error.message}`);
                     }
                 };
-                
+
                 if (file.name.endsWith('.csv')) {
                     reader.readAsText(file);
                 } else {
                     reader.readAsBinaryString(file);
                 }
             });
-                        
+
             aiLayoutBtn.addEventListener('click', async () => {
                 loadingText.textContent = `Designing the ${activeSide} of the card...`;
                 const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
@@ -1635,14 +1756,14 @@
                 headers.forEach(header => {
                     // Check if the header name contains "photo" or "image" and make it a photo field
                     const type = header.toLowerCase().includes('photo') || header.toLowerCase().includes('image') ? 'photo' : 'text';
-                    
+
                     // For photo fields, adjust the height and width proportions and make it circular
-                    const options = type === 'photo' ? 
-                        { width: 0.25, height: 0.3, x: 0.7, y: 0.1, shape: 'circle' } : 
+                    const options = type === 'photo' ?
+                        { width: 0.25, height: 0.3, x: 0.7, y: 0.1, shape: 'circle' } :
                         { y: yOffset };
-                    
+
                     addPlaceholder({ key: header, type, ...options });
-                    
+
                     // Only increment yOffset for text fields
                     if (type === 'text') yOffset += 0.1;
                 });
@@ -1660,117 +1781,117 @@
             addQrBtn.addEventListener('click', () => {
                 // Get the field from the QR select dropdown or fall back to the input field if empty
                 const qrField = qrFieldSelect.value || fieldNameInput.value || 'ID';
-                
+
                 // Check if this field exists in the data
                 if (data.length > 0 && !headers.includes(qrField) && qrField !== 'ID') {
                     alert(`Warning: The field "${qrField}" doesn't exist in your data. QR code may not appear in preview or export.`);
                 }
-                
+
                 // Add QR code with more specific positioning
-                addPlaceholder({ 
-                    key: qrField, 
-                    type: 'qr', 
+                addPlaceholder({
+                    key: qrField,
+                    type: 'qr',
                     width: 0.25,   // 25% of card width
                     height: 0.25,  // 25% of card height
                     x: 0.65,       // Right side of card
                     y: 0.20,       // Upper part of card
                     qrColor: '#000000' // Force black for better contrast
                 });
-                
+
                 // Create alert to confirm QR code was added
                 alert(`QR code for field "${qrField}" added. For best results:\n1. Preview to check visibility\n2. Adjust size/position if needed\n3. Make sure field exists in your data`);
-                
+
                 // Log to help with debugging
                 console.log(`Added QR code for field: ${qrField}`);
                 console.log(`Available data fields: ${headers.join(', ')}`);
             });
-            
+
             // Zoom control
             zoomSelect.addEventListener('change', (e) => {
                 const zoomLevel = e.target.value === 'actual' ? 'actual' : parseFloat(e.target.value);
                 applyZoom(zoomLevel);
             });
             // QR Code button event handler already defined above
-                        
+
             previewBtn.addEventListener('click', async () => {
-                if (data.length === 0) { 
-                    alert('Please upload data to preview.'); 
-                    return; 
+                if (data.length === 0) {
+                    alert('Please upload data to preview.');
+                    return;
                 }
-                
+
                 // Clear any active selections first
                 setActivePlaceholder(null);
-                
+
                 // Ensure positioning is synchronized before preview
                 syncPlaceholderWrappers();
-                
+
                 // Hide placeholder wrappers for clean preview
                 frontPlaceholderWrapper.style.display = 'none';
                 backPlaceholderWrapper.style.display = 'none';
-                
+
                 console.log("Previewing with data:", data[0]);
                 console.log("Current placeholders:", {
-                    front: placeholders.front.map(p => ({id: p.id, type: p.type, x: p.x, y: p.y, width: p.width, height: p.height})),
-                    back: placeholders.back.map(p => ({id: p.id, type: p.type, x: p.x, y: p.y, width: p.width, height: p.height}))
+                    front: placeholders.front.map(p => ({ id: p.id, type: p.type, x: p.x, y: p.y, width: p.width, height: p.height })),
+                    back: placeholders.back.map(p => ({ id: p.id, type: p.type, x: p.x, y: p.y, width: p.width, height: p.height }))
                 });
-                
+
                 // Force redraw with first record data
                 await drawAllCanvases(data[0]);
-                
+
                 // Add back to edit button
                 const backButton = document.createElement('button');
                 backButton.innerText = 'Back to Edit';
                 backButton.className = 'absolute top-2 right-2 bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg shadow-lg z-50 transition-colors';
-                backButton.onclick = () => { 
+                backButton.onclick = () => {
                     // Show placeholder wrappers again
-                    frontPlaceholderWrapper.style.display = 'block'; 
-                    backPlaceholderWrapper.style.display = 'block'; 
-                    
+                    frontPlaceholderWrapper.style.display = 'block';
+                    backPlaceholderWrapper.style.display = 'block';
+
                     // Redraw canvas without data to show placeholders
-                    drawAllCanvases(); 
-                    
+                    drawAllCanvases();
+
                     // Re-sync positioning after returning to edit mode
                     syncPlaceholderWrappers();
                     renderPlaceholders();
-                    
+
                     // Remove the back button
-                    backButton.remove(); 
+                    backButton.remove();
                 };
-                
+
                 document.getElementById('front-canvas-wrapper').appendChild(backButton);
             });
 
             // PDF Generation Logic
             generatePdfBtn.addEventListener('click', async () => {
-                if (data.length === 0) { 
-                    alert('Please upload data and add fields before generating.'); 
-                    return; 
+                if (data.length === 0) {
+                    alert('Please upload data and add fields before generating.');
+                    return;
                 }
-                    
+
                 loadingModal.classList.remove('hidden');
                 loadingText.textContent = 'Generating A4 PDF...';
-                    
+
                 try {
                     const { jsPDF } = window.jspdf;
                     const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
-                        
+
                     const isHorizontal = orientation === 'horizontal';
                     const cardWidthMM = isHorizontal ? 85.6 : 54.0;
                     const cardHeightMM = isHorizontal ? 54.0 : 85.6;
-                        
+
                     // Optimized for 5 cards per row on A4 landscape (297mm x 210mm)
                     const cardsPerRow = 5;
                     const pageWidth = 297;
                     const pageHeight = 210;
-                    
+
                     // Calculate optimal spacing for 5 cards
                     const totalCardsWidth = cardsPerRow * cardWidthMM;
                     const availableSpaceForGaps = pageWidth - totalCardsWidth;
                     const cardSpacing = availableSpaceForGaps / (cardsPerRow + 1); // Equal spacing including margins
-                    
+
                     const frontRowY = 15; // Top margin
                     const backRowY = frontRowY + cardHeightMM + 15; // Space between front and back rows
-                    
+
                     // Create temporary canvas for rendering
                     const tempCanvas = document.createElement('canvas');
                     tempCanvas.width = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
@@ -1780,17 +1901,17 @@
                     // Process cards in batches of 5
                     for (let i = 0; i < data.length; i += cardsPerRow) {
                         if (i > 0) pdf.addPage(); // New page for each batch
-                        
+
                         // Process each card in this batch
                         for (let j = 0; j < cardsPerRow && (i + j) < data.length; j++) {
                             const cardData = data[i + j];
                             const cardX = cardSpacing + (j * (cardWidthMM + cardSpacing));
-                            
+
                             // Draw FRONT card (top row)
                             await drawCardOnContext(tempCtx, 'front', tempCanvas.width, tempCanvas.height, cardData);
                             const frontDataUrl = tempCanvas.toDataURL('image/png');
                             pdf.addImage(frontDataUrl, 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM);
-                            
+
                             // Draw BACK card (bottom row, rotated 180 degrees for proper double-sided printing)
                             // Create a temporary canvas for rotation
                             const rotatedCanvas = document.createElement('canvas');
@@ -1802,9 +1923,9 @@
                             await drawCardOnContext(tempCtx, 'back', tempCanvas.width, tempCanvas.height, cardData);
 
                             // Now rotate and draw it on the rotated canvas
-                            rotatedCtx.translate(rotatedCanvas.width/2, rotatedCanvas.height/2);
+                            rotatedCtx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
                             rotatedCtx.rotate(Math.PI); // 180 degrees
-                            rotatedCtx.translate(-rotatedCanvas.width/2, -rotatedCanvas.height/2);
+                            rotatedCtx.translate(-rotatedCanvas.width / 2, -rotatedCanvas.height / 2);
                             rotatedCtx.drawImage(tempCanvas, 0, 0);
 
                             const backDataUrl = rotatedCanvas.toDataURL('image/png');
@@ -1828,8 +1949,8 @@
                 setActivePlaceholder(null);
                 loadingModal.classList.remove('hidden');
                 loadingText.textContent = 'Generating ZIP...';
-                
-                try {                
+
+                try {
                     const zip = new JSZip();
                     const tempCanvas = document.createElement('canvas');
                     const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
@@ -1837,22 +1958,22 @@
                     tempCanvas.width = w;
                     tempCanvas.height = h;
                     const tempCtx = tempCanvas.getContext('2d');
-                    
+
                     for (let i = 0; i < data.length; i++) {
                         const baseName = `ID_Card_${data[i].ID || data[i].id || i + 1}`;
-                                            
+
                         await drawCardOnContext(tempCtx, 'front', w, h, data[i]);
                         zip.file(`${baseName}_Front.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
-                                            
+
                         await drawCardOnContext(tempCtx, 'back', w, h, data[i]);
                         zip.file(`${baseName}_Back.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
-                        
+
                         // Update loading message
                         if (i % 5 === 0) {
-                            loadingText.textContent = `Generating ZIP... (${i+1}/${data.length} cards)`;
+                            loadingText.textContent = `Generating ZIP... (${i + 1}/${data.length} cards)`;
                         }
                     }
-                    
+
                     const content = await zip.generateAsync({ type: 'blob' });
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(content);
@@ -1868,7 +1989,7 @@
                     loadingModal.classList.add('hidden');
                 }
             });
-            
+
             // --- Image Helper Functions ---
             const convertImagesToDataUrls = async () => {
                 const files = imageConverterInput.files;
@@ -1876,59 +1997,59 @@
                     alert("Please select at least one image file.");
                     return;
                 }
-                
+
                 const conversions = [];
                 let completed = 0;
-                
+
                 // Show progress
                 conversionOutput.classList.remove('hidden');
                 convertedList.innerHTML = '<div class="text-blue-600">Converting images...</div>';
-                
+
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
-                    
+
                     // Create a promise for each file conversion
                     const conversionPromise = new Promise((resolve, reject) => {
                         const reader = new FileReader();
-                        
+
                         reader.onload = (e) => {
                             const dataUrl = e.target.result;
                             const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
-                            
+
                             conversions.push({
                                 originalName: file.name,
                                 fileName: fileName,
                                 dataUrl: dataUrl,
                                 size: Math.round(file.size / 1024) + ' KB'
                             });
-                            
+
                             completed++;
                             convertedList.innerHTML = `<div class="text-blue-600">Converting... ${completed}/${files.length}</div>`;
-                            
+
                             resolve();
                         };
-                        
+
                         reader.onerror = reject;
                         reader.readAsDataURL(file);
                     });
-                    
+
                     await conversionPromise;
                 }
-                
+
                 // Create CSV content
                 let csvContent = 'Name,ID,Position,Photo\n'; // Header row
-                
+
                 conversions.forEach((conversion, index) => {
                     const sampleName = `Student ${index + 1}`;
                     const sampleID = `ID${(index + 1).toString().padStart(3, '0')}`;
                     const samplePosition = 'Student';
-                    
+
                     // Escape quotes in data URL and wrap in quotes
                     const escapedDataUrl = '"' + conversion.dataUrl.replace(/"/g, '""') + '"';
-                    
+
                     csvContent += `${sampleName},${sampleID},${samplePosition},${escapedDataUrl}\n`;
                 });
-                
+
                 // Create and download CSV file
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
@@ -1939,7 +2060,7 @@
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                
+
                 // Show summary
                 convertedList.innerHTML = `
                     <div class="space-y-1">
@@ -1954,10 +2075,10 @@
                         </div>
                     </div>
                 `;
-                
+
                 alert(`Successfully converted ${conversions.length} images!\n\nA CSV file has been downloaded with your photos embedded. Edit the file with real student data, then upload it back to the generator.`);
             };
-            
+
             // --- Layout Management ---
             const saveLayout = () => {
                 const layoutName = layoutNameInput.value.trim();
@@ -1965,7 +2086,7 @@
                     alert("Please enter a name for your layout!");
                     return;
                 }
-                
+
                 // Create an object with all layout data including backgrounds
                 const layoutData = {
                     name: layoutName,
@@ -1980,38 +2101,38 @@
                     },
                     dateCreated: new Date().toISOString()
                 };
-                
+
                 // Get existing layouts from localStorage or initialize empty object
                 const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
-                
+
                 // Add/update this layout
                 savedLayouts[layoutName] = layoutData;
-                
+
                 // Save back to localStorage
                 localStorage.setItem('idCardLayouts', JSON.stringify(savedLayouts));
-                
+
                 // Update the dropdown
                 updateLayoutSelect();
-                
+
                 alert(`Layout "${layoutName}" saved successfully with background designs!`);
             };
-            
+
             const loadLayout = (layoutName) => {
                 const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
                 const layout = savedLayouts[layoutName];
-                
+
                 if (!layout) {
                     alert("Layout not found!");
                     return;
                 }
-                
+
                 // Set orientation
                 setOrientation(layout.orientation);
-                
+
                 // Load placeholders
                 placeholders.front = JSON.parse(JSON.stringify(layout.placeholders.front));
                 placeholders.back = JSON.parse(JSON.stringify(layout.placeholders.back));
-                
+
                 // Load background images if they exist
                 if (layout.backgrounds) {
                     if (layout.backgrounds.front) {
@@ -2021,23 +2142,23 @@
                         bgImages.back.src = layout.backgrounds.back;
                     }
                 }
-                
+
                 // Redraw everything
                 renderPlaceholders();
                 drawAllCanvases();
-                
+
                 alert(`Layout "${layoutName}" loaded successfully with backgrounds!`);
             };
-            
+
             const updateLayoutSelect = () => {
                 // Clear existing options except the first default one
                 while (layoutSelect.options.length > 1) {
                     layoutSelect.remove(1);
                 }
-                
+
                 // Get saved layouts
                 const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
-                
+
                 // Add each layout to the dropdown
                 for (const layoutName in savedLayouts) {
                     const option = document.createElement('option');
@@ -2046,13 +2167,13 @@
                     layoutSelect.appendChild(option);
                 }
             };
-            
+
             // --- Image Helper Event Listeners ---
             convertImagesBtn.addEventListener('click', convertImagesToDataUrls);
-            
+
             // --- Event Listeners for Layout Management ---
             saveLayoutBtn.addEventListener('click', saveLayout);
-            
+
             loadLayoutBtn.addEventListener('click', () => {
                 const selectedLayout = layoutSelect.value;
                 if (!selectedLayout) {
@@ -2061,48 +2182,48 @@
                 }
                 loadLayout(selectedLayout);
             });
-            
+
             deleteLayoutBtn.addEventListener('click', () => {
                 const selectedLayout = layoutSelect.value;
                 if (!selectedLayout) {
                     alert("Please select a layout to delete!");
                     return;
                 }
-                
+
                 if (confirm(`Are you sure you want to delete the layout "${selectedLayout}"? This cannot be undone.`)) {
                     const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
-                    
+
                     // Remove the selected layout
                     delete savedLayouts[selectedLayout];
-                    
+
                     // Save back to localStorage
                     localStorage.setItem('idCardLayouts', JSON.stringify(savedLayouts));
-                    
+
                     // Update the dropdown
                     updateLayoutSelect();
-                    
+
                     // Clear the name input
                     layoutNameInput.value = '';
-                    
+
                     alert(`Layout "${selectedLayout}" has been deleted.`);
                 }
             });
-            
+
             layoutSelect.addEventListener('change', () => {
                 const selectedLayout = layoutSelect.value;
                 if (selectedLayout) {
                     layoutNameInput.value = selectedLayout;
                 }
             });
-            
+
             exportLayoutsBtn.addEventListener('click', () => {
                 const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
-                
+
                 if (Object.keys(savedLayouts).length === 0) {
                     alert("No layouts to export. Please create and save a layout first.");
                     return;
                 }
-                
+
                 // Create a data object with metadata
                 const exportData = {
                     type: "ID_Card_Generator_Layouts",
@@ -2110,58 +2231,58 @@
                     timestamp: new Date().toISOString(),
                     layouts: savedLayouts
                 };
-                
+
                 // Convert to JSON string
                 const jsonStr = JSON.stringify(exportData, null, 2);
-                
+
                 // Create a downloadable file
                 const blob = new Blob([jsonStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
-                
+
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = 'ID_Card_Layouts_' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
                 document.body.appendChild(a);
                 a.click();
-                
+
                 // Cleanup
                 setTimeout(() => {
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(url);
                 }, 0);
             });
-            
+
             importLayoutsBtn.addEventListener('click', () => {
                 // Create a hidden file input
                 const fileInput = document.createElement('input');
                 fileInput.type = 'file';
                 fileInput.accept = 'application/json';
                 fileInput.style.display = 'none';
-                
+
                 fileInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (!file) return;
-                    
+
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         try {
                             const importedData = JSON.parse(event.target.result);
-                            
+
                             // Validate that it's an ID card layout file
                             if (!importedData.type || importedData.type !== "ID_Card_Generator_Layouts") {
                                 throw new Error("Invalid layout file format");
                             }
-                            
+
                             // Get current layouts
                             const currentLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
-                            
+
                             // Count imported layouts
                             const importCount = Object.keys(importedData.layouts).length;
-                            
+
                             // Handle conflicts or merge
                             let conflictCount = 0;
                             let mergeCount = 0;
-                            
+
                             for (const [name, layout] of Object.entries(importedData.layouts)) {
                                 if (currentLayouts[name]) {
                                     conflictCount++;
@@ -2171,34 +2292,34 @@
                                 }
                                 currentLayouts[name] = layout;
                             }
-                            
+
                             // Save merged layouts
                             localStorage.setItem('idCardLayouts', JSON.stringify(currentLayouts));
-                            
+
                             // Update the dropdown
                             updateLayoutSelect();
-                            
+
                             alert(`Successfully imported ${importCount} layouts!\n- ${mergeCount} new layouts added\n- ${conflictCount} existing layouts updated`);
-                            
+
                         } catch (error) {
                             console.error("Import error:", error);
                             alert(`Error importing layouts: ${error.message}`);
                         }
                     };
-                    
+
                     reader.readAsText(file);
                 });
-                
+
                 // Append and trigger click
                 document.body.appendChild(fileInput);
                 fileInput.click();
-                
+
                 // Cleanup
                 setTimeout(() => {
                     document.body.removeChild(fileInput);
                 }, 0);
             });
-            
+
             // --- Initial Setup ---
             const initialSetup = () => {
                 // Set canvas dimensions based on orientation
@@ -2214,30 +2335,30 @@
                     wrapper.style.width = ''; // Reset width
                     wrapper.style.height = ''; // Reset height
                 });
-                
+
                 // Reset placeholder wrapper styles
                 [frontPlaceholderWrapper, backPlaceholderWrapper].forEach(w => {
                     w.style.transform = '';
                 });
-                
+
                 // Setup background image loading
                 bgImages.front.onload = () => drawAllCanvases();
                 bgImages.back.onload = () => drawAllCanvases();
-                
+
                 // Load default backgrounds
                 bgImages.front.src = defaultBgDataUrl;
                 bgImages.back.src = defaultBackBgDataUrl;
-                
+
                 // Set initial state
                 setOrientation('horizontal');
                 setActiveSide('front');
-                
+
                 // Load saved layouts into the dropdown
                 updateLayoutSelect();
-                
+
                 // Apply default zoom
                 applyZoom(0.7);
-                
+
                 // Create basic demo data if needed
                 if (data.length === 0) {
                     // Optional: add some sample data for demo purposes
@@ -2245,9 +2366,10 @@
                     // headers = Object.keys(data[0]);
                 }
             };
-            
+
             initialSetup();
         });
     </script>
 </body>
+
 </html>
