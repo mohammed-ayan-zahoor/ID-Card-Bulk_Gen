@@ -488,13 +488,94 @@
                     // Format date fields if they contain DOB, Date, or similar
                     if (!isStaticText && value && (p.key.toLowerCase().includes('dob') || p.key.toLowerCase().includes('date') || p.key.toLowerCase().includes('birth'))) {
                         try {
-                            // Try to parse as date and format it
-                            const date = new Date(value);
-                            if (!isNaN(date.getTime())) {
-                                value = date.toLocaleDateString(); // Format as local date
+                            console.log(`Processing date field "${p.key}" with value:`, value, `(type: ${typeof value})`);
+                            
+                            // Enhanced date parsing to handle various formats
+                            let parsedDate = null;
+                            
+                            // Convert string numbers to actual numbers for Excel date detection
+                            const numValue = parseFloat(value);
+                            
+                            // Handle Excel serial dates (numbers like 44927)
+                            // Only treat as Excel date if in a realistic range (10,000–50,000 covers years 1927–2036)
+                            if (!isNaN(numValue) && numValue >= 10000 && numValue <= 50000) {
+                                console.log(`Detected potential Excel serial date: ${numValue}`);
+                                const excelEpoch = new Date(1899, 11, 30); // December 30, 1899
+                                const millisecondsPerDay = 24 * 60 * 60 * 1000;
+                                const jsDate = new Date(excelEpoch.getTime() + numValue * millisecondsPerDay);
+                                if (jsDate.getFullYear() >= 1900 && jsDate.getFullYear() <= new Date().getFullYear()) {
+                                    parsedDate = jsDate;
+                                    console.log(`Excel date converted: ${numValue} -> ${jsDate.toDateString()}`);
+                                } else {
+                                    console.warn(`Excel date resulted in invalid year: ${jsDate.getFullYear()}`);
+                                }
+                            }
+                            // Handle MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD formats
+                            else if (typeof value === 'string') {
+                                // Clean the string first
+                                const cleanValue = value.trim();
+                                console.log(`Processing string date: "${cleanValue}"`);
+                                
+                                // Try parsing different date formats
+                                if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanValue)) {
+                                    // MM/DD/YYYY or DD/MM/YYYY format
+                                    const parts = cleanValue.split('/');
+                                    const month = parseInt(parts[0]) - 1; // Month is 0-indexed
+                                    const day = parseInt(parts[1]);
+                                    const year = parseInt(parts[2]);
+                                    
+                                    console.log(`Parsed MM/DD/YYYY: month=${month+1}, day=${day}, year=${year}`);
+                                    
+                                    // Validate year range (reasonable birth years)
+                                    if (year >= 1900 && year <= new Date().getFullYear()) {
+                                        parsedDate = new Date(year, month, day);
+                                    } else {
+                                        console.warn(`Invalid year in date: ${year}`);
+                                    }
+                                } else if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleanValue)) {
+                                    // YYYY-MM-DD format
+                                    const parts = cleanValue.split('-');
+                                    const year = parseInt(parts[0]);
+                                    const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+                                    const day = parseInt(parts[2]);
+                                    
+                                    console.log(`Parsed YYYY-MM-DD: year=${year}, month=${month+1}, day=${day}`);
+                                    
+                                    // Validate year range
+                                    if (year >= 1900 && year <= new Date().getFullYear()) {
+                                        parsedDate = new Date(year, month, day);
+                                    } else {
+                                        console.warn(`Invalid year in date: ${year}`);
+                                    }
+                                } else {
+                                    console.log(`Trying native Date constructor for: "${cleanValue}"`);
+                                    // Try the native Date constructor as fallback
+                                    const testDate = new Date(cleanValue);
+                                    if (!isNaN(testDate.getTime()) && testDate.getFullYear() >= 1900 && testDate.getFullYear() <= new Date().getFullYear()) {
+                                        parsedDate = testDate;
+                                        console.log(`Native Date parsing successful: ${testDate.toDateString()}`);
+                                    } else {
+                                        console.warn(`Native Date parsing failed or invalid year: ${testDate.getFullYear()}`);
+                                    }
+                                }
+                            }
+                            
+                            // If we successfully parsed a date, format it
+                            if (parsedDate && !isNaN(parsedDate.getTime())) {
+                                // Format as MM/DD/YYYY for consistency
+                                const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+                                const day = parsedDate.getDate().toString().padStart(2, '0');
+                                const year = parsedDate.getFullYear();
+                                value = `${month}/${day}/${year}`;
+                                
+                                console.log(`✅ Successfully formatted date: ${value} (original: ${rowData[p.key]})`);
+                            } else {
+                                console.warn(`❌ Could not parse date: "${value}" for field: ${p.key} - keeping original value`);
+                                // Keep the original value if we can't parse it
                             }
                         } catch (e) {
                             // If parsing fails, keep original value
+                            console.error(`Date parsing error for ${p.key}:`, e);
                         }
                     }
                     
