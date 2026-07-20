@@ -418,6 +418,10 @@
                         <button id="generate-pdf-btn"
                             class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors text-lg"
                             disabled>Export to A4 PDF</button>
+                        <label class="flex items-center gap-2 cursor-pointer select-none text-sm font-medium text-gray-700">
+                            <input type="checkbox" id="front-only-checkbox" class="w-4 h-4 accent-red-600">
+                            Front side only &mdash; print 10 fronts per page (no back)
+                        </label>
                         <button id="generate-zip-btn"
                             class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
                             disabled>Generate & Download ZIP</button>
@@ -1878,6 +1882,7 @@
                     const isHorizontal = orientation === 'horizontal';
                     const cardWidthMM = isHorizontal ? 85.6 : 54.0;
                     const cardHeightMM = isHorizontal ? 54.0 : 85.6;
+                    const frontOnly = document.getElementById('front-only-checkbox').checked;
 
                     // Optimized for 5 cards per row on A4 landscape (297mm x 210mm)
                     const cardsPerRow = 5;
@@ -1903,33 +1908,39 @@
                         if (i > 0) pdf.addPage(); // New page for each batch
 
                         // Process each card in this batch
-                        for (let j = 0; j < cardsPerRow && (i + j) < data.length; j++) {
+                        const batchSize = Math.min(cardsPerRow, data.length - i);
+                        // Right-align the batch: empty slot(s) stay on the LEFT so the user can
+                        // feed a pre-cut piece of sheet that covers only the right portion.
+                        const batchStartX = cardSpacing + (cardsPerRow - batchSize) * (cardWidthMM + cardSpacing);
+                        for (let j = 0; j < batchSize; j++) {
                             const cardData = data[i + j];
-                            const cardX = cardSpacing + (j * (cardWidthMM + cardSpacing));
+                            const cardX = batchStartX + (j * (cardWidthMM + cardSpacing));
 
                             // Draw FRONT card (top row)
                             await drawCardOnContext(tempCtx, 'front', tempCanvas.width, tempCanvas.height, cardData);
                             const frontDataUrl = tempCanvas.toDataURL('image/png');
                             pdf.addImage(frontDataUrl, 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM);
 
-                            // Draw BACK card (bottom row, rotated 180 degrees for proper double-sided printing)
-                            // Create a temporary canvas for rotation
-                            const rotatedCanvas = document.createElement('canvas');
-                            rotatedCanvas.width = tempCanvas.width;
-                            rotatedCanvas.height = tempCanvas.height;
-                            const rotatedCtx = rotatedCanvas.getContext('2d');
+                            if (frontOnly) {
+                                // Second row is also front — 10 fronts per page
+                                pdf.addImage(frontDataUrl, 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+                            } else {
+                                // Draw BACK card (bottom row, rotated 180° for double-sided printing)
+                                const rotatedCanvas = document.createElement('canvas');
+                                rotatedCanvas.width = tempCanvas.width;
+                                rotatedCanvas.height = tempCanvas.height;
+                                const rotatedCtx = rotatedCanvas.getContext('2d');
 
-                            // Draw the back card normally first
-                            await drawCardOnContext(tempCtx, 'back', tempCanvas.width, tempCanvas.height, cardData);
+                                await drawCardOnContext(tempCtx, 'back', tempCanvas.width, tempCanvas.height, cardData);
 
-                            // Now rotate and draw it on the rotated canvas
-                            rotatedCtx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
-                            rotatedCtx.rotate(Math.PI); // 180 degrees
-                            rotatedCtx.translate(-rotatedCanvas.width / 2, -rotatedCanvas.height / 2);
-                            rotatedCtx.drawImage(tempCanvas, 0, 0);
+                                rotatedCtx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+                                rotatedCtx.rotate(Math.PI); // 180 degrees
+                                rotatedCtx.translate(-rotatedCanvas.width / 2, -rotatedCanvas.height / 2);
+                                rotatedCtx.drawImage(tempCanvas, 0, 0);
 
-                            const backDataUrl = rotatedCanvas.toDataURL('image/png');
-                            pdf.addImage(backDataUrl, 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+                                const backDataUrl = rotatedCanvas.toDataURL('image/png');
+                                pdf.addImage(backDataUrl, 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+                            }
                         }
                     }
 
