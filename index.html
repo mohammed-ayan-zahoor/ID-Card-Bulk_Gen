@@ -303,7 +303,7 @@
             <div id="step1" class="bg-white rounded-xl shadow-md step-card">
                 <div class="step-header">
                     <span class="step-num bg-blue-500 text-white">1</span>
-                    <h2>Card Setup <span class="info-icon" title="Choose orientation and upload front/back background images. Default designs provided.">ℹ</span></h2>
+                    <h2 class="flex items-center justify-between w-full">Card Setup <span title="Choose orientation and upload front/back background images. Default designs provided."><svg class="w-3.5 h-3.5 inline text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <div class="flex gap-1 mb-2">
                     <button id="orientation-horizontal-btn" class="flex-1 py-1.5 rounded-md bg-blue-500 text-white text-xs font-bold">Horizontal</button>
@@ -325,7 +325,7 @@
             <div id="step2" class="bg-white rounded-xl shadow-md step-card">
                 <div class="step-header">
                     <span class="step-num bg-blue-500 text-white">2</span>
-                    <h2>Upload Data <span class="info-icon" title="Upload Excel (.xlsx) or CSV. If your photo column has numbers (e.g. 3956), use the Photo Folder tool on the right.">ℹ</span></h2>
+                    <h2 class="flex items-center justify-between w-full">Upload Data <span title="Upload Excel (.xlsx) or CSV. If your photo column has numbers (e.g. 3956), use the Photo Folder tool on the right."><svg class="w-3.5 h-3.5 inline text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <input type="file" id="data-file-input" accept=".xlsx,.csv" class="file-input-sm">
             </div>
@@ -334,7 +334,7 @@
             <div id="step3" class="bg-white rounded-xl shadow-md step-card">
                 <div class="step-header">
                     <span class="step-num bg-blue-500 text-white">3</span>
-                    <h2>Design Card <span class="info-icon" title="Click a canvas side to activate it, then add fields. Type the Excel column name in the field box to bind data.">ℹ</span></h2>
+                    <h2 class="flex items-center justify-between w-full">Design Card <span title="Click a canvas side to activate it, then add fields. Type the Excel column name in the field box to bind data."><svg class="w-3.5 h-3.5 inline text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <div id="ai-controls" class="opacity-50">
                     <button id="add-all-headers-btn" class="w-full mb-1.5 py-1.5 bg-gray-500 text-white text-xs font-bold rounded-md hover:bg-gray-600" disabled>Add All Fields</button>
@@ -361,7 +361,7 @@
             <!-- Edit Panel (shown when a placeholder is selected) -->
             <div id="edit-panel" class="bg-white rounded-xl shadow-md step-card hidden">
                 <div class="step-header">
-                    <span class="step-num bg-pink-500 text-white">✎</span>
+                    <span class="step-num bg-pink-500 text-white"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></span>
                     <h2>Edit Field</h2>
                 </div>
                 <div id="edit-controls" class="space-y-2"></div>
@@ -371,7 +371,7 @@
             <div id="layout-management" class="bg-white rounded-xl shadow-md step-card">
                 <div class="step-header">
                     <span class="step-num bg-green-500 text-white">S</span>
-                    <h2>Layouts <span class="info-icon" title="Save/load card layouts with backgrounds to reuse across sessions. Export/Import to share between computers.">ℹ</span></h2>
+                    <h2 class="flex items-center justify-between w-full">Layouts <span title="Save/load card layouts with backgrounds to reuse across sessions. Export/Import to share between computers."><svg class="w-3.5 h-3.5 inline text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <div class="space-y-1.5">
                     <input type="text" id="layout-name" placeholder="Layout name…"
@@ -388,7 +388,9 @@
                         <select id="layout-select" class="flex-1 p-1 border border-gray-300 rounded text-xs">
                             <option value="">Select saved layout…</option>
                         </select>
-                        <button id="delete-layout-btn" class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">🗑</button>
+                        <button id="delete-layout-btn" class="px-2.5 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 flex items-center justify-center">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -397,7 +399,7 @@
             <div id="step4" class="bg-white rounded-xl shadow-md step-card">
                 <div class="step-header">
                     <span class="step-num bg-purple-500 text-white">4</span>
-                    <h2>Generate <span class="info-icon" title="Preview all cards with your data, then export to A4 PDF (5 or 10 per page) or individual PNG ZIP.">ℹ</span></h2>
+                    <h2 class="flex items-center justify-between w-full">Generate <span title="Preview all cards with your data, then export to A4 PDF (5 or 10 per page) or individual PNG ZIP."><svg class="w-3.5 h-3.5 inline text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <div class="space-y-1.5">
                     <div class="space-y-1">
@@ -459,8 +461,10 @@
             <!-- AI / Design tools -->
             <div class="bg-white rounded-xl shadow-md step-card">
                 <div class="step-header">
-                    <span class="step-num bg-teal-500 text-white">✨</span>
-                    <h2>AI Design <span class="info-icon" title="Uses Gemini AI to suggest a full card layout or generate a professional title based on your data columns.">ℹ</span></h2>
+                    <span class="step-num bg-teal-500 text-white flex items-center justify-center">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                    </span>
+                    <h2 class="flex items-center justify-between w-full">AI Design <span title="Uses Gemini AI to suggest a full card layout or generate a professional title based on your data columns."><svg class="w-3.5 h-3.5 inline text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <div id="ai-controls-right" class="space-y-1.5 opacity-50">
                     <div>
@@ -470,21 +474,30 @@
                             class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:ring-teal-500 focus:border-teal-500">
                         <p class="text-xs text-gray-400 mt-0.5">Free key at <a href="https://aistudio.google.com" target="_blank" class="underline text-teal-600">aistudio.google.com</a></p>
                     </div>
-                    <button id="ai-layout-btn" class="w-full py-1.5 bg-teal-500 text-white text-xs font-bold rounded-md hover:bg-teal-600" disabled>✨ Suggest Layout</button>
-                    <button id="ai-title-btn" class="w-full py-1.5 bg-indigo-500 text-white text-xs font-bold rounded-md hover:bg-indigo-600" disabled>✨ Generate Title</button>
+                    <button id="ai-layout-btn" class="w-full py-1.5 bg-teal-500 text-white text-xs font-bold rounded-md hover:bg-teal-600 flex items-center justify-center gap-1" disabled>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                        Suggest Layout
+                    </button>
+                    <button id="ai-title-btn" class="w-full py-1.5 bg-indigo-500 text-white text-xs font-bold rounded-md hover:bg-indigo-600 flex items-center justify-center gap-1" disabled>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                        Generate Title
+                    </button>
                 </div>
             </div>
 
             <!-- Photo Folder -->
             <div id="photo-folder-tool" class="bg-white rounded-xl shadow-md step-card">
                 <div class="step-header">
-                    <span class="step-num bg-orange-500 text-white">📁</span>
-                    <h2>Photo Folder <span class="info-icon" title="Select a folder of photos named by number (e.g. 3956.jpg). The app matches them to the number in your Excel photo column automatically.">ℹ</span></h2>
+                    <span class="step-num bg-orange-500 text-white flex items-center justify-center">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                    </span>
+                    <h2 class="flex items-center justify-between w-full">Photo Folder <span title="Select a folder of photos named by number (e.g. 3956.jpg). The app matches them to the number in your Excel photo column automatically."><svg class="w-3.5 h-3.5 inline text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <input type="file" id="photo-folder-input" webkitdirectory multiple class="file-input-sm">
                 <div id="photo-folder-status" class="hidden mt-1.5">
-                    <div class="p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800">
-                        ✅ <span id="photo-count"></span>
+                    <div class="p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800 flex items-center gap-1">
+                        <svg class="w-4 h-4 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        <span id="photo-count"></span>
                     </div>
                 </div>
             </div>
@@ -492,16 +505,19 @@
             <!-- Sign / Extra Image Folder -->
             <div id="sign-folder-tool" class="bg-white rounded-xl shadow-md step-card">
                 <div class="step-header">
-                    <span class="step-num bg-teal-500 text-white">✍</span>
-                    <h2>Sign / Extra Folder <span class="info-icon" title="Load a second image folder for signatures, stamps, etc. Enter the exact Excel column name it maps to.">ℹ</span></h2>
+                    <span class="step-num bg-teal-500 text-white flex items-center justify-center">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    </span>
+                    <h2 class="flex items-center justify-between w-full">Sign / Extra Folder <span title="Load a second image folder for signatures, stamps, etc. Enter the exact Excel column name it maps to."><svg class="w-3.5 h-3.5 inline text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <div class="space-y-1.5">
                     <input type="text" id="sign-column-input" placeholder="Excel column (e.g. Sign)"
                         class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:ring-teal-500 focus:border-teal-500">
                     <input type="file" id="sign-folder-input" webkitdirectory multiple class="file-input-sm">
                     <div id="sign-folder-status" class="hidden">
-                        <div class="p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800">
-                            ✅ <span id="sign-folder-count"></span>
+                        <div class="p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800 flex items-center gap-1">
+                            <svg class="w-4 h-4 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            <span id="sign-folder-count"></span>
                         </div>
                     </div>
                 </div>
@@ -510,8 +526,10 @@
             <!-- Image Helper -->
             <div id="image-helper" class="bg-white rounded-xl shadow-md step-card">
                 <div class="step-header">
-                    <span class="step-num bg-amber-500 text-white">🔧</span>
-                    <h2>Image → CSV <span class="info-icon" title="Select local image files. The tool converts them to base64 and downloads a CSV template with your photos embedded — ready to upload as data.">ℹ</span></h2>
+                    <span class="step-num bg-amber-500 text-white flex items-center justify-center">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </span>
+                    <h2 class="flex items-center justify-between w-full">Image to CSV <span title="Select local image files. The tool converts them to base64 and downloads a CSV template with your photos embedded — ready to upload as data."><svg class="w-3.5 h-3.5 inline text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <div class="space-y-1.5">
                     <input type="file" id="image-converter-input" accept="image/*" multiple class="file-input-sm">
@@ -523,6 +541,7 @@
             </div>
 
         </div><!-- end right col -->
+
 
         </div><!-- end #app-grid -->
 
@@ -780,10 +799,9 @@
                                 const year = parsedDate.getFullYear();
                                 value = `${day}/${month}/${year}`;
 
-                                console.log(`✅ Successfully formatted date: ${value} (original: ${rowData[p.key]})`);
+                                // Formatted successfully
                             } else {
-                                console.warn(`❌ Could not parse date: "${value}" for field: ${p.key} - keeping original value`);
-                                // Keep the original value if we can't parse it
+                                // Keep original value if parsing fails
                             }
                         } catch (e) {
                             // If parsing fails, keep original value
@@ -1621,7 +1639,7 @@
                     if (zoomLevel === 'actual') {
                         const sizeNote = document.createElement('div');
                         sizeNote.className = 'size-note text-xs text-green-600 font-semibold text-center mt-2';
-                        sizeNote.textContent = '📏 Optimized viewing size for card design';
+                        sizeNote.textContent = 'Optimized viewing size for card design';
                         wrapper.appendChild(sizeNote);
                     }
                 });
@@ -2059,7 +2077,10 @@
                 // Show summary
                 convertedList.innerHTML = `
                     <div class="space-y-1">
-                        <div class="text-green-600 font-semibold">✅ Conversion completed!</div>
+                        <div class="text-green-600 font-semibold flex items-center gap-1">
+                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            Conversion completed!
+                        </div>
                         <div class="text-sm text-gray-600">Converted ${conversions.length} images</div>
                         <div class="text-sm text-gray-600">CSV file downloaded with sample data</div>
                         <div class="text-xs text-gray-500 mt-2 p-2 bg-yellow-50 rounded">
@@ -2071,7 +2092,7 @@
                     </div>
                 `;
 
-                alert(`Successfully converted ${conversions.length} images!\n\nA CSV file has been downloaded with your photos embedded. Edit the file with real student data, then upload it back to the generator.`);
+                toast(`Successfully converted ${conversions.length} images! CSV file downloaded.`, 'success');
             };
 
             // --- Layout Management ---
