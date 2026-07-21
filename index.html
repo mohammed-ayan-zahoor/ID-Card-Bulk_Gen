@@ -2032,33 +2032,72 @@
                 loadingText.textContent = 'Generating A4 PDF...';
                 showProgress(0);
 
+            // --- PDF Generation (Always vertical 54mm x 85.6mm cards on A4) ---
+            generatePdfBtn.addEventListener('click', async () => {
+                if (data.length === 0) { toast('Please upload data and add fields before generating.', 'warn'); return; }
+                loadingModal.classList.remove('hidden');
+                loadingText.textContent = 'Generating A4 PDF...';
+                showProgress(0);
+
                 try {
                     const { jsPDF } = window.jspdf;
                     const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
                     const isHorizontal = orientation === 'horizontal';
-                    const cardWidthMM  = isHorizontal ? 85.6 : 54.0;
-                    const cardHeightMM = isHorizontal ? 54.0 : 85.6;
+
+                    // Output PDF card dimensions in MM (Always Vertical: 54mm wide x 85.6mm high)
+                    const cardWidthMM = 54.0;
+                    const cardHeightMM = 85.6;
                     const frontOnly = document.getElementById('front-only-checkbox').checked;
                     const cardsPerRow = 5;
                     const pageWidth = 297, pageHeight = 210;
-                    const totalCardsWidth = cardsPerRow * cardWidthMM;
-                    const cardSpacing = (pageWidth - totalCardsWidth) / (cardsPerRow + 1);
-                    const frontRowY = 15;
-                    const backRowY  = frontRowY + cardHeightMM + 15;
+                    const totalCardsWidth = cardsPerRow * cardWidthMM; // 270mm
+                    const cardSpacing = (pageWidth - totalCardsWidth) / (cardsPerRow + 1); // ~4.5mm
+                    const frontRowY = 12;
+                    const backRowY = 112; // 12 + 85.6 + 14.4 = 112mm
+
+                    // Canvas dimensions for original card design
+                    const designW = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT; // 1011 or 638
+                    const designH = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH; // 638 or 1011
+
+                    // Canvas dimensions for output vertical card image
+                    const outW = 638;
+                    const outH = 1011;
 
                     const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width  = isHorizontal ? HORIZONTAL_WIDTH  : HORIZONTAL_HEIGHT;
-                    tempCanvas.height = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                    tempCanvas.width = designW;
+                    tempCanvas.height = designH;
                     const tempCtx = tempCanvas.getContext('2d');
 
-                    // Reuse one rotated canvas for backs instead of creating per card
+                    const outCanvas = document.createElement('canvas');
+                    outCanvas.width = outW;
+                    outCanvas.height = outH;
+                    const outCtx = outCanvas.getContext('2d');
+
                     const rotatedCanvas = document.createElement('canvas');
-                    rotatedCanvas.width  = tempCanvas.width;
-                    rotatedCanvas.height = tempCanvas.height;
+                    rotatedCanvas.width = outW;
+                    rotatedCanvas.height = outH;
                     const rotatedCtx = rotatedCanvas.getContext('2d');
 
+                    // Helper to draw design and rotate 90° if horizontal to produce vertical card image
+                    const drawVerticalCard = async (side, cardData) => {
+                        tempCtx.clearRect(0, 0, designW, designH);
+                        await drawCardOnContext(tempCtx, side, designW, designH, cardData);
+
+                        outCtx.clearRect(0, 0, outW, outH);
+                        if (isHorizontal) {
+                            // Rotate horizontal design 90° counter-clockwise so it stands vertically on PDF
+                            outCtx.save();
+                            outCtx.translate(0, outH);
+                            outCtx.rotate(-Math.PI / 2);
+                            outCtx.drawImage(tempCanvas, 0, 0);
+                            outCtx.restore();
+                        } else {
+                            outCtx.drawImage(tempCanvas, 0, 0);
+                        }
+                    };
+
                     const cardsPerPage = frontOnly ? cardsPerRow * 2 : cardsPerRow;
-                    const totalPages  = Math.ceil(data.length / cardsPerPage);
+                    const totalPages = Math.ceil(data.length / cardsPerPage);
 
                     for (let i = 0; i < data.length; i += cardsPerPage) {
                         if (i > 0) pdf.addPage();
@@ -2066,38 +2105,40 @@
                         showProgress(Math.round((pageNum / totalPages) * 100));
                         loadingText.textContent = `Generating PDF... page ${pageNum} / ${totalPages}`;
 
-                        // ROW 1
-                        const row1Size   = Math.min(cardsPerRow, data.length - i);
+                        // ROW 1 (Fronts)
+                        const row1Size = Math.min(cardsPerRow, data.length - i);
                         const row1StartX = cardSpacing + (cardsPerRow - row1Size) * (cardWidthMM + cardSpacing);
                         for (let j = 0; j < row1Size; j++) {
                             const cardData = data[i + j];
                             const cardX = row1StartX + j * (cardWidthMM + cardSpacing);
-                            await drawCardOnContext(tempCtx, 'front', tempCanvas.width, tempCanvas.height, cardData);
-                            pdf.addImage(tempCanvas.toDataURL('image/png'), 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM);
+
+                            await drawVerticalCard('front', cardData);
+                            pdf.addImage(outCanvas.toDataURL('image/png'), 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM);
 
                             if (!frontOnly) {
-                                rotatedCtx.clearRect(0, 0, rotatedCanvas.width, rotatedCanvas.height);
-                                await drawCardOnContext(tempCtx, 'back', tempCanvas.width, tempCanvas.height, cardData);
+                                await drawVerticalCard('back', cardData);
+                                rotatedCtx.clearRect(0, 0, outW, outH);
                                 rotatedCtx.save();
-                                rotatedCtx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+                                rotatedCtx.translate(outW / 2, outH / 2);
                                 rotatedCtx.rotate(Math.PI);
-                                rotatedCtx.translate(-rotatedCanvas.width / 2, -rotatedCanvas.height / 2);
-                                rotatedCtx.drawImage(tempCanvas, 0, 0);
+                                rotatedCtx.translate(-outW / 2, -outH / 2);
+                                rotatedCtx.drawImage(outCanvas, 0, 0);
                                 rotatedCtx.restore();
                                 pdf.addImage(rotatedCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
                             }
                         }
 
                         if (frontOnly) {
-                            // ROW 2: next 5 cards
-                            const row2Start  = i + cardsPerRow;
-                            const row2Size   = Math.min(cardsPerRow, Math.max(0, data.length - row2Start));
+                            // ROW 2 (Next 5 Fronts)
+                            const row2Start = i + cardsPerRow;
+                            const row2Size = Math.min(cardsPerRow, Math.max(0, data.length - row2Start));
                             const row2StartX = cardSpacing + (cardsPerRow - row2Size) * (cardWidthMM + cardSpacing);
                             for (let j = 0; j < row2Size; j++) {
                                 const cardData = data[row2Start + j];
                                 const cardX = row2StartX + j * (cardWidthMM + cardSpacing);
-                                await drawCardOnContext(tempCtx, 'front', tempCanvas.width, tempCanvas.height, cardData);
-                                pdf.addImage(tempCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+
+                                await drawVerticalCard('front', cardData);
+                                pdf.addImage(outCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
                             }
                         }
                     }
@@ -2113,6 +2154,7 @@
                     hideProgress();
                 }
             });
+
 
             // ZIP Generation
             generateZipBtn.addEventListener('click', async () => {
