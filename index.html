@@ -1929,43 +1929,48 @@
                     tempCanvas.height = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
                     const tempCtx = tempCanvas.getContext('2d');
 
-                    // Process cards in batches of 5
-                    for (let i = 0; i < data.length; i += cardsPerRow) {
-                        if (i > 0) pdf.addPage(); // New page for each batch
+                    // In front-only mode each page holds 10 cards (2 rows of 5).
+                    // In double-sided mode each page holds 5 (front row + back row = same cards).
+                    const cardsPerPage = frontOnly ? cardsPerRow * 2 : cardsPerRow;
 
-                        // Process each card in this batch
-                        const batchSize = Math.min(cardsPerRow, data.length - i);
-                        // Right-align the batch: empty slot(s) stay on the LEFT so the user can
-                        // feed a pre-cut piece of sheet that covers only the right portion.
-                        const batchStartX = cardSpacing + (cardsPerRow - batchSize) * (cardWidthMM + cardSpacing);
-                        for (let j = 0; j < batchSize; j++) {
+                    for (let i = 0; i < data.length; i += cardsPerPage) {
+                        if (i > 0) pdf.addPage();
+
+                        // --- ROW 1: cards i to i+4 ---
+                        const row1Size = Math.min(cardsPerRow, data.length - i);
+                        const row1StartX = cardSpacing + (cardsPerRow - row1Size) * (cardWidthMM + cardSpacing);
+                        for (let j = 0; j < row1Size; j++) {
                             const cardData = data[i + j];
-                            const cardX = batchStartX + (j * (cardWidthMM + cardSpacing));
-
-                            // Draw FRONT card (top row)
+                            const cardX = row1StartX + j * (cardWidthMM + cardSpacing);
                             await drawCardOnContext(tempCtx, 'front', tempCanvas.width, tempCanvas.height, cardData);
                             const frontDataUrl = tempCanvas.toDataURL('image/png');
                             pdf.addImage(frontDataUrl, 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM);
 
-                            if (frontOnly) {
-                                // Second row is also front — 10 fronts per page
-                                pdf.addImage(frontDataUrl, 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
-                            } else {
-                                // Draw BACK card (bottom row, rotated 180° for double-sided printing)
+                            if (!frontOnly) {
+                                // Double-sided: back of same card in row 2, rotated 180 degrees
                                 const rotatedCanvas = document.createElement('canvas');
                                 rotatedCanvas.width = tempCanvas.width;
                                 rotatedCanvas.height = tempCanvas.height;
                                 const rotatedCtx = rotatedCanvas.getContext('2d');
-
                                 await drawCardOnContext(tempCtx, 'back', tempCanvas.width, tempCanvas.height, cardData);
-
                                 rotatedCtx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
-                                rotatedCtx.rotate(Math.PI); // 180 degrees
+                                rotatedCtx.rotate(Math.PI);
                                 rotatedCtx.translate(-rotatedCanvas.width / 2, -rotatedCanvas.height / 2);
                                 rotatedCtx.drawImage(tempCanvas, 0, 0);
+                                pdf.addImage(rotatedCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+                            }
+                        }
 
-                                const backDataUrl = rotatedCanvas.toDataURL('image/png');
-                                pdf.addImage(backDataUrl, 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+                        if (frontOnly) {
+                            // --- ROW 2: next 5 cards (i+5 to i+9) ---
+                            const row2Start = i + cardsPerRow;
+                            const row2Size = Math.min(cardsPerRow, Math.max(0, data.length - row2Start));
+                            const row2StartX = cardSpacing + (cardsPerRow - row2Size) * (cardWidthMM + cardSpacing);
+                            for (let j = 0; j < row2Size; j++) {
+                                const cardData = data[row2Start + j];
+                                const cardX = row2StartX + j * (cardWidthMM + cardSpacing);
+                                await drawCardOnContext(tempCtx, 'front', tempCanvas.width, tempCanvas.height, cardData);
+                                pdf.addImage(tempCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
                             }
                         }
                     }
