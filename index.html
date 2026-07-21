@@ -237,347 +237,297 @@
                 print-ready sheets.</p>
         </header>
         <div id="app-grid">
-            <!-- Controls Column -->
-            <div class="col-scroll space-y-6">
-                <!-- Step 1: Card Design -->
-                <div id="step1" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4"><span
-                            class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">1</span>
-                        <h2 class="text-xl sm:text-2xl font-semibold">Card Setup</h2>
-                    </div>
-                    <p class="text-gray-600 mb-4">Choose an orientation. Default designs are provided, which you can
-                        replace.</p>
+        <!-- ========== CSS: 3-col grid + conditional canvas layout ========== -->
+        <style>
+            /* Wider max width */
+            #app-wrapper { max-width: 1800px; margin: 0 auto; }
 
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Orientation</label>
-                        <div class="flex justify-around bg-gray-100 rounded-lg p-1">
-                            <button id="orientation-horizontal-btn"
-                                class="w-full px-3 py-2 rounded-md bg-blue-500 text-white">Horizontal</button>
-                            <button id="orientation-vertical-btn" class="w-full px-3 py-2 rounded-md">Vertical</button>
-                        </div>
-                    </div>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Front Design</label>
-                            <input type="file" id="bg-image-front-input" accept="image/jpeg, image/png"
-                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Back Design</label>
-                            <input type="file" id="bg-image-back-input" accept="image/jpeg, image/png"
-                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                        </div>
-                    </div>
+            /* 3-column grid: left=compact controls, center=canvas, right=tools */
+            #app-grid {
+                grid-template-columns: 240px 1fr 280px !important;
+                gap: 1rem !important;
+                padding: 0 1rem 1rem !important;
+            }
+
+            /* Compact card padding */
+            .step-card { padding: 0.75rem 1rem !important; }
+            .step-card h2 { font-size: 0.95rem !important; font-weight: 700; }
+            .step-card .step-num {
+                width: 1.5rem; height: 1.5rem; border-radius: 50%;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+                margin-right: 0.5rem;
+            }
+            .step-header { display: flex; align-items: center; margin-bottom: 0.5rem; }
+            .tool-row { display: flex; gap: 0.4rem; }
+            .tool-row button { flex: 1; padding: 0.35rem 0.25rem; font-size: 0.75rem; font-weight: 700; border-radius: 0.4rem; border: none; cursor: pointer; transition: opacity 0.15s; }
+            .tool-row button:hover { opacity: 0.85; }
+
+            /* Compact file input */
+            .file-input-sm { display: block; width: 100%; font-size: 0.7rem; color: #6b7280; }
+            .file-input-sm::file-selector-button {
+                font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 999px; border: none;
+                font-weight: 600; cursor: pointer; margin-right: 0.4rem;
+            }
+
+            /* Canvas column: conditional layout */
+            #canvas-area {
+                display: flex;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            /* Horizontal cards: stack vertically */
+            #canvas-area[data-orientation="horizontal"] {
+                flex-direction: column;
+            }
+            /* Vertical cards: sit side-by-side */
+            #canvas-area[data-orientation="vertical"] {
+                flex-direction: row;
+            }
+            #canvas-area > .canvas-wrapper {
+                flex: 1;
+            }
+
+            /* Tooltip via title — browser default, but we add a little indicator */
+            [title] { cursor: help; }
+            .info-icon { color: #9ca3af; font-size: 0.75rem; margin-left: 0.25rem; }
+
+            /* Compact QR field box */
+            #qr-field-container { padding: 0.5rem !important; }
+        </style>
+
+        <!-- ===== LEFT: Compact Steps ===== -->
+        <div class="col-scroll space-y-2">
+
+            <!-- Step 1: Card Setup -->
+            <div id="step1" class="bg-white rounded-xl shadow-md step-card">
+                <div class="step-header">
+                    <span class="step-num bg-blue-500 text-white">1</span>
+                    <h2>Card Setup <span class="info-icon" title="Choose orientation and upload front/back background images. Default designs provided.">ℹ</span></h2>
                 </div>
-                <!-- Step 2: Upload Data -->
-                <div id="step2" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4"><span
-                            class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">2</span>
-                        <h2 class="text-xl sm:text-2xl font-semibold">Upload Data</h2>
-                    </div>
-                    <p class="text-gray-600 mb-4">Upload your Excel (.xlsx) or CSV file.</p>
-                    <input type="file" id="data-file-input" accept=".xlsx, .csv"
-                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-
-                    <!-- Photo Tips -->
-                    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                        <div class="flex items-start">
-                            <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                    clip-rule="evenodd"></path>
-                            </svg>
-                            <div class="text-sm text-blue-800">
-                                <strong>Photo Tips:</strong><br>
-                                • If your Excel has a Photo column with numbers (e.g., 3956, 1234), use the Photo Folder
-                                feature below<br>
-                                • For full image URLs/paths, those will work directly in the Excel file
-                            </div>
-                        </div>
-                    </div>
+                <div class="flex gap-1 mb-2">
+                    <button id="orientation-horizontal-btn" class="flex-1 py-1.5 rounded-md bg-blue-500 text-white text-xs font-bold">Horizontal</button>
+                    <button id="orientation-vertical-btn" class="flex-1 py-1.5 rounded-md bg-gray-200 text-gray-700 text-xs font-bold">Vertical</button>
                 </div>
-
-                <!-- Step 3: AI/Manual Design -->
-                <div id="step3" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4"><span
-                            class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">3</span>
-                        <h2 class="text-xl sm:text-2xl font-semibold">Design Card</h2>
+                <div class="space-y-1.5">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-0.5">Front BG</label>
+                        <input type="file" id="bg-image-front-input" accept="image/jpeg,image/png" class="file-input-sm" style="--btn-bg:#eff6ff;--btn-color:#1d4ed8;">
                     </div>
-                    <p class="text-gray-600 mb-4">Click on a canvas (Front/Back) to edit it. Use AI or add fields
-                        manually.</p>
-                    <div id="ai-controls" class="space-y-3 opacity-50">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label>
-                            <input type="password" id="gemini-api-key-input"
-                                placeholder="Paste your API key once..."
-                                class="w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-teal-500 focus:border-teal-500">
-                            <p class="text-xs text-gray-400 mt-1">Get a free key at <a href="https://aistudio.google.com" target="_blank" class="underline text-teal-600">aistudio.google.com</a>. Saved for this session.</p>
-                        </div>
-                        <button id="ai-layout-btn"
-                            class="w-full bg-teal-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-600 transition-colors flex items-center justify-center"
-                            disabled>✨ Suggest Layout</button>
-                        <button id="ai-title-btn"
-                            class="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors flex items-center justify-center"
-                            disabled>✨ Generate Title</button>
-                        <button id="add-all-headers-btn"
-                            class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center"
-                            disabled>Add All Data Fields</button>
-                    </div>
-                    <hr class="my-4">
-                    <div id="add-placeholder-controls" class="space-y-4">
-                        <div>
-                            <label for="field-name-input" class="block text-sm font-medium text-gray-700 mb-1">Field
-                                Name:</label>
-                            <input type="text" id="field-name-input" placeholder="e.g., FullName, Address"
-                                class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <button id="add-text-btn"
-                            class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Add
-                            Text Field</button>
-                        <button id="add-label-btn"
-                            class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">Add
-                            Label (Static Text)</button>
-                        <button id="add-photo-btn"
-                            class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Add
-                            Photo Field</button>
-
-                        <!-- QR Code Field Selection -->
-                        <div id="qr-field-container"
-                            class="border border-purple-300 rounded-md p-3 bg-purple-50 opacity-70">
-                            <label for="qr-field-select" class="block text-sm font-medium text-purple-700 mb-1">QR Code
-                                Field:</label>
-                            <select id="qr-field-select"
-                                class="w-full p-2 border border-purple-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 mb-2"
-                                disabled>
-                                <option value="">Upload data to see fields</option>
-                                <!-- Options will be populated when data is loaded -->
-                            </select>
-                            <button id="add-qr-btn"
-                                class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">Add
-                                QR Code</button>
-                        </div>
-                    </div>
-                </div>
-                <!-- Edit Panel -->
-                <div id="edit-panel" class="bg-white p-6 rounded-xl shadow-md step-card hidden">
-                    <h2 class="text-xl sm:text-2xl font-semibold mb-4">Edit Selected Field</h2>
-                    <div id="edit-controls" class="space-y-4"></div>
-                </div>
-                <!-- Photo Folder Selection -->
-                <div id="photo-folder-tool" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4">
-                        <span
-                            class="bg-orange-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">📁</span>
-                        <h2 class="text-xl sm:text-2xl font-semibold">Photo Folder</h2>
-                    </div>
-                    <p class="text-gray-600 mb-4">Select folder containing photos. Photos will be matched by number
-                        (e.g., 3956.jpg matches Excel value "3956")</p>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Photo Folder:</label>
-                            <input type="file" id="photo-folder-input" webkitdirectory multiple
-                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
-                        </div>
-                        <div id="photo-folder-status" class="hidden">
-                            <div class="p-3 bg-green-50 border border-green-200 rounded-md">
-                                <div class="flex items-center">
-                                    <svg class="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                            clip-rule="evenodd"></path>
-                                    </svg>
-                                    <span class="text-green-800 font-medium">Photo folder loaded!</span>
-                                </div>
-                                <div id="photo-count" class="text-sm text-green-700 mt-1"></div>
-                            </div>
-                        </div>
-                        <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
-                            <strong>How it works:</strong><br>
-                            1. Select a folder containing your photos<br>
-                            2. Photos should be named with numbers (e.g., 3956.jpg, 1234.png, 0045.JPG)<br>
-                            3. Excel should have photo numbers in the photo column (e.g., 3956, 1234, 45)<br>
-                            4. App will automatically match and insert correct photos<br><br>
-
-                            <strong>Supported formats:</strong> JPG, JPEG, PNG, GIF, BMP, WEBP<br>
-                            <strong>Name examples:</strong> 3956.jpg, IMG_1234.png, photo0045.JPG, 987.jpeg
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Second Image Folder (Sign / Stamp / any column) -->
-                <div id="sign-folder-tool" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4">
-                        <span class="bg-teal-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">✍</span>
-                        <h2 class="text-xl sm:text-2xl font-semibold">Sign / Extra Image Folder</h2>
-                    </div>
-                    <p class="text-gray-600 mb-4">Load a second folder for signatures, stamps, or any other per-student image column.</p>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Excel column name this folder maps to:</label>
-                            <input type="text" id="sign-column-input" placeholder="e.g. Sign, Stamp, Sign2"
-                                class="w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-teal-500 focus:border-teal-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Folder:</label>
-                            <input type="file" id="sign-folder-input" webkitdirectory multiple
-                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100">
-                        </div>
-                        <div id="sign-folder-status" class="hidden">
-                            <div class="p-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-800">
-                                ✅ <span id="sign-folder-count"></span>
-                            </div>
-                        </div>
-                        <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
-                            Files should be named by the matching value in Excel (e.g. 1001.png matches cell value "1001").
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Image Helper Tool -->
-                <div id="image-helper" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4">
-                        <span
-                            class="bg-amber-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">�</span>
-                        <h2 class="text-xl sm:text-2xl font-semibold">Image Helper</h2>
-                    </div>
-                    <p class="text-gray-600 mb-4">Convert local images to Excel-compatible format</p>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Images to
-                                Convert:</label>
-                            <input type="file" id="image-converter-input" accept="image/*" multiple
-                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
-                        </div>
-                        <button id="convert-images-btn"
-                            class="w-full bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors">Convert
-                            & Download CSV Template</button>
-                        <div id="conversion-output" class="hidden">
-                            <h3 class="font-semibold text-gray-700 mb-2">Converted Images:</h3>
-                            <div id="converted-list" class="max-h-40 overflow-y-auto text-xs"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Layout Management -->
-                <div id="layout-management" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4">
-                        <span
-                            class="bg-green-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">S</span>
-                        <h2 class="text-xl sm:text-2xl font-semibold">Layout Management</h2>
-                    </div>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="layout-name" class="block text-sm font-medium text-gray-700 mb-1">Layout
-                                Name:</label>
-                            <input type="text" id="layout-name" placeholder="e.g., Science Class, Math Class"
-                                class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-2">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button id="save-layout-btn"
-                                class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Save
-                                Layout</button>
-                            <button id="load-layout-btn"
-                                class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Load
-                                Layout</button>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button id="export-layouts-btn"
-                                class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Export
-                                Layouts</button>
-                            <button id="import-layouts-btn"
-                                class="bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors">Import
-                                Layouts</button>
-                        </div>
-                        <div>
-                            <label for="layout-select" class="block text-sm font-medium text-gray-700 mb-1">Saved
-                                Layouts:</label>
-                            <div class="flex gap-2">
-                                <select id="layout-select"
-                                    class="flex-grow p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="">Select a saved layout...</option>
-                                </select>
-                                <button id="delete-layout-btn"
-                                    class="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                        class="bi bi-trash" viewBox="0 0 16 16">
-                                        <path
-                                            d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
-                                        <path fill-rule="evenodd"
-                                            d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 4: Generate -->
-                <div id="step4" class="bg-white p-6 rounded-xl shadow-md step-card">
-                    <div class="flex items-center mb-4"><span
-                            class="bg-purple-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold text-lg mr-4">4</span>
-                        <h2 class="text-xl sm:text-2xl font-semibold">Generate Cards</h2>
-                    </div>
-                    <div class="space-y-4">
-                        <div class="space-y-2">
-                            <button id="preview-btn"
-                                class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"
-                                disabled>Preview Cards</button>
-                            <div id="preview-nav" class="hidden flex items-center gap-2 justify-center">
-                                <button id="preview-prev-btn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm font-bold">◀</button>
-                                <span id="preview-index" class="text-sm font-medium text-gray-700">1 / 1</span>
-                                <button id="preview-next-btn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm font-bold">▶</button>
-                                <button id="preview-exit-btn" class="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 rounded text-sm font-bold">Exit Preview</button>
-                            </div>
-                        </div>
-                        <button id="generate-pdf-btn"
-                            class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors text-lg"
-                            disabled>Export to A4 PDF</button>
-                        <label class="flex items-center gap-2 cursor-pointer select-none text-sm font-medium text-gray-700">
-                            <input type="checkbox" id="front-only-checkbox" class="w-4 h-4 accent-red-600">
-                            Front side only &mdash; print 10 fronts per page (no back)
-                        </label>
-                        <button id="generate-zip-btn"
-                            class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
-                            disabled>Generate & Download ZIP</button>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-0.5">Back BG</label>
+                        <input type="file" id="bg-image-back-input" accept="image/jpeg,image/png" class="file-input-sm">
                     </div>
                 </div>
             </div>
-            <!-- Canvas Column -->
-            <div class="col-scroll space-y-8">
-                <!-- Zoom Controls -->
-                <div class="bg-white p-4 rounded-xl shadow-lg">
-                    <div class="flex items-center justify-between">
-                        <h3 class="font-bold text-lg">View Controls</h3>
-                        <div class="flex items-center gap-2">
-                            <label class="text-sm font-medium">Zoom:</label>
-                            <select id="zoom-select" class="p-1 border border-gray-300 rounded text-sm">
-                                <option value="actual">Optimized Size</option>
-                                <option value="0.3">30%</option>
-                                <option value="0.5">50%</option>
-                                <option value="0.7" selected>70% (Default)</option>
-                                <option value="1.0">100%</option>
-                                <option value="1.5">150%</option>
-                            </select>
-                        </div>
+
+            <!-- Step 2: Upload Data -->
+            <div id="step2" class="bg-white rounded-xl shadow-md step-card">
+                <div class="step-header">
+                    <span class="step-num bg-blue-500 text-white">2</span>
+                    <h2>Upload Data <span class="info-icon" title="Upload Excel (.xlsx) or CSV. If your photo column has numbers (e.g. 3956), use the Photo Folder tool on the right.">ℹ</span></h2>
+                </div>
+                <input type="file" id="data-file-input" accept=".xlsx,.csv" class="file-input-sm">
+            </div>
+
+            <!-- Step 3: Design Card -->
+            <div id="step3" class="bg-white rounded-xl shadow-md step-card">
+                <div class="step-header">
+                    <span class="step-num bg-blue-500 text-white">3</span>
+                    <h2>Design Card <span class="info-icon" title="Click a canvas side to activate it, then add fields. Type the Excel column name in the field box to bind data.">ℹ</span></h2>
+                </div>
+                <div id="ai-controls" class="opacity-50">
+                    <button id="add-all-headers-btn" class="w-full mb-1.5 py-1.5 bg-gray-500 text-white text-xs font-bold rounded-md hover:bg-gray-600" disabled>Add All Fields</button>
+                </div>
+                <div id="add-placeholder-controls" class="space-y-1.5">
+                    <input type="text" id="field-name-input" placeholder="Column name (e.g. FullName)"
+                        class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:ring-blue-500 focus:border-blue-500">
+                    <div class="tool-row">
+                        <button id="add-text-btn" style="background:#2563eb;color:white">+ Text</button>
+                        <button id="add-label-btn" style="background:#7c3aed;color:white">+ Label</button>
+                    </div>
+                    <div class="tool-row">
+                        <button id="add-photo-btn" style="background:#16a34a;color:white">+ Photo</button>
+                        <button id="add-qr-btn" style="background:#9333ea;color:white">+ QR</button>
+                    </div>
+                    <div id="qr-field-container" class="border border-purple-200 rounded-md p-1.5 bg-purple-50 opacity-70">
+                        <select id="qr-field-select" class="w-full p-1 border border-purple-300 rounded text-xs" disabled>
+                            <option value="">Upload data first</option>
+                        </select>
                     </div>
                 </div>
+            </div>
 
-                <div id="front-canvas-wrapper"
-                    class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto active">
-                    <h3 class="text-center font-bold text-lg sm:text-xl mb-2">FRONT</h3>
-                    <canvas id="front-canvas" class="w-full h-full rounded-md bg-gray-200"></canvas>
+            <!-- Edit Panel (shown when a placeholder is selected) -->
+            <div id="edit-panel" class="bg-white rounded-xl shadow-md step-card hidden">
+                <div class="step-header">
+                    <span class="step-num bg-pink-500 text-white">✎</span>
+                    <h2>Edit Field</h2>
+                </div>
+                <div id="edit-controls" class="space-y-2"></div>
+            </div>
+
+            <!-- Layout Management -->
+            <div id="layout-management" class="bg-white rounded-xl shadow-md step-card">
+                <div class="step-header">
+                    <span class="step-num bg-green-500 text-white">S</span>
+                    <h2>Layouts <span class="info-icon" title="Save/load card layouts with backgrounds to reuse across sessions. Export/Import to share between computers.">ℹ</span></h2>
+                </div>
+                <div class="space-y-1.5">
+                    <input type="text" id="layout-name" placeholder="Layout name…"
+                        class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:ring-blue-500 focus:border-blue-500">
+                    <div class="tool-row">
+                        <button id="save-layout-btn" style="background:#16a34a;color:white">Save</button>
+                        <button id="load-layout-btn" style="background:#2563eb;color:white">Load</button>
+                    </div>
+                    <div class="tool-row">
+                        <button id="export-layouts-btn" style="background:#4f46e5;color:white">Export</button>
+                        <button id="import-layouts-btn" style="background:#d97706;color:white">Import</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <select id="layout-select" class="flex-1 p-1 border border-gray-300 rounded text-xs">
+                            <option value="">Select saved layout…</option>
+                        </select>
+                        <button id="delete-layout-btn" class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">🗑</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Generate -->
+            <div id="step4" class="bg-white rounded-xl shadow-md step-card">
+                <div class="step-header">
+                    <span class="step-num bg-purple-500 text-white">4</span>
+                    <h2>Generate <span class="info-icon" title="Preview all cards with your data, then export to A4 PDF (5 or 10 per page) or individual PNG ZIP.">ℹ</span></h2>
+                </div>
+                <div class="space-y-1.5">
+                    <div class="space-y-1">
+                        <button id="preview-btn" class="w-full py-1.5 bg-gray-500 text-white text-xs font-bold rounded-md hover:bg-gray-600" disabled>Preview Cards</button>
+                        <div id="preview-nav" class="hidden flex items-center gap-1 justify-center">
+                            <button id="preview-prev-btn" class="px-2 py-0.5 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300">◀</button>
+                            <span id="preview-index" class="text-xs font-medium text-gray-700">1 / 1</span>
+                            <button id="preview-next-btn" class="px-2 py-0.5 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300">▶</button>
+                            <button id="preview-exit-btn" class="px-2 py-0.5 bg-yellow-400 rounded text-xs font-bold hover:bg-yellow-500">Exit</button>
+                        </div>
+                    </div>
+                    <button id="generate-pdf-btn" class="w-full py-2 bg-red-600 text-white text-sm font-bold rounded-md hover:bg-red-700" disabled>Export PDF (A4)</button>
+                    <label class="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-gray-700">
+                        <input type="checkbox" id="front-only-checkbox" class="w-3.5 h-3.5 accent-red-600">
+                        Front only — 10/page
+                    </label>
+                    <button id="generate-zip-btn" class="w-full py-1.5 bg-purple-600 text-white text-xs font-bold rounded-md hover:bg-purple-700" disabled>Download ZIP</button>
+                </div>
+            </div>
+
+        </div><!-- end left col -->
+
+        <!-- ===== CENTRE: Canvas ===== -->
+        <div class="col-scroll">
+            <!-- Zoom bar -->
+            <div class="bg-white px-3 py-2 rounded-xl shadow-md mb-3 flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-600">View</span>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-medium text-gray-600">Zoom:</label>
+                    <select id="zoom-select" class="p-1 border border-gray-300 rounded text-xs">
+                        <option value="actual">Auto</option>
+                        <option value="0.3">30%</option>
+                        <option value="0.5">50%</option>
+                        <option value="0.7" selected>70%</option>
+                        <option value="1.0">100%</option>
+                        <option value="1.5">150%</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Canvas area — layout switches via JS setting data-orientation -->
+            <div id="canvas-area" data-orientation="horizontal">
+                <div id="front-canvas-wrapper" class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative active">
+                    <h3 class="text-center font-bold text-sm mb-2">FRONT</h3>
+                    <canvas id="front-canvas" class="block rounded-md bg-gray-200"></canvas>
                     <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full"></div>
                 </div>
-                <div id="back-canvas-wrapper"
-                    class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative max-w-full mx-auto">
-                    <h3 class="text-center font-bold text-lg sm:text-xl mb-2">BACK</h3>
-                    <canvas id="back-canvas" class="w-full h-full rounded-md bg-gray-200"></canvas>
+                <div id="back-canvas-wrapper" class="canvas-wrapper bg-white p-4 rounded-xl shadow-lg relative">
+                    <h3 class="text-center font-bold text-sm mb-2">BACK</h3>
+                    <canvas id="back-canvas" class="block rounded-md bg-gray-200"></canvas>
                     <div id="back-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full"></div>
                 </div>
             </div>
-        </div>
+        </div><!-- end centre col -->
+
+        <!-- ===== RIGHT: Tools ===== -->
+        <div class="col-scroll space-y-2">
+
+            <!-- AI / Design tools -->
+            <div class="bg-white rounded-xl shadow-md step-card">
+                <div class="step-header">
+                    <span class="step-num bg-teal-500 text-white">✨</span>
+                    <h2>AI Design <span class="info-icon" title="Uses Gemini AI to suggest a full card layout or generate a professional title based on your data columns.">ℹ</span></h2>
+                </div>
+                <div id="ai-controls-right" class="space-y-1.5 opacity-50">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-0.5">Gemini API Key</label>
+                        <input type="password" id="gemini-api-key-input"
+                            placeholder="Paste key once…"
+                            class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:ring-teal-500 focus:border-teal-500">
+                        <p class="text-xs text-gray-400 mt-0.5">Free key at <a href="https://aistudio.google.com" target="_blank" class="underline text-teal-600">aistudio.google.com</a></p>
+                    </div>
+                    <button id="ai-layout-btn" class="w-full py-1.5 bg-teal-500 text-white text-xs font-bold rounded-md hover:bg-teal-600" disabled>✨ Suggest Layout</button>
+                    <button id="ai-title-btn" class="w-full py-1.5 bg-indigo-500 text-white text-xs font-bold rounded-md hover:bg-indigo-600" disabled>✨ Generate Title</button>
+                </div>
+            </div>
+
+            <!-- Photo Folder -->
+            <div id="photo-folder-tool" class="bg-white rounded-xl shadow-md step-card">
+                <div class="step-header">
+                    <span class="step-num bg-orange-500 text-white">📁</span>
+                    <h2>Photo Folder <span class="info-icon" title="Select a folder of photos named by number (e.g. 3956.jpg). The app matches them to the number in your Excel photo column automatically.">ℹ</span></h2>
+                </div>
+                <input type="file" id="photo-folder-input" webkitdirectory multiple class="file-input-sm">
+                <div id="photo-folder-status" class="hidden mt-1.5">
+                    <div class="p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800">
+                        ✅ <span id="photo-count"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sign / Extra Image Folder -->
+            <div id="sign-folder-tool" class="bg-white rounded-xl shadow-md step-card">
+                <div class="step-header">
+                    <span class="step-num bg-teal-500 text-white">✍</span>
+                    <h2>Sign / Extra Folder <span class="info-icon" title="Load a second image folder for signatures, stamps, etc. Enter the exact Excel column name it maps to.">ℹ</span></h2>
+                </div>
+                <div class="space-y-1.5">
+                    <input type="text" id="sign-column-input" placeholder="Excel column (e.g. Sign)"
+                        class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:ring-teal-500 focus:border-teal-500">
+                    <input type="file" id="sign-folder-input" webkitdirectory multiple class="file-input-sm">
+                    <div id="sign-folder-status" class="hidden">
+                        <div class="p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800">
+                            ✅ <span id="sign-folder-count"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Helper -->
+            <div id="image-helper" class="bg-white rounded-xl shadow-md step-card">
+                <div class="step-header">
+                    <span class="step-num bg-amber-500 text-white">🔧</span>
+                    <h2>Image → CSV <span class="info-icon" title="Select local image files. The tool converts them to base64 and downloads a CSV template with your photos embedded — ready to upload as data.">ℹ</span></h2>
+                </div>
+                <div class="space-y-1.5">
+                    <input type="file" id="image-converter-input" accept="image/*" multiple class="file-input-sm">
+                    <button id="convert-images-btn" class="w-full py-1.5 bg-amber-600 text-white text-xs font-bold rounded-md hover:bg-amber-700">Convert & Download CSV</button>
+                    <div id="conversion-output" class="hidden">
+                        <div id="converted-list" class="max-h-32 overflow-y-auto text-xs"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end right col -->
+
+        </div><!-- end #app-grid -->
 
         <!-- Modals -->
+
         <div id="loading-modal" class="modal-overlay hidden">
             <div class="modal-content flex flex-col items-center">
                 <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4"></div>
@@ -649,7 +599,7 @@
             const backPlaceholderWrapper = document.getElementById('back-placeholder-wrapper');
             const editPanel = document.getElementById('edit-panel');
             const editControls = document.getElementById('edit-controls');
-            const aiControls = document.getElementById('ai-controls');
+            const aiControls = document.getElementById('ai-controls-right');
             const aiLayoutBtn = document.getElementById('ai-layout-btn');
             const aiTitleBtn = document.getElementById('ai-title-btn');
             const addAllHeadersBtn = document.getElementById('add-all-headers-btn');
@@ -1596,11 +1546,16 @@
                     w.style.transform = '';
                 });
 
+                // Flip canvas-area layout between stacked (horizontal) and side-by-side (vertical)
+                document.getElementById('canvas-area').dataset.orientation = newOrientation;
+
                 // Update orientation buttons
                 orientationHorizontalBtn.classList.toggle('bg-blue-500', isHorizontal);
                 orientationHorizontalBtn.classList.toggle('text-white', isHorizontal);
+                orientationHorizontalBtn.classList.toggle('bg-gray-200', !isHorizontal);
                 orientationVerticalBtn.classList.toggle('bg-blue-500', !isHorizontal);
                 orientationVerticalBtn.classList.toggle('text-white', !isHorizontal);
+                orientationVerticalBtn.classList.toggle('bg-gray-200', isHorizontal);
 
                 // Redraw canvases with new dimensions
                 drawAllCanvases();
