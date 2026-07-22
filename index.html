@@ -2049,12 +2049,12 @@
                     const backRowY = 112; // 12 + 85.6 + 14.4 = 112mm
 
                     // Canvas dimensions for original card design
-                    const designW = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT; // 1011 or 638
-                    const designH = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH; // 638 or 1011
+                    const designW = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT; // 856 or 540
+                    const designH = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH; // 540 or 856
 
-                    // Canvas dimensions for output vertical card image
-                    const outW = 638;
-                    const outH = 1011;
+                    // Canvas dimensions for output vertical card image (540x856 matches standard vertical card ratio)
+                    const outW = HORIZONTAL_HEIGHT; // 540
+                    const outH = HORIZONTAL_WIDTH;  // 856
 
                     const tempCanvas = document.createElement('canvas');
                     tempCanvas.width = designW;
