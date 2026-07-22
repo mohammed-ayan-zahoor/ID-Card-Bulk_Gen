@@ -2025,13 +2025,6 @@
                 _previewVisible = false;
             });
 
-            // PDF Generation
-            generatePdfBtn.addEventListener('click', async () => {
-                if (data.length === 0) { toast('Please upload data and add fields before generating.', 'warn'); return; }
-                loadingModal.classList.remove('hidden');
-                loadingText.textContent = 'Generating A4 PDF...';
-                showProgress(0);
-
             // --- PDF Generation (Always vertical 54mm x 85.6mm cards on A4) ---
             generatePdfBtn.addEventListener('click', async () => {
                 if (data.length === 0) { toast('Please upload data and add fields before generating.', 'warn'); return; }
