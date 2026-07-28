@@ -2045,8 +2045,8 @@
                     const pageWidth = 297, pageHeight = 210;
                     const totalCardsWidth = cardsPerRow * cardWidthMM; // 270mm
                     const cardSpacing = (pageWidth - totalCardsWidth) / (cardsPerRow + 1); // ~4.5mm
-                    const frontRowY = 12;
-                    const backRowY = 117; // 12 + 85.6 + 19.4 = 117mm (results in ~7.4mm bottom margin)
+                    const frontRowY = 20;
+                    const backRowY = 115.6; // Top margin: 20mm, Middle gap: 10mm, Bottom margin: 8.8mm
 
                     // Canvas dimensions for original card design
                     const designW = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT; // 856 or 540
