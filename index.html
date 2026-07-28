@@ -2113,7 +2113,9 @@
                                 rotatedCtx.clearRect(0, 0, outW, outH);
                                 rotatedCtx.save();
                                 rotatedCtx.translate(outW / 2, outH / 2);
-                                rotatedCtx.rotate(Math.PI);
+                                if (!isHorizontal) {
+                                    rotatedCtx.rotate(Math.PI);
+                                }
                                 rotatedCtx.translate(-outW / 2, -outH / 2);
                                 rotatedCtx.drawImage(outCanvas, 0, 0);
                                 rotatedCtx.restore();
