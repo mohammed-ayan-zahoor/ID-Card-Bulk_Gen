@@ -93,112 +93,243 @@
             border-color: #ec4899;
         }
 
+        /* ── Placeholder fields: Figma-style ─────────────────────────────── */
         .placeholder {
             position: absolute;
-            border: 2px dashed #3b82f6;
+            /* Idle: barely-there grey dash — fields should disappear into the design */
+            border: 1px dashed rgba(91, 76, 240, 0.30);
+            background: transparent;
             cursor: move;
             user-select: none;
-            background-color: rgba(59, 130, 246, 0.2);
             padding: 4px;
             box-sizing: border-box;
             min-width: 20px;
             min-height: 20px;
+            border-radius: 4px;
+            transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
         }
 
+        /* Hover: show presence without dominating */
+        .placeholder:hover {
+            border: 1px solid rgba(91, 76, 240, 0.65);
+            background: rgba(91, 76, 240, 0.04);
+        }
+
+        /* Selected: clean Figma-style solid outline, NO background fill */
+        .placeholder.active {
+            border: 1.5px solid #5B4CF0;
+            background: transparent;
+            box-shadow: 0 0 0 2.5px rgba(91, 76, 240, 0.18);
+            z-index: 10;
+        }
+
+        /* Type-specific layout — structure only, no color overrides */
         .placeholder.text-placeholder {
-            color: #1e40af;
-            font-weight: 500;
             display: flex;
             align-items: flex-start;
             justify-content: flex-start;
         }
-
         .placeholder.photo-placeholder {
-            border-style: solid;
-            border-color: #16a34a;
-            background-color: rgba(22, 163, 74, 0.2);
-            color: #14532d;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-
         .placeholder.qr-placeholder {
-            border-style: solid;
-            border-color: #9333ea;
-            background-color: rgba(147, 51, 234, 0.2);
-            color: #581c87;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
         }
 
+        /* Label text inside idle fields: muted purple so it reads but doesn't scream */
+        .placeholder .ph-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: rgba(91, 76, 240, 0.55);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            pointer-events: none;
+            line-height: 1.2;
+        }
+        .placeholder.active .ph-label {
+            color: rgba(91, 76, 240, 0.85);
+        }
+
+        /* QR preview: keep the mini icon but inherit the muted colour */
         .qr-placeholder-preview {
-            font-weight: 500;
+            font-weight: 600;
             text-align: center;
-            font-size: 12px;
+            font-size: 10px;
+            color: rgba(91, 76, 240, 0.6);
             padding: 4px;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="%239333ea" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><rect x="7" y="7" width="3" height="3"></rect><rect x="14" y="7" width="3" height="3"></rect><rect x="7" y="14" width="3" height="3"></rect><rect x="14" y="14" width="3" height="3"></rect></svg>');
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="%235B4CF0" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><rect x="7" y="7" width="3" height="3"></rect><rect x="14" y="7" width="3" height="3"></rect><rect x="7" y="14" width="3" height="3"></rect><rect x="14" y="14" width="3" height="3"></rect></svg>');
             background-repeat: no-repeat;
-            background-position: center 2px;
-            background-size: 24px 24px;
+            background-position: center 4px;
+            background-size: 22px 22px;
             padding-top: 28px;
         }
 
-        .placeholder.active {
-            border-style: solid;
-            border-color: #db2777;
-            background-color: rgba(219, 39, 119, 0.2);
-            z-index: 10;
+        /* Show resize handle only when selected */
+        /* .rh handles are shown via .placeholder.active .rh { display: block } defined above */
+
+        /* ── Floating field toolbar ──────────────────────────────────── */
+        .field-toolbar {
+            position: absolute;
+            display: none;                   /* hidden until a field is selected */
+            align-items: center;
+            gap: 5px;
+            background: #11111e;
+            border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 12px;
+            padding: 6px 9px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 1px 6px rgba(0,0,0,0.25);
+            z-index: 50;
+            white-space: nowrap;
+            pointer-events: auto;
+            transform: translateY(calc(-100% - 10px));  /* float above the element */
+            transition: opacity 0.12s ease;
+        }
+        .field-toolbar.visible { display: flex; }
+
+        /* Toolbar buttons */
+        .ftb {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 30px;
+            min-width: 30px;
+            padding: 0 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.1s ease, color 0.1s ease;
+            white-space: nowrap;
+            line-height: 1;
+        }
+        .ftb:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .ftb.active { background: rgba(91,76,240,0.85); color: #fff; }
+        .ftb.danger:hover { background: rgba(225,75,75,0.75); color: #fff; }
+
+        /* Thin divider between groups */
+        .ft-sep {
+            width: 1px;
+            height: 18px;
+            background: rgba(255,255,255,0.15);
+            flex-shrink: 0;
+            margin: 0 3px;
         }
 
-        .placeholder.active .resize-handle {
-            display: block;
+        /* Color swatch button */
+        .ftb-color {
+            position: relative;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ftb-color input[type="color"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            border: none;
+            padding: 0;
+        }
+        .ftb-color .swatch {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1.5px solid rgba(255,255,255,0.4);
+            pointer-events: none;
         }
 
+        /* ── Smart snap guide lines ────────────────────────────────────── */
+        .guide-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 40;
+            overflow: visible;
+        }
+        .guide-svg line {
+            stroke: #FF0055;
+            stroke-width: 2px;
+            stroke-dasharray: 6 4;
+            filter: drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 1px #ffffff);
+            vector-effect: non-scaling-stroke;
+        }
+
+        /* Delete button: neutral until hovered */
         .delete-btn {
             position: absolute;
-            top: -8px;
-            right: -8px;
-            width: 20px;
-            height: 20px;
-            background: #ef4444;
+            top: -9px;
+            right: -9px;
+            width: 18px;
+            height: 18px;
+            background: #5B4CF0;
             color: white;
             border-radius: 50%;
-            border: 2px solid white;
+            border: 1.5px solid white;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            opacity: 0.9;
-            transition: all 0.2s ease;
+            opacity: 0;
+            transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
             line-height: 1;
             z-index: 100;
             pointer-events: auto;
-            font-size: 12px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            font-size: 11px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.18);
         }
-
         .placeholder:hover .delete-btn,
         .placeholder.active .delete-btn {
             opacity: 1;
-            transform: scale(1.1);
+        }
+        .delete-btn:hover {
+            background: #E14B4B;
+            transform: scale(1.12);
         }
 
-        .resize-handle {
+        /* ── 8-handle resize system ──────────────────────────────────────── */
+        /* Base: hidden until selected */
+        .rh {
             position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 12px;
-            height: 12px;
-            background: #db2777;
-            border: 2px solid white;
-            cursor: se-resize;
+            width: 8px;
+            height: 8px;
+            background: #5B4CF0;
+            border: 1.5px solid white;
+            border-radius: 2px;
             display: none;
             z-index: 15;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+            pointer-events: auto;
         }
+        .placeholder.active .rh { display: block; }
+
+        /* Corner handles */
+        .rh-nw { top: -4px; left: -4px;   cursor: nw-resize; }
+        .rh-ne { top: -4px; right: -4px;  cursor: ne-resize; }
+        .rh-se { bottom: -4px; right: -4px; cursor: se-resize; }
+        .rh-sw { bottom: -4px; left: -4px;  cursor: sw-resize; }
+
+        /* Edge midpoint handles */
+        .rh-n  { top: -4px;    left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .rh-s  { bottom: -4px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .rh-e  { right: -4px;  top: 50%;  transform: translateY(-50%); cursor: e-resize; }
+        .rh-w  { left: -4px;   top: 50%;  transform: translateY(-50%); cursor: w-resize; }
 
         .modal-overlay {
             position: fixed;
@@ -389,16 +520,20 @@
                 border-color: #8A8984;
             }
 
-            /* Canvas Area: Well with Generous Breathing Room */
+            /* Canvas Area: Figma Studio Stage with Micro-dot Grid */
             #canvas-area {
                 display: flex;
-                gap: 2rem;
+                gap: 2.5rem;
                 align-items: center;
                 justify-content: center;
-                padding: 2.5rem;
-                background: #F4F3F1;
+                padding: 3rem;
+                background-color: #F8F9FA;
+                background-image: radial-gradient(#D8D6D1 1.2px, transparent 1.2px);
+                background-size: 18px 18px;
                 border-radius: 1.5rem;
-                min-height: 520px;
+                border: 1px solid rgba(216, 214, 209, 0.5);
+                min-height: 540px;
+                box-shadow: inset 0 2px 6px rgba(0,0,0,0.03);
             }
             #canvas-area[data-orientation="horizontal"] {
                 flex-direction: column;
@@ -407,33 +542,142 @@
                 flex-direction: row;
             }
             .canvas-wrapper {
-                border: 2px solid transparent;
+                border: 2px solid #E5E7EB;
                 border-radius: 1.25rem;
-                transition: all 0.25s ease;
+                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                 background: #FFFFFF;
-                box-shadow: 0 4px 16px rgba(23,23,23,0.06), 0 2px 4px rgba(23,23,23,0.04);
+                box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.02);
             }
             .canvas-wrapper.active {
                 border-color: #5B4CF0;
-                box-shadow: 0 0 0 4px rgba(91, 76, 240, 0.15), 0 12px 32px rgba(23,23,23,0.08);
+                box-shadow: 0 0 0 4px rgba(91, 76, 240, 0.15), 0 20px 30px -10px rgba(91, 76, 240, 0.12);
+            }
+            .lanyard-slot {
+                width: 36px;
+                height: 6px;
+                background: #D8D6D1;
+                border-radius: 999px;
+                margin: 0 auto;
+                box-shadow: inset 0 1px 2px rgba(0,0,0,0.18);
             }
 
-            /* Canvas Placeholders */
-            .placeholder {
-                position: absolute;
-                border: 1.5px dashed #5B4CF0;
-                cursor: move;
-                user-select: none;
-                background-color: rgba(91, 76, 240, 0.06);
-                padding: 4px;
-                box-sizing: border-box;
-                border-radius: 6px;
+            /* Canvas Placeholders — all rules live in the <head> style block above */
+
+            /* ── Layer list ─────────────────────────────────────────── */
+            .layer-list {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                min-height: 24px;
             }
-            .placeholder.active {
-                border-style: solid;
+            .layer-list-empty {
+                font-size: 11px;
+                color: #A09D99;
+                text-align: center;
+                padding: 8px 0;
+            }
+            .layer-item {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 8px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background 0.1s ease;
+                user-select: none;
+            }
+            .layer-item:hover { background: rgba(91,76,240,0.06); }
+            .layer-item.active {
+                background: rgba(91,76,240,0.1);
+                outline: 1px solid rgba(91,76,240,0.25);
+            }
+            .layer-icon {
+                font-size: 11px;
+                width: 18px;
+                text-align: center;
+                flex-shrink: 0;
+                color: #5B4CF0;
+            }
+            .layer-name {
+                flex: 1;
+                font-size: 11px;
+                font-weight: 500;
+                color: #3D3B38;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .layer-order-btns {
+                display: flex;
+                flex-direction: column;
+                gap: 1px;
+                flex-shrink: 0;
+                opacity: 0;
+                transition: opacity 0.1s ease;
+            }
+            .layer-item:hover .layer-order-btns,
+            .layer-item.active .layer-order-btns { opacity: 1; }
+            .layer-order-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 14px;
+                height: 11px;
+                background: transparent;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 8px;
+                color: #8A8984;
+                line-height: 1;
+                padding: 0;
+            }
+            .layer-order-btn:hover { background: rgba(91,76,240,0.15); color: #5B4CF0; }
+
+            /* Geometry (X/Y/W/H) input grid in edit panel */
+            .geom-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+                margin-bottom: 10px;
+            }
+            .geom-cell {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            .geom-cell label {
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: #8A8984;
+                padding-left: 2px;
+            }
+            .geom-cell input[type="number"] {
+                width: 100%;
+                padding: 4px 6px;
+                font-size: 12px;
+                font-weight: 500;
+                color: #171717;
+                background: #FFFFFF;
+                border: 1px solid #D8D6D1;
+                border-radius: 8px;
+                box-sizing: border-box;
+                -moz-appearance: textfield;
+                transition: border-color 0.12s ease, box-shadow 0.12s ease;
+            }
+            .geom-cell input[type="number"]::-webkit-inner-spin-button,
+            .geom-cell input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
+            .geom-cell input[type="number"]:focus {
                 border-color: #5B4CF0;
-                background-color: rgba(91, 76, 240, 0.12);
-                box-shadow: 0 0 0 3px rgba(91, 76, 240, 0.2);
+                box-shadow: 0 0 0 2px rgba(91,76,240,0.14);
+                outline: none;
+            }
+            .geom-divider {
+                border: none;
+                border-top: 1px solid rgba(216,214,209,0.6);
+                margin: 8px 0 10px;
             }
 
             /* Inputs & Selects Styling */
@@ -454,7 +698,7 @@
 
 
         <!-- ===== LEFT: Compact Steps ===== -->
-        <div class="col-scroll space-y-3">
+        <div class="col-scroll space-y-3" id="left-sidebar">
 
             <!-- Step 1: Card Setup (Sand Tint) -->
             <div id="step1" class="step-card bg-tint-sand">
@@ -525,6 +769,20 @@
                 <div id="edit-controls" class="space-y-2"></div>
             </div>
 
+            <!-- Layers Panel -->
+            <div id="layers-panel" class="step-card bg-surface shadow-sm">
+                <div class="step-header">
+                    <span class="step-num">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                        </svg>
+                    </span>
+                    <h2>Layers</h2>
+                </div>
+                <div id="layer-list" class="layer-list"></div>
+            </div>
+
             <!-- Layout Management (Mint Tint) -->
             <div id="layout-management" class="step-card bg-tint-mint">
                 <div class="step-header">
@@ -586,32 +844,55 @@
         <!-- ===== CENTRE: Canvas ===== -->
         <div class="col-scroll">
             <!-- Quiet Toolbar Strip -->
-            <div class="bg-surface px-4 py-2.5 rounded-2xl shadow-sm border-none mb-3 flex items-center justify-between">
-                <span class="text-xs font-semibold text-ink-900 tracking-wider uppercase">Canvas View</span>
+            <div class="bg-surface px-4 py-2.5 rounded-2xl shadow-sm border border-ink-200/50 mb-3 flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <label class="text-xs font-medium text-ink-500">Zoom:</label>
-                    <select id="zoom-select" class="px-2.5 py-1 bg-surface-sunken border border-ink-300 rounded-full text-xs text-ink-900 focus:bg-surface">
-                        <option value="actual">Auto</option>
-                        <option value="0.3">30%</option>
-                        <option value="0.5">50%</option>
-                        <option value="0.7" selected>70%</option>
-                        <option value="1.0">100%</option>
-                        <option value="1.5">150%</option>
-                    </select>
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-semibold text-ink-900 tracking-wider uppercase">Canvas Studio Stage</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs font-medium text-ink-500">Zoom:</label>
+                        <select id="zoom-select" class="px-2.5 py-1 bg-surface-sunken border border-ink-300 rounded-full text-xs text-ink-900 focus:bg-surface font-medium">
+                            <option value="actual">Auto Fit</option>
+                            <option value="0.3">30%</option>
+                            <option value="0.5">50%</option>
+                            <option value="0.7" selected>70%</option>
+                            <option value="1.0">100%</option>
+                            <option value="1.5">150%</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <!-- Canvas area — Well with 48px breathing room -->
+            <!-- Canvas area — Well with micro-dot grid stage -->
             <div id="canvas-area" data-orientation="horizontal">
-                <div id="front-canvas-wrapper" class="canvas-wrapper bg-surface p-4 rounded-2xl shadow-md relative active">
-                    <h3 class="text-center font-semibold text-xs text-ink-500 uppercase tracking-wider mb-2">Front</h3>
+                <div id="front-canvas-wrapper" class="canvas-wrapper bg-surface p-4 rounded-2xl relative active">
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <span class="px-3 py-1 bg-surface-sunken text-ink-700 text-xs font-semibold rounded-full border border-ink-200 flex items-center gap-1.5 shadow-sm">
+                            <span class="w-1.5 h-1.5 rounded-full bg-accent"></span> Front Canvas
+                        </span>
+                        <div class="lanyard-slot" title="Lanyard / Badge Punch Slot"></div>
+                        <span id="front-dims-label" class="text-xs font-mono text-ink-400">856 × 540</span>
+                    </div>
                     <canvas id="front-canvas" class="block rounded-lg bg-surface-sunken"></canvas>
-                    <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full"></div>
+                    <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
+                        <div id="front-field-toolbar" class="field-toolbar"></div>
+                        <svg id="front-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </div>
                 </div>
-                <div id="back-canvas-wrapper" class="canvas-wrapper bg-surface p-4 rounded-2xl shadow-md relative">
-                    <h3 class="text-center font-semibold text-xs text-ink-500 uppercase tracking-wider mb-2">Back</h3>
+                <div id="back-canvas-wrapper" class="canvas-wrapper bg-surface p-4 rounded-2xl relative">
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <span class="px-3 py-1 bg-surface-sunken text-ink-700 text-xs font-semibold rounded-full border border-ink-200 flex items-center gap-1.5 shadow-sm">
+                            <span class="w-1.5 h-1.5 rounded-full bg-ink-400"></span> Back Canvas
+                        </span>
+                        <div class="lanyard-slot" title="Lanyard / Badge Punch Slot"></div>
+                        <span id="back-dims-label" class="text-xs font-mono text-ink-400">856 × 540</span>
+                    </div>
                     <canvas id="back-canvas" class="block rounded-lg bg-surface-sunken"></canvas>
-                    <div id="back-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full"></div>
+                    <div id="back-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
+                        <div id="back-field-toolbar" class="field-toolbar"></div>
+                        <svg id="back-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </div>
                 </div>
             </div>
         </div><!-- end centre col -->
@@ -619,32 +900,7 @@
         <!-- ===== RIGHT: Tools (Tonal Pastel Cards) ===== -->
         <div class="col-scroll space-y-3">
 
-            <!-- AI Assistant (Lavender Tint) -->
-            <div class="step-card bg-tint-lavender">
-                <div class="step-header">
-                    <span class="w-8 h-8 rounded-full bg-surface text-tint-lavender-ink shadow-sm flex items-center justify-center shrink-0 mr-2.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
-                    </span>
-                    <h2 class="flex items-center justify-between w-full">AI Assistant <span title="Uses Gemini AI to suggest a full card layout or generate a professional title based on your data columns."><svg class="w-3.5 h-3.5 inline text-ink-500 hover:text-ink-700 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
-                </div>
-                <div id="ai-controls-right" class="space-y-2 opacity-50">
-                    <div>
-                        <label class="block text-xs font-medium text-ink-700 mb-0.5">Gemini API Key</label>
-                        <input type="password" id="gemini-api-key-input"
-                            placeholder="Paste API key once…"
-                            class="w-full px-3 py-1.5 bg-surface border border-ink-300 rounded-lg text-xs">
-                        <p class="text-[11px] text-ink-500 mt-0.5">Free key at <a href="https://aistudio.google.com" target="_blank" class="underline text-accent">aistudio.google.com</a></p>
-                    </div>
-                    <button id="ai-layout-btn" class="w-full py-1.5 bg-surface text-tint-lavender-ink border border-tint-lavender-ink/30 text-xs font-semibold rounded-full hover:bg-surface/80 transition-all shadow-sm flex items-center justify-center gap-1.5" disabled>
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
-                        Suggest Layout
-                    </button>
-                    <button id="ai-title-btn" class="w-full py-1.5 bg-surface text-tint-lavender-ink border border-tint-lavender-ink/30 text-xs font-semibold rounded-full hover:bg-surface/80 transition-all shadow-sm flex items-center justify-center gap-1.5" disabled>
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
-                        Generate Title
-                    </button>
-                </div>
-            </div>
+
 
             <!-- Photo Folder (Sky Tint) -->
             <div id="photo-folder-tool" class="step-card bg-tint-sky">
@@ -779,9 +1035,8 @@
             const backPlaceholderWrapper = document.getElementById('back-placeholder-wrapper');
             const editPanel = document.getElementById('edit-panel');
             const editControls = document.getElementById('edit-controls');
-            const aiControls = document.getElementById('ai-controls-right');
-            const aiLayoutBtn = document.getElementById('ai-layout-btn');
-            const aiTitleBtn = document.getElementById('ai-title-btn');
+            const layersPanel = document.getElementById('layers-panel');
+            const leftSidebar = document.getElementById('left-sidebar');
             const addAllHeadersBtn = document.getElementById('add-all-headers-btn');
             const loadingModal = document.getElementById('loading-modal');
             const loadingText = document.getElementById('loading-text');
@@ -829,11 +1084,123 @@
             // Sign / extra image folder
             let signFiles = new Map();  // Map of value -> file, for the custom column
             let signColumnName = '';    // Excel column this folder maps to
+            let userCustomBg = { front: false, back: false };
             // --- Constants ---
             const HORIZONTAL_WIDTH = 856;
             const HORIZONTAL_HEIGHT = 540;
-            const defaultBgDataUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODU2IiBoZWlnaHQ9IjU0MCIgdmlld0JveD0iMCAwIDg1NiA1NDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkMSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I0YzRjRGNjtzdG9wLW9wYWNpdHk6MSIgLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNFNUU3RUI7c3RvcC1vcGFjaXR5OjEiIC8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9Ijg1NiIgaGVpZ2h0PSI1NDAiIGZpbGw9InVybCgjZ3JhZDEpIi8+PHBhdGggZD0iTTAgMCBIODU2IFYxMTAgQyA1MDAgMTUwLCAzNTYgNTAsIDAgOTAgWiIgZmlsbD0iIzI1NjNFQiIvPjxwYXRoIGQ9Ik04NTYgNTQwIEgwIFY0MzAgQyAzMDAgNDAwLCA1NTYgNTAwLCA4NTYgNDUwIFoiIGZpbGw9IiMzQjgyRjYiIGZpbGwtb3BhY2l0eT0iMC42Ii8+PC9zdmc+";
-            const defaultBackBgDataUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODU2IiBoZWlnaHQ9IjU0MCIgdmlld0JveD0iMCAwIDg1NiA1NDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkMiIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I0YzRjRGNjtzdG9wLW9wYWNpdHk6MSIgLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNFNUU3RUI7c3RvcC1vcGFjaXR5OjEiIC8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9Ijg1NiIgaGVpZ2h0PSI1NDAiIGZpbGw9InVybCgjZ3JhZDIpIi8+PC9zdmc+";
+
+            const getDefaultBg = (side, orient) => {
+                const isHoriz = orient === 'horizontal';
+                let svg = '';
+                if (side === 'front') {
+                    if (isHoriz) {
+                        svg = `<svg width="856" height="540" viewBox="0 0 856 540" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <defs>
+                            <linearGradient id="bgGrad" x1="0" y1="0" x2="856" y2="540" gradientUnits="userSpaceOnUse">
+                              <stop offset="0%" stop-color="#FFFFFF"/>
+                              <stop offset="100%" stop-color="#F1F5F9"/>
+                            </linearGradient>
+                            <linearGradient id="headerGrad" x1="0" y1="0" x2="856" y2="150" gradientUnits="userSpaceOnUse">
+                              <stop offset="0%" stop-color="#0F172A"/>
+                              <stop offset="100%" stop-color="#1E293B"/>
+                            </linearGradient>
+                            <linearGradient id="accentGrad" x1="0" y1="0" x2="856" y2="0" gradientUnits="userSpaceOnUse">
+                              <stop offset="0%" stop-color="#5B4CF0"/>
+                              <stop offset="50%" stop-color="#8B5CF6"/>
+                              <stop offset="100%" stop-color="#EC4899"/>
+                            </linearGradient>
+                            <pattern id="dotPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                              <circle cx="3" cy="3" r="1.2" fill="#FFFFFF" fill-opacity="0.12"/>
+                            </pattern>
+                          </defs>
+                          <rect width="856" height="540" rx="16" fill="url(#bgGrad)"/>
+                          <path d="M0 0 H856 V140 C 600 165, 300 120, 0 140 Z" fill="url(#headerGrad)"/>
+                          <path d="M0 0 H856 V140 Z" fill="url(#dotPattern)"/>
+                          <circle cx="780" cy="10" r="140" fill="#5B4CF0" fill-opacity="0.25"/>
+                          <circle cx="840" cy="70" r="90" fill="#EC4899" fill-opacity="0.2"/>
+                          <path d="M0 138 C 300 118, 600 158, 856 138" stroke="url(#accentGrad)" stroke-width="4"/>
+                          <rect y="516" width="856" height="24" fill="url(#accentGrad)"/>
+                          <path d="M0 485 Q 428 512 856 485 L 856 516 L 0 516 Z" fill="#0F172A" fill-opacity="0.04"/>
+                        </svg>`;
+                    } else {
+                        svg = `<svg width="540" height="856" viewBox="0 0 540 856" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <defs>
+                            <linearGradient id="vBgGrad" x1="0" y1="0" x2="540" y2="856" gradientUnits="userSpaceOnUse">
+                              <stop offset="0%" stop-color="#FFFFFF"/>
+                              <stop offset="100%" stop-color="#F1F5F9"/>
+                            </linearGradient>
+                            <linearGradient id="vHeaderGrad" x1="0" y1="0" x2="540" y2="240" gradientUnits="userSpaceOnUse">
+                              <stop offset="0%" stop-color="#0F172A"/>
+                              <stop offset="100%" stop-color="#1E293B"/>
+                            </linearGradient>
+                            <linearGradient id="vAccentGrad" x1="0" y1="0" x2="540" y2="0" gradientUnits="userSpaceOnUse">
+                              <stop offset="0%" stop-color="#5B4CF0"/>
+                              <stop offset="50%" stop-color="#8B5CF6"/>
+                              <stop offset="100%" stop-color="#EC4899"/>
+                            </linearGradient>
+                            <pattern id="vDotPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                              <circle cx="3" cy="3" r="1.2" fill="#FFFFFF" fill-opacity="0.12"/>
+                            </pattern>
+                          </defs>
+                          <rect width="540" height="856" rx="16" fill="url(#vBgGrad)"/>
+                          <path d="M0 0 H540 V220 C 360 240, 180 200, 0 220 Z" fill="url(#vHeaderGrad)"/>
+                          <path d="M0 0 H540 V220 Z" fill="url(#vDotPattern)"/>
+                          <circle cx="480" cy="30" r="130" fill="#5B4CF0" fill-opacity="0.25"/>
+                          <circle cx="520" cy="110" r="80" fill="#EC4899" fill-opacity="0.2"/>
+                          <path d="M0 218 C 180 198, 360 238, 540 218" stroke="url(#vAccentGrad)" stroke-width="4"/>
+                          <rect y="830" width="540" height="26" fill="url(#vAccentGrad)"/>
+                          <path d="M0 795 Q 270 822 540 795 L 540 830 L 0 830 Z" fill="#0F172A" fill-opacity="0.04"/>
+                        </svg>`;
+                    }
+                } else {
+                    if (isHoriz) {
+                        svg = `<svg width="856" height="540" viewBox="0 0 856 540" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <defs>
+                            <linearGradient id="bBgGrad" x1="0" y1="0" x2="856" y2="540" gradientUnits="userSpaceOnUse">
+                              <stop offset="0%" stop-color="#F8FAFC"/>
+                              <stop offset="100%" stop-color="#F1F5F9"/>
+                            </linearGradient>
+                            <linearGradient id="bAccentGrad" x1="0" y1="0" x2="856" y2="0" gradientUnits="userSpaceOnUse">
+                              <stop offset="0%" stop-color="#5B4CF0"/>
+                              <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                            <pattern id="bGrid" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+                              <path d="M 16 0 L 0 0 0 16" fill="none" stroke="#E2E8F0" stroke-width="0.8"/>
+                            </pattern>
+                          </defs>
+                          <rect width="856" height="540" rx="16" fill="url(#bBgGrad)"/>
+                          <rect width="856" height="540" fill="url(#bGrid)"/>
+                          <rect y="50" width="856" height="70" fill="#0F172A"/>
+                          <rect x="40" y="160" width="500" height="50" rx="6" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+                          <line x1="50" y1="185" x2="520" y2="185" stroke="#94A3B8" stroke-width="1" stroke-dasharray="4 4"/>
+                          <rect y="520" width="856" height="20" fill="url(#bAccentGrad)"/>
+                        </svg>`;
+                    } else {
+                        svg = `<svg width="540" height="856" viewBox="0 0 540 856" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <defs>
+                            <linearGradient id="vbBgGrad" x1="0" y1="0" x2="540" y2="856" gradientUnits="userSpaceOnUse">
+                              <stop offset="0%" stop-color="#F8FAFC"/>
+                              <stop offset="100%" stop-color="#F1F5F9"/>
+                            </linearGradient>
+                            <linearGradient id="vbAccentGrad" x1="0" y1="0" x2="540" y2="0" gradientUnits="userSpaceOnUse">
+                              <stop offset="0%" stop-color="#5B4CF0"/>
+                              <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                            <pattern id="vbGrid" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+                              <path d="M 16 0 L 0 0 0 16" fill="none" stroke="#E2E8F0" stroke-width="0.8"/>
+                            </pattern>
+                          </defs>
+                          <rect width="540" height="856" rx="16" fill="url(#vbBgGrad)"/>
+                          <rect width="540" height="856" fill="url(#vbGrid)"/>
+                          <rect y="70" width="540" height="80" fill="#0F172A"/>
+                          <rect x="30" y="200" width="480" height="60" rx="6" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+                          <line x1="40" y1="230" x2="500" y2="230" stroke="#94A3B8" stroke-width="1" stroke-dasharray="4 4"/>
+                          <rect y="830" width="540" height="26" fill="url(#vbAccentGrad)"/>
+                        </svg>`;
+                    }
+                }
+                return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+            };
             // --- Canvas Drawing ---
             const drawCardOnContext = async (targetCtx, side, width, height, rowData) => {
                 targetCtx.clearRect(0, 0, width, height);
@@ -1349,7 +1716,8 @@
 
                 const renderSide = (side) => {
                     const wrapper = side === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
-                    wrapper.innerHTML = '';
+                    // Remove only placeholder elements, leaving the toolbar and guide-svg intact in the DOM
+                    wrapper.querySelectorAll('.placeholder').forEach(el => el.remove());
 
                     placeholders[side].forEach(p => {
                         const el = document.createElement('div');
@@ -1365,21 +1733,11 @@
 
                         const displayText = p.staticText ? p.staticText : `{{${p.key}}}`;
                         if (p.type === 'qr') {
-                            // Enhanced QR placeholder to make it more visible
-                            el.innerHTML = `<div class="qr-placeholder-preview">QR: ${p.key}</div>`;
-
-                            // Add a mini visual representation of a QR code
-                            const miniQR = document.createElement('div');
-                            miniQR.style.width = '30px';
-                            miniQR.style.height = '30px';
-                            miniQR.style.margin = '4px auto';
-                            miniQR.style.backgroundImage = 'linear-gradient(to right, #9333ea 30%, transparent 30%), linear-gradient(to bottom, #9333ea 30%, transparent 30%)';
-                            miniQR.style.backgroundSize = '5px 5px';
-                            miniQR.style.backgroundPosition = '0 0, 0 0';
-                            miniQR.style.opacity = '0.7';
-                            el.appendChild(miniQR);
+                            el.innerHTML = `<div class="qr-placeholder-preview"><span class="ph-label">QR • ${p.key}</span></div>`;
+                        } else if (p.type === 'photo') {
+                            el.innerHTML = `<span class="ph-label">🖼️ ${displayText}</span>`;
                         } else {
-                            el.innerHTML = `<span>${displayText}</span>`;
+                            el.innerHTML = `<span class="ph-label">T  ${displayText}</span>`;
                         }
                         const deleteBtn = document.createElement('button');
                         deleteBtn.className = 'delete-btn';
@@ -1424,27 +1782,22 @@
 
                         el.appendChild(deleteBtn);
 
-                        const resizeHandle = document.createElement('div');
-                        resizeHandle.className = 'resize-handle';
-                        resizeHandle.addEventListener('mousedown', onResizeStart);
-                        el.appendChild(resizeHandle);
+                        // 8 resize handles — one per direction
+                        const DIRS = ['nw','n','ne','e','se','s','sw','w'];
+                        DIRS.forEach(dir => {
+                            const rh = document.createElement('div');
+                            rh.className = `rh rh-${dir}`;
+                            rh.dataset.dir = dir;
+                            rh.addEventListener('mousedown', onResizeStart);
+                            el.appendChild(rh);
+                        });
 
                         // Add drag event listener to the main element, but exclude delete button and resize handle
                         el.addEventListener('mousedown', (e) => {
-                            // Don't start drag if clicking on delete button or resize handle
-                            if (e.target === deleteBtn || e.target.classList.contains('delete-btn') ||
-                                e.target === resizeHandle || e.target.classList.contains('resize-handle')) {
-                                console.log('Mousedown on control element, skipping drag');
-                                return;
-                            }
-
-                            // Only start drag if clicking on the placeholder element itself or its direct text content
-                            if (e.target === el || e.target.tagName === 'SPAN' || e.target.classList.contains('qr-placeholder-preview')) {
-                                console.log('Starting drag for placeholder:', p.id);
-                                onDragStart(e);
-                            } else {
-                                console.log('Mousedown on unexpected element, skipping drag:', e.target);
-                            }
+                            // Don't start drag if clicking on delete button or any resize handle
+                            if (e.target.classList.contains('delete-btn') ||
+                                e.target.classList.contains('rh')) return;
+                            onDragStart(e);
                         });
 
                         wrapper.appendChild(el);
@@ -1452,81 +1805,294 @@
                 }
                 renderSide('front');
                 renderSide('back');
+                if (typeof renderLayerList === 'function') renderLayerList();
             };
             const setActiveSide = (side) => {
                 activeSide = side;
                 frontCanvasWrapper.classList.toggle('active', side === 'front');
                 backCanvasWrapper.classList.toggle('active', side === 'back');
                 setActivePlaceholder(null);
+                if (typeof renderLayerList === 'function') renderLayerList();
             };
+            const adjustPanelOrder = (activeId) => {
+                if (!leftSidebar || !editPanel || !layersPanel) return;
+                const step1 = document.getElementById('step1');
+                const layoutMgmt = document.getElementById('layout-management');
+                if (activeId) {
+                    leftSidebar.insertBefore(editPanel, step1);
+                    leftSidebar.insertBefore(layersPanel, step1);
+                } else {
+                    leftSidebar.insertBefore(editPanel, layoutMgmt);
+                    leftSidebar.insertBefore(layersPanel, layoutMgmt);
+                }
+            };
+
             const setActivePlaceholder = (id) => {
                 activePlaceholderId = id;
                 editPanel.classList.toggle('hidden', !id);
+                adjustPanelOrder(id);
                 if (id) renderEditPanel();
                 renderPlaceholders();
+                updateFieldToolbar();
             };
+
+            // --- Layer List ---
+            const layerList = document.getElementById('layer-list');
+            const TYPE_ICON = { text: 'T', photo: '🖼', qr: '⬛' };
+
+            const renderLayerList = () => {
+                const items = placeholders[activeSide];
+                if (!items.length) {
+                    layerList.innerHTML = '<div class="layer-list-empty">No fields yet</div>';
+                    return;
+                }
+                // Reverse so top of list = highest layer (last in array = rendered last = on top)
+                layerList.innerHTML = [...items].reverse().map((p, revIdx) => {
+                    const realIdx = items.length - 1 - revIdx;
+                    const isActive = p.id === activePlaceholderId;
+                    const label = p.staticText || p.key || p.type;
+                    const icon = TYPE_ICON[p.type] || 'T';
+                    const canUp   = realIdx < items.length - 1;
+                    const canDown = realIdx > 0;
+                    return `<div class="layer-item ${isActive ? 'active' : ''}" onclick="setActivePlaceholder('${p.id}')">
+                        <span class="layer-icon">${icon}</span>
+                        <span class="layer-name">${label}</span>
+                        <div class="layer-order-btns" onclick="event.stopPropagation()">
+                            <button class="layer-order-btn" title="Move up" ${canUp ? '' : 'disabled style="opacity:0.3"'}
+                                onclick="moveLayer('${p.id}', 1)">▲</button>
+                            <button class="layer-order-btn" title="Move down" ${canDown ? '' : 'disabled style="opacity:0.3"'}
+                                onclick="moveLayer('${p.id}', -1)">▼</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            };
+            window.setActivePlaceholder = (id) => setActivePlaceholder(id);
+            window.moveLayer = (id, dir) => {
+                const arr = placeholders[activeSide];
+                const i = arr.findIndex(p => p.id === id);
+                if (i < 0) return;
+                const j = i + dir;
+                if (j < 0 || j >= arr.length) return;
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+                renderPlaceholders();
+                drawAllCanvases();
+            };
+
+            // --- Floating Field Toolbar ---
+            const frontFieldToolbar = document.getElementById('front-field-toolbar');
+            const backFieldToolbar  = document.getElementById('back-field-toolbar');
+
+            const updateFieldToolbar = () => {
+                const toolbar = activeSide === 'front' ? frontFieldToolbar : backFieldToolbar;
+                const other   = activeSide === 'front' ? backFieldToolbar  : frontFieldToolbar;
+                other.classList.remove('visible');
+
+                if (!activePlaceholderId) { toolbar.classList.remove('visible'); return; }
+                const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
+                if (!p) { toolbar.classList.remove('visible'); return; }
+
+                // Position above the element (uses same % coordinate space)
+                toolbar.style.left = `${p.x * 100}%`;
+                toolbar.style.top  = `${p.y * 100}%`;
+
+                // Build type-aware content
+                let html = '';
+
+                if (p.type === 'text') {
+                    const sz = p.fontSize || 15;
+                    const bold = (p.fontWeight === 'bold');
+                    const col  = p.color || '#000000';
+                    const al   = p.align  || 'left';
+                    html += `
+                    <button class="ftb ${bold ? 'active' : ''}" title="Bold"
+                        onclick="updatePlaceholderProp('${p.id}','fontWeight','${bold ? 'normal' : 'bold'}')"
+                        >B</button>
+                    <div class="ft-sep"></div>
+                    <button class="ftb" title="Decrease font size"
+                        onclick="updatePlaceholderProp('${p.id}','fontSize',${sz - 1})">−</button>
+                    <span style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:600;min-width:26px;text-align:center">${sz}</span>
+                    <button class="ftb" title="Increase font size"
+                        onclick="updatePlaceholderProp('${p.id}','fontSize',${sz + 1})">+</button>
+                    <div class="ft-sep"></div>
+                    <button class="ftb ${al==='left'?'active':''}"   title="Align left"    onclick="updatePlaceholderProp('${p.id}','align','left')">&#8676;</button>
+                    <button class="ftb ${al==='center'?'active':''}" title="Align center"  onclick="updatePlaceholderProp('${p.id}','align','center')">&#8596;</button>
+                    <button class="ftb ${al==='right'?'active':''}"  title="Align right"   onclick="updatePlaceholderProp('${p.id}','align','right')">&#8677;</button>
+                    <div class="ft-sep"></div>
+                    <button class="ftb ftb-color" title="Text color">
+                        <div class="swatch" style="background:${col}"></div>
+                        <input type="color" value="${col}" oninput="updatePlaceholderProp('${p.id}','color',this.value);document.querySelector('#${activeSide === 'front' ? 'front' : 'back'}-field-toolbar .swatch').style.background=this.value">
+                    </button>`;
+                } else if (p.type === 'photo') {
+                    const sh = p.shape || 'square';
+                    html += `
+                    <button class="ftb ${sh==='square'?'active':''}"  onclick="updatePlaceholderProp('${p.id}','shape','square')" title="Square">▣</button>
+                    <button class="ftb ${sh==='rounded'?'active':''}" onclick="updatePlaceholderProp('${p.id}','shape','rounded')" title="Rounded">▢</button>
+                    <button class="ftb ${sh==='circle'?'active':''}"  onclick="updatePlaceholderProp('${p.id}','shape','circle')" title="Circle">◯</button>`;
+                } else if (p.type === 'qr') {
+                    const qrCol = p.qrColor || '#000000';
+                    html += `
+                    <span style="color:rgba(255,255,255,0.5);font-size:10px;padding:0 4px">QR color</span>
+                    <button class="ftb ftb-color" title="QR color">
+                        <div class="swatch" style="background:${qrCol}"></div>
+                        <input type="color" value="${qrCol}" oninput="updatePlaceholderProp('${p.id}','qrColor',this.value)">
+                    </button>`;
+                }
+
+                // Delete button — always last
+                html += `<div class="ft-sep"></div>
+                    <button class="ftb danger" title="Delete field (Del)"
+                        onclick="(function(){placeholders[activeSide]=placeholders[activeSide].filter(pl=>pl.id!=='${p.id}');setActivePlaceholder(null);drawAllCanvases();})()">
+                        &#x2715;
+                    </button>`;
+
+                toolbar.innerHTML = html;
+                toolbar.classList.add('visible');
+            };
+            window.updateFieldToolbar = updateFieldToolbar;
 
             // --- Edit Panel ---
             const renderEditPanel = () => {
                 const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
                 if (!p) return;
 
+                // Canvas pixel dimensions for the active orientation
+                const cW = orientation === 'horizontal' ? HORIZONTAL_WIDTH  : HORIZONTAL_HEIGHT;
+                const cH = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+
+                // X/Y/W/H block — always at the top, values in canvas pixels
+                const geomBlock = `
+                <div class="geom-grid">
+                    <div class="geom-cell">
+                        <label>X</label>
+                        <input type="number" id="geom-x" value="${Math.round(p.x * cW)}"
+                            oninput="updatePlaceholderGeometry('${p.id}', 'x', this.value)">
+                    </div>
+                    <div class="geom-cell">
+                        <label>Y</label>
+                        <input type="number" id="geom-y" value="${Math.round(p.y * cH)}"
+                            oninput="updatePlaceholderGeometry('${p.id}', 'y', this.value)">
+                    </div>
+                    <div class="geom-cell">
+                        <label>W</label>
+                        <input type="number" id="geom-w" value="${Math.round(p.width * cW)}" min="10"
+                            oninput="updatePlaceholderGeometry('${p.id}', 'width', this.value)">
+                    </div>
+                    <div class="geom-cell">
+                        <label>H</label>
+                        <input type="number" id="geom-h" value="${Math.round(p.height * cH)}" min="10"
+                            oninput="updatePlaceholderGeometry('${p.id}', 'height', this.value)">
+                    </div>
+                </div>
+                <hr class="geom-divider">`;
+
                 const keyInputLabel = p.staticText ? "Static Text" : "Field Name (from data)";
                 const keyInputValue = p.staticText ? p.staticText : p.key;
-                let content = `<div><label class="block text-sm font-medium">${keyInputLabel}</label><input type="text" value="${keyInputValue}" oninput="updatePlaceholderProp('${p.id}', '${p.staticText ? 'staticText' : 'key'}', this.value)" class="w-full p-2 border rounded"></div>`;
+                let content = geomBlock + `
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">${keyInputLabel}</label>
+                        <input type="text" value="${keyInputValue}" oninput="updatePlaceholderProp('${p.id}', '${p.staticText ? 'staticText' : 'key'}', this.value)" class="w-full p-2 border rounded">
+                    </div>`;
 
                 if (p.type === 'text') {
                     content += `
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium">Font Size</label><input type="number" value="${p.fontSize}" oninput="updatePlaceholderProp('${p.id}', 'fontSize', this.value)" class="w-full p-2 border rounded"></div>
-                            <div><label class="block text-sm font-medium">Color</label><input type="color" value="${p.color}" oninput="updatePlaceholderProp('${p.id}', 'color', this.value)" class="w-full p-2 h-10 border rounded"></div>
-                            <div><label class="block text-sm font-medium">Line Height</label><input type="number" value="${p.lineHeight}" oninput="updatePlaceholderProp('${p.id}', 'lineHeight', this.value)" class="w-full p-2 border rounded"></div>
-                            <div><label class="block text-sm font-medium">Font Family</label>
-                                <select onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded">
-                                    <option value="Inter" ${(p.fontFamily || 'Inter') === 'Inter' ? 'selected' : ''}>Inter (Default)</option>
-                                    <option value="Arial" ${p.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>
-                                    <option value="Times New Roman" ${p.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
-                                    <option value="Helvetica" ${p.fontFamily === 'Helvetica' ? 'selected' : ''}>Helvetica</option>
-                                    <option value="Georgia" ${p.fontFamily === 'Georgia' ? 'selected' : ''}>Georgia</option>
-                                    <option value="Verdana" ${p.fontFamily === 'Verdana' ? 'selected' : ''}>Verdana</option>
-                                    <option value="Courier New" ${p.fontFamily === 'Courier New' ? 'selected' : ''}>Courier New</option>
-                                </select>
+                    <div>
+                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Font Family</label>
+                        <select onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded">
+                            <option value="Inter" ${(p.fontFamily || 'Inter') === 'Inter' ? 'selected' : ''}>Inter (Default)</option>
+                            <option value="Arial" ${p.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>
+                            <option value="Times New Roman" ${p.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
+                            <option value="Helvetica" ${p.fontFamily === 'Helvetica' ? 'selected' : ''}>Helvetica</option>
+                            <option value="Georgia" ${p.fontFamily === 'Georgia' ? 'selected' : ''}>Georgia</option>
+                            <option value="Verdana" ${p.fontFamily === 'Verdana' ? 'selected' : ''}>Verdana</option>
+                            <option value="Courier New" ${p.fontFamily === 'Courier New' ? 'selected' : ''}>Courier New</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Font Size</label>
+                            <input type="number" value="${p.fontSize}" oninput="updatePlaceholderProp('${p.id}', 'fontSize', this.value)" class="w-full p-2 border rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Line Height</label>
+                            <input type="number" value="${p.lineHeight}" oninput="updatePlaceholderProp('${p.id}', 'lineHeight', this.value)" class="w-full p-2 border rounded">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 items-center">
+                        <div>
+                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Color</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" value="${p.color}" oninput="updatePlaceholderProp('${p.id}', 'color', this.value)" class="w-10 h-8 border rounded cursor-pointer p-0">
+                                <span class="text-xs font-mono text-ink-700">${p.color}</span>
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium">Alignment</label><div class="flex justify-around bg-gray-100 rounded-lg p-1">
-                                <button onclick="updatePlaceholderProp('${p.id}', 'align', 'left')" class="px-3 py-1 rounded ${p.align === 'left' ? 'bg-blue-500 text-white' : ''}">Left</button>
-                                <button onclick="updatePlaceholderProp('${p.id}', 'align', 'center')" class="px-3 py-1 rounded ${p.align === 'center' ? 'bg-blue-500 text-white' : ''}">Center</button>
-                                <button onclick="updatePlaceholderProp('${p.id}', 'align', 'right')" class="px-3 py-1 rounded ${p.align === 'right' ? 'bg-blue-500 text-white' : ''}">Right</button>
-                            </div></div>
-                            <div><label class="block text-sm font-medium">Font Weight</label><div class="flex justify-around bg-gray-100 rounded-lg p-1">
-                                <button onclick="updatePlaceholderProp('${p.id}', 'fontWeight', 'normal')" class="px-3 py-1 rounded ${(p.fontWeight || 'normal') === 'normal' ? 'bg-blue-500 text-white' : ''}">Normal</button>
-                                <button onclick="updatePlaceholderProp('${p.id}', 'fontWeight', 'bold')" class="px-3 py-1 rounded ${p.fontWeight === 'bold' ? 'bg-blue-500 text-white' : ''}">Bold</button>
-                            </div></div>
-                        </div>`;
-                } else if (p.type === 'photo') {
-                    // Add shape controls for photo fields
-                    p.shape = p.shape || 'square'; // Default to square if not set
-                    content += `
-                        <div><label class="block text-sm font-medium">Photo Shape</label>
-                            <div class="flex justify-around bg-gray-100 rounded-lg p-1 mt-2">
-                                <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'square')" class="px-3 py-1 rounded ${p.shape === 'square' ? 'bg-blue-500 text-white' : ''}">Square</button>
-                                <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'rounded')" class="px-3 py-1 rounded ${p.shape === 'rounded' ? 'bg-blue-500 text-white' : ''}">Rounded</button>
-                                <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'circle')" class="px-3 py-1 rounded ${p.shape === 'circle' ? 'bg-blue-500 text-white' : ''}">Circle</button>
+                        <div>
+                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Font Weight</label>
+                            <div class="flex bg-surface-sunken rounded-lg p-0.5 border border-ink-200">
+                                <button onclick="updatePlaceholderProp('${p.id}', 'fontWeight', 'normal')" class="flex-1 py-1 rounded text-xs font-semibold ${p.fontWeight !== 'bold' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Normal</button>
+                                <button onclick="updatePlaceholderProp('${p.id}', 'fontWeight', 'bold')" class="flex-1 py-1 rounded text-xs font-semibold ${p.fontWeight === 'bold' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Bold</button>
                             </div>
-                        </div>`;
-
-                } else if (p.type === 'qr') {
-                    // Add QR code specific controls
-                    p.qrColor = p.qrColor || '#000000'; // Default to black if not set
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Alignment</label>
+                        <div class="flex bg-surface-sunken rounded-lg p-0.5 border border-ink-200">
+                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'left')" class="flex-1 py-1 rounded text-xs font-semibold ${p.align === 'left' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Left</button>
+                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'center')" class="flex-1 py-1 rounded text-xs font-semibold ${p.align === 'center' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Center</button>
+                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'right')" class="flex-1 py-1 rounded text-xs font-semibold ${p.align === 'right' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Right</button>
+                        </div>
+                    </div>`;
+                } else if (p.type === 'photo') {
+                    p.shape = p.shape || 'square';
                     content += `
-                        <div><label class="block text-sm font-medium">QR Code Color</label>
-                        <input type="color" value="${p.qrColor}" oninput="updatePlaceholderProp('${p.id}', 'qrColor', this.value)" class="w-full p-2 h-10 border rounded"></div>
-                        <div class="mt-2 p-2 bg-yellow-50 text-sm text-yellow-800 rounded">
+                    <div>
+                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Photo Shape</label>
+                        <div class="flex bg-surface-sunken rounded-lg p-0.5 border border-ink-200">
+                            <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'square')" class="flex-1 py-1 rounded text-xs font-semibold ${p.shape === 'square' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Square</button>
+                            <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'rounded')" class="flex-1 py-1 rounded text-xs font-semibold ${p.shape === 'rounded' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Rounded</button>
+                            <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'circle')" class="flex-1 py-1 rounded text-xs font-semibold ${p.shape === 'circle' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Circle</button>
+                        </div>
+                    </div>`;
+                } else if (p.type === 'qr') {
+                    p.qrColor = p.qrColor || '#000000';
+                    content += `
+                    <div>
+                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">QR Code Color</label>
+                        <div class="flex items-center gap-2">
+                            <input type="color" value="${p.qrColor}" oninput="updatePlaceholderProp('${p.id}', 'qrColor', this.value)" class="w-10 h-8 border rounded cursor-pointer p-0">
+                            <span class="text-xs font-mono text-ink-700">${p.qrColor}</span>
+                        </div>
+                        <div class="mt-2.5 p-2 bg-yellow-50 text-xs text-yellow-800 rounded-lg border border-yellow-100">
                             QR codes will be generated with the data from field: <strong>${p.key}</strong>
-                        </div>`;
+                        </div>
+                    </div>`;
                 }
+                content += `</div>`; // Close space-y-3 container
                 editControls.innerHTML = content;
+            };
+            // Converts a pixel value typed into a geom input back to the 0-1 fraction and updates live
+            window.updatePlaceholderGeometry = (id, prop, pxValue) => {
+                const p = placeholders[activeSide].find(pl => pl.id === id);
+                if (!p) return;
+                const cW = orientation === 'horizontal' ? HORIZONTAL_WIDTH  : HORIZONTAL_HEIGHT;
+                const cH = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                const px = parseFloat(pxValue);
+                if (isNaN(px)) return;
+
+                if (prop === 'x')     p.x     = Math.max(0, px) / cW;
+                if (prop === 'y')     p.y     = Math.max(0, px) / cH;
+                if (prop === 'width') p.width = Math.max(10, px) / cW;
+                if (prop === 'height')p.height= Math.max(10, px) / cH;
+
+                // Move/resize the DOM element directly — no full re-render so the input keeps focus
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.left   = `${p.x * 100}%`;
+                    el.style.top    = `${p.y * 100}%`;
+                    el.style.width  = `${p.width * 100}%`;
+                    el.style.height = `${p.height * 100}%`;
+                }
+                drawAllCanvases();
             };
             window.updatePlaceholderProp = (id, prop, value) => {
                 const p = placeholders[activeSide].find(pl => pl.id === id);
@@ -1534,23 +2100,22 @@
                     const numValue = parseFloat(value);
                     p[prop] = isNaN(numValue) ? value : numValue;
                     renderPlaceholders();
-                    // Re-render edit panel when alignment, shape, or fontWeight changes
-                    if (prop === 'align' || prop === 'shape' || prop === 'fontWeight') {
+                    updateFieldToolbar();
+
+                    // Sync the sidebar panel values if the user isn't currently typing in it
+                    if (document.activeElement?.closest('#edit-panel') === null) {
                         renderEditPanel();
-                        // Also redraw the canvas when shape changes to see the effect immediately
-                        if (prop === 'shape') {
-                            drawAllCanvases();
-                        }
                     }
-                    // Redraw canvas when font properties change
-                    if (prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight' || prop === 'fontWeight') {
+
+                    // Redraw canvas for visual property changes
+                    if (prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight' || prop === 'fontWeight' || prop === 'shape' || prop === 'align') {
                         drawAllCanvases();
                     }
                 }
             };
             // --- Interaction Logic ---
             const onDragStart = (e) => {
-                if (isResizing || e.target.classList.contains('delete-btn') || e.target.classList.contains('resize-handle')) return;
+                if (isResizing || e.target.classList.contains('delete-btn') || e.target.classList.contains('rh')) return;
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -1559,13 +2124,24 @@
 
                 if (activePlaceholderId !== target.id) setActivePlaceholder(target.id);
 
-                const elementToDrag = document.getElementById(target.id);
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
-                const elementRect = elementToDrag.getBoundingClientRect();
+                const wrapperRect = wrapper.getBoundingClientRect();
                 const scale = getWrapperScale(wrapper);
 
-                dragOffsetX = (e.clientX - elementRect.left) / scale;
-                dragOffsetY = (e.clientY - elementRect.top) / scale;
+                const unscaledW = wrapper.offsetWidth;
+                const unscaledH = wrapper.offsetHeight;
+
+                const pData = placeholders[activeSide].find(p => p.id === target.id);
+                if (!pData) return;
+
+                const mouseX_unscaled = (e.clientX - wrapperRect.left) / scale;
+                const mouseY_unscaled = (e.clientY - wrapperRect.top) / scale;
+
+                const startElX = pData.x * unscaledW;
+                const startElY = pData.y * unscaledH;
+
+                dragOffsetX = mouseX_unscaled - startElX;
+                dragOffsetY = mouseY_unscaled - startElY;
 
                 document.addEventListener('mousemove', onDragMove);
                 document.addEventListener('mouseup', onDragEnd);
@@ -1585,8 +2161,8 @@
                 const newLeft_unscaled = mouseX_unscaled - dragOffsetX;
                 const newTop_unscaled  = mouseY_unscaled - dragOffsetY;
 
-                const unscaledW = wrapper.offsetWidth  / scale;
-                const unscaledH = wrapper.offsetHeight / scale;
+                const unscaledW = wrapper.offsetWidth;
+                const unscaledH = wrapper.offsetHeight;
 
                 pData.x = newLeft_unscaled / unscaledW;
                 pData.y = newTop_unscaled  / unscaledH;
@@ -1596,107 +2172,255 @@
                 pData.x = Math.max(-pData.width + bufferX, Math.min(pData.x, 1 - bufferX));
                 pData.y = Math.max(-pData.height + bufferY, Math.min(pData.y, 1 - bufferY));
 
+                // Smart snap — adjust position and collect guide lines
+                computeSnap(pData, unscaledW, unscaledH);
+
                 activeEl.style.left = `${pData.x * 100}%`;
                 activeEl.style.top  = `${pData.y * 100}%`;
+
+                // Keep toolbar pinned above the element while dragging
+                const tb = activeSide === 'front' ? frontFieldToolbar : backFieldToolbar;
+                if (tb) { tb.style.left = `${pData.x * 100}%`; tb.style.top = `${pData.y * 100}%`; }
             };
             const onDragEnd = () => {
                 document.removeEventListener('mousemove', onDragMove);
                 document.removeEventListener('mouseup', onDragEnd);
-
-                // The position is already correctly set in onDragMove.
-                // We just need to trigger a final canvas redraw to ensure it's up-to-date.
                 drawAllCanvases();
+                syncGeomInputs();
+                updateFieldToolbar();
+                clearGuides();
             };
+
+            // --- Smart snap guides ---
+            const frontGuideSvg = document.getElementById('front-guide-svg');
+            const backGuideSvg  = document.getElementById('back-guide-svg');
+            const SNAP_PX = 5; // snap threshold in wrapper pixels
+
+            const clearGuides = () => {
+                if (frontGuideSvg) frontGuideSvg.innerHTML = '';
+                if (backGuideSvg)  backGuideSvg.innerHTML  = '';
+            };
+
+            const drawGuides = (svg, guides, W, H) => {
+                svg.innerHTML = '';
+                guides.forEach(g => {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    if (g.axis === 'x') {   // vertical guide line at x=g.pos
+                        const px = (g.pos / W) * 100;
+                        line.setAttribute('x1', `${px}%`); line.setAttribute('x2', `${px}%`);
+                        line.setAttribute('y1', '0%');      line.setAttribute('y2', '100%');
+                    } else {                 // horizontal guide line at y=g.pos
+                        const py = (g.pos / H) * 100;
+                        line.setAttribute('x1', '0%');      line.setAttribute('x2', '100%');
+                        line.setAttribute('y1', `${py}%`);  line.setAttribute('y2', `${py}%`);
+                    }
+                    svg.appendChild(line);
+                });
+            };
+
+            // Mutates pData.x/y to snap, returns nothing — guides drawn as side-effect
+            const computeSnap = (pData, W, H) => {
+                const svg = activeSide === 'front' ? frontGuideSvg : backGuideSvg;
+                if (!svg) return;
+
+                const others = placeholders[activeSide].filter(p => p.id !== activePlaceholderId);
+                if (!others.length) { svg.innerHTML = ''; return; }
+
+                // Active element key points in wrapper-pixels
+                const ax1 = pData.x * W;
+                const ax2 = (pData.x + pData.width) * W;
+                const axc = ax1 + (ax2 - ax1) / 2;
+                const ay1 = pData.y * H;
+                const ay2 = (pData.y + pData.height) * H;
+                const ayc = ay1 + (ay2 - ay1) / 2;
+
+                let snapX = null, snapY = null;
+                const guides = [];
+
+                others.forEach(o => {
+                    const ox1 = o.x * W;
+                    const ox2 = (o.x + o.width) * W;
+                    const oxc = ox1 + (ox2 - ox1) / 2;
+                    const oy1 = o.y * H;
+                    const oy2 = (o.y + o.height) * H;
+                    const oyc = oy1 + (oy2 - oy1) / 2;
+
+                    // X-axis snaps: check each active x-point against each ref x-point
+                    const xPairs = [
+                        [ax1, ox1], [ax1, ox2], [ax1, oxc],
+                        [ax2, ox1], [ax2, ox2], [ax2, oxc],
+                        [axc, ox1], [axc, ox2], [axc, oxc],
+                    ];
+                    xPairs.forEach(([ap, rp]) => {
+                        if (snapX === null && Math.abs(ap - rp) < SNAP_PX) {
+                            // shift pData.x so that ap aligns with rp
+                            pData.x += (rp - ap) / W;
+                            snapX = rp;
+                            guides.push({ axis: 'x', pos: rp });
+                        }
+                    });
+
+                    // Y-axis snaps
+                    const yPairs = [
+                        [ay1, oy1], [ay1, oy2], [ay1, oyc],
+                        [ay2, oy1], [ay2, oy2], [ay2, oyc],
+                        [ayc, oy1], [ayc, oy2], [ayc, oyc],
+                    ];
+                    yPairs.forEach(([ap, rp]) => {
+                        if (snapY === null && Math.abs(ap - rp) < SNAP_PX) {
+                            pData.y += (rp - ap) / H;
+                            snapY = rp;
+                            guides.push({ axis: 'y', pos: rp });
+                        }
+                    });
+                });
+
+                drawGuides(svg, guides, W, H);
+            };
+            // Updates the X/Y/W/H inputs without re-rendering the whole panel
+            const syncGeomInputs = () => {
+                const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
+                if (!p) return;
+                const cW = orientation === 'horizontal' ? HORIZONTAL_WIDTH  : HORIZONTAL_HEIGHT;
+                const cH = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+                set('geom-x', Math.round(p.x * cW));
+                set('geom-y', Math.round(p.y * cH));
+                set('geom-w', Math.round(p.width * cW));
+                set('geom-h', Math.round(p.height * cH));
+            };
+            // direction and starting geometry captured at mousedown
+            let resizeDir = 'se';
+            let resizeOrigin = null; // { x, y, w, h, mouseX, mouseY } all in wrapper-unscaled px
+
             const onResizeStart = (e) => {
                 e.preventDefault(); e.stopPropagation();
                 isResizing = true;
                 const target = e.target.closest('.placeholder');
                 if (!target) return;
                 if (activePlaceholderId !== target.id) setActivePlaceholder(target.id);
+
+                resizeDir = e.target.dataset.dir || 'se';
+
+                // Capture the element's current geometry in wrapper-pixel space
+                const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
+                const scale   = getWrapperScale(wrapper);
+                const pData   = placeholders[activeSide].find(p => p.id === target.id);
+                const W = wrapper.offsetWidth;
+                const H = wrapper.offsetHeight;
+
+                resizeOrigin = {
+                    x: pData.x * W,  y: pData.y * H,
+                    w: pData.width * W, h: pData.height * H,
+                    mouseX: (e.clientX - wrapper.getBoundingClientRect().left) / scale,
+                    mouseY: (e.clientY - wrapper.getBoundingClientRect().top)  / scale,
+                };
+
                 document.addEventListener('mousemove', onResizeMove);
                 document.addEventListener('mouseup', onResizeEnd);
             };
             const onResizeMove = (e) => {
                 const activeEl = document.getElementById(activePlaceholderId);
                 const pData = placeholders[activeSide].find(p => p.id === activePlaceholderId);
-                if (!activeEl || !pData) return;
+                if (!activeEl || !pData || !resizeOrigin) return;
+
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
-                const wrapperRect = wrapper.getBoundingClientRect();
+                const scale   = getWrapperScale(wrapper);
+                const W = wrapper.offsetWidth;
+                const H = wrapper.offsetHeight;
 
-                // Calculate new dimensions based on mouse position
-                const elementRect = activeEl.getBoundingClientRect();
-                const newWidth = Math.max(20, e.clientX - elementRect.left);
-                const newHeight = Math.max(20, e.clientY - elementRect.top);
+                const mx = (e.clientX - wrapper.getBoundingClientRect().left) / scale;
+                const my = (e.clientY - wrapper.getBoundingClientRect().top)  / scale;
+                const dx = mx - resizeOrigin.mouseX;
+                const dy = my - resizeOrigin.mouseY;
 
-                // Update placeholder data immediately
-                pData.width = Math.max(20 / wrapperRect.width, newWidth / wrapperRect.width);
-                pData.height = Math.max(20 / wrapperRect.height, newHeight / wrapperRect.height);
+                const MIN = 20; // minimum size in wrapper-pixels
+                let { x, y, w, h } = resizeOrigin;
 
-                // Update visual representation
-                activeEl.style.width = `${pData.width * 100}%`;
+                // Each direction adjusts the appropriate edges
+                const dir = resizeDir;
+                if (dir.includes('e')) { w = Math.max(MIN, w + dx); }
+                if (dir.includes('s')) { h = Math.max(MIN, h + dy); }
+                if (dir.includes('w')) { const nw = Math.max(MIN, w - dx); x = x + w - nw; w = nw; }
+                if (dir.includes('n')) { const nh = Math.max(MIN, h - dy); y = y + h - nh; h = nh; }
+
+                // Commit to pData as fractions
+                pData.x = x / W;  pData.y = y / H;
+                pData.width = w / W; pData.height = h / H;
+
+                activeEl.style.left   = `${pData.x * 100}%`;
+                activeEl.style.top    = `${pData.y * 100}%`;
+                activeEl.style.width  = `${pData.width  * 100}%`;
                 activeEl.style.height = `${pData.height * 100}%`;
 
-                // Update canvas in real-time
+                // Keep toolbar pinned above the element while resizing
+                const tb = activeSide === 'front' ? frontFieldToolbar : backFieldToolbar;
+                if (tb) { tb.style.left = `${pData.x * 100}%`; tb.style.top = `${pData.y * 100}%`; }
+
                 drawAllCanvases();
             };
             const onResizeEnd = () => {
                 isResizing = false;
                 document.removeEventListener('mousemove', onResizeMove);
                 document.removeEventListener('mouseup', onResizeEnd);
+                syncGeomInputs(); // refresh W/H in panel after resize
             };
             document.addEventListener('keydown', (e) => {
+                // Never intercept when the user is typing in an input, textarea, or select
+                const tag = document.activeElement?.tagName;
+                if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+                // Escape — deselect regardless of whether a field is active
+                if (e.key === 'Escape') {
+                    setActivePlaceholder(null);
+                    return;
+                }
+
                 if (!activePlaceholderId) return;
                 const pData = placeholders[activeSide].find(p => p.id === activePlaceholderId);
                 if (!pData) return;
+
+                // Delete / Backspace — remove the selected field
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    e.preventDefault();
+                    placeholders[activeSide] = placeholders[activeSide].filter(p => p.id !== activePlaceholderId);
+                    setActivePlaceholder(null);
+                    drawAllCanvases();
+                    return;
+                }
+
+                // Ctrl+D — duplicate the selected field with a small offset
+                if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+                    e.preventDefault();
+                    const clone = JSON.parse(JSON.stringify(pData));
+                    clone.id = 'ph_' + Date.now();
+                    clone.x = Math.min(clone.x + 0.02, 0.9);
+                    clone.y = Math.min(clone.y + 0.02, 0.9);
+                    placeholders[activeSide].push(clone);
+                    setActivePlaceholder(clone.id);
+                    drawAllCanvases();
+                    return;
+                }
+
+                // Arrow nudge — 1px normally, 10px with Shift
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                 const smallStep = 1 / wrapper.offsetWidth;
                 const largeStep = 10 / wrapper.offsetWidth;
                 const step = e.shiftKey ? largeStep : smallStep;
-                let needsRender = false;
+                let moved = false;
                 switch (e.key) {
-                    case 'ArrowUp': pData.y -= step; needsRender = true; break;
-                    case 'ArrowDown': pData.y += step; needsRender = true; break;
-                    case 'ArrowLeft': pData.x -= step; needsRender = true; break;
-                    case 'ArrowRight': pData.x += step; needsRender = true; break;
+                    case 'ArrowUp':    pData.y -= step; moved = true; break;
+                    case 'ArrowDown':  pData.y += step; moved = true; break;
+                    case 'ArrowLeft':  pData.x -= step; moved = true; break;
+                    case 'ArrowRight': pData.x += step; moved = true; break;
                 }
-                if (needsRender) { e.preventDefault(); renderPlaceholders(); }
+                if (moved) {
+                    e.preventDefault();
+                    renderPlaceholders();
+                    syncGeomInputs();
+                }
             });
-            // --- Gemini API Call ---
-            const callGemini = async (promptText, jsonSchema = null) => {
-                // Read key from input, fall back to sessionStorage cache
-                const keyInput = document.getElementById('gemini-api-key-input');
-                let apiKey = keyInput.value.trim() || sessionStorage.getItem('geminiApiKey');
-                if (!apiKey) {
-                    toast('Please enter your Gemini API key in the Design Card section first.', 'warn', 5000);
-                    loadingModal.classList.add('hidden');
-                    return null;
-                }
-                // Cache for the session so user doesn't retype
-                sessionStorage.setItem('geminiApiKey', apiKey);
-                keyInput.value = apiKey;
 
-                loadingModal.classList.remove('hidden');
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
-                const payload = { contents: [{ role: 'user', parts: [{ text: promptText }] }] };
-                if (jsonSchema) payload.generationConfig = { responseMimeType: 'application/json', responseSchema: jsonSchema };
-                try {
-                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) {
-                        const errorBody = await response.json();
-                        throw new Error(`API Error: ${errorBody.error?.message || 'Unknown error'}`);
-                    }
-                    const result = await response.json();
-                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (!text) throw new Error('No content received from API.');
-                    return text;
-                } catch (error) {
-                    errorText.textContent = error.message || 'An unknown error occurred.';
-                    errorModal.classList.remove('hidden');
-                    return null;
-                } finally {
-                    loadingModal.classList.add('hidden');
-                }
-            };
             // --- Orientation Logic ---
             const setOrientation = (newOrientation) => {
                 if (orientation === newOrientation) return;
@@ -1705,6 +2429,16 @@
                 const isHorizontal = newOrientation === 'horizontal';
                 const newW = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
                 const newH = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+
+                // Update default backgrounds if custom image wasn't uploaded
+                if (!userCustomBg.front) bgImages.front.src = getDefaultBg('front', newOrientation);
+                if (!userCustomBg.back)  bgImages.back.src  = getDefaultBg('back', newOrientation);
+
+                // Update dimension label text
+                const frontDimsLabel = document.getElementById('front-dims-label');
+                const backDimsLabel = document.getElementById('back-dims-label');
+                if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
+                if (backDimsLabel)  backDimsLabel.textContent  = `${newW} × ${newH}`;
 
                 // Reset canvas dimensions and styles
                 [frontCanvas, backCanvas].forEach(c => {
@@ -1746,20 +2480,9 @@
 
                 // Calculate actual card size if "actual" is selected
                 if (zoomLevel === 'actual') {
-                    // Standard ID card size: 85.6mm x 54mm (3.375" x 2.125")
-                    // Convert to pixels assuming 96 DPI (standard screen DPI)
-                    const actualCardWidthPx = (85.6 / 25.4) * 96;  // ~325px
-                    const actualCardHeightPx = (54 / 25.4) * 96;   // ~204px
-
-                    // For better viewing experience, let's use a more reasonable "actual size"
-                    // that represents the card at a good viewing scale rather than tiny physical size
                     const canvasWidth = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
                     const canvasHeight = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
-
-                    // Instead of true physical size, use a proportion that makes the card 
-                    // appear at a reasonable viewing size (roughly 60% of canvas)
                     actualZoom = 0.6;
-
                     console.log(`Actual size view: Canvas ${canvasWidth}x${canvasHeight}, Zoom: ${actualZoom}`);
                 }
 
@@ -1767,24 +2490,26 @@
                     const canvas = wrapper.querySelector('canvas');
                     const placeholderWrapper = wrapper.querySelector('[id*="placeholder-wrapper"]');
 
-                    // Reset any previous transforms first
-                    canvas.style.transform = '';
-                    placeholderWrapper.style.transform = '';
-                    wrapper.style.width = '';
-                    wrapper.style.height = '';
-
-                    // Apply zoom transform
-                    canvas.style.transform = `scale(${actualZoom})`;
-                    canvas.style.transformOrigin = 'top left';
-                    placeholderWrapper.style.transform = `scale(${actualZoom})`;
-                    placeholderWrapper.style.transformOrigin = 'top left';
-
-                    // Adjust wrapper size to accommodate zoom
+                    // Adjust base dimensions
                     const baseWidth = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
                     const baseHeight = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
 
-                    wrapper.style.width = `${baseWidth * actualZoom}px`;
-                    wrapper.style.height = `${baseHeight * actualZoom + 60}px`; // +60 for title
+                    const zoomedW = baseWidth * actualZoom;
+                    const zoomedH = baseHeight * actualZoom;
+
+                    // Apply layout width/height zoom directly to canvas element (no CSS transform)
+                    // This updates the element's actual layout box size in the DOM, preventing overflow leaks.
+                    canvas.style.width = `${zoomedW}px`;
+                    canvas.style.height = `${zoomedH}px`;
+                    canvas.style.transform = '';
+
+                    // Reset placeholder wrapper transform
+                    placeholderWrapper.style.transform = '';
+
+                    // Adjust wrapper layout dimensions to exactly fit the zoomed canvas + padding + title header
+                    // Wrapper padding is 1rem (16px) all around, so +32px width and +32px height
+                    wrapper.style.width = `${zoomedW + 32}px`;
+                    wrapper.style.height = `${zoomedH + 60 + 32}px`; // +60px for Front/Back header title
 
                     // Remove any existing size notes
                     const existingSizeNote = wrapper.querySelector('.size-note');
@@ -1814,6 +2539,7 @@
                 input.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
+                        userCustomBg[side] = true;
                         const reader = new FileReader();
                         reader.onload = (event) => { bgImages[side].src = event.target.result; };
                         reader.readAsDataURL(file);
@@ -1883,9 +2609,8 @@
                             });
                             qrFieldSelect.disabled = false;
                             document.getElementById('qr-field-container').classList.remove('opacity-70');
-                            aiControls.classList.remove('opacity-50');
-                            aiLayoutBtn.disabled = false;
-                            aiTitleBtn.disabled = false;
+                            const addAllWrap = document.getElementById('ai-controls');
+                            if (addAllWrap) addAllWrap.classList.remove('opacity-50');
                             addAllHeadersBtn.disabled = false;
                             previewBtn.disabled = false;
                             generateZipBtn.disabled = false;
@@ -1902,35 +2627,7 @@
                 else reader.readAsBinaryString(file);
             });
 
-            aiLayoutBtn.addEventListener('click', async () => {
-                loadingText.textContent = `Designing the ${activeSide} of the card...`;
-                const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
-                const h = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
-                const promptText = `Based on these data headers for the ${activeSide} of an ID card, create a logical layout for a ${orientation} card. Headers: ${headers.join(', ')}. The canvas is ${w}x${h}. A photo field should be about 1/4 of the width and 1/2 of the height for vertical, or 1/4 height and 1/3 width for horizontal. Place the most important info prominently. Identify which field is likely the photo.`;
-                const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { key: { type: "STRING" }, type: { type: "STRING", enum: ["text", "photo"] }, x: { type: "NUMBER" }, y: { type: "NUMBER" }, width: { type: "NUMBER" }, height: { type: "NUMBER" } }, required: ["key", "type", "x", "y", "width", "height"] } };
-                const result = await callGemini(promptText, schema);
-                if (result) {
-                    try {
-                        placeholders[activeSide] = [];
-                        const layout = JSON.parse(result);
-                        layout.forEach(p => {
-                            const base = p.type === 'text' ? { fontSize: 15, lineHeight: 18, color: '#000000', align: 'left' } : {};
-                            addPlaceholder({ ...p, ...base });
-                        });
-                    } catch (error) {
-                        errorText.textContent = 'Could not process the AI-generated layout. Try again.';
-                        errorModal.classList.remove('hidden');
-                    }
-                }
-            });
-            aiTitleBtn.addEventListener('click', async () => {
-                loadingText.textContent = 'Generating a professional title...';
-                const promptText = `Based on these data headers, suggest a short, professional title for the ID card. For example, "Employee ID" or "Student Pass". Headers: ${headers.join(', ')}`;
-                const result = await callGemini(promptText);
-                if (result) {
-                    addPlaceholder({ key: 'title', type: 'text', x: 0.1, y: 0.05, width: 0.8, height: 0.1, fontSize: 36, staticText: result.replace(/"/g, '') });
-                }
-            });
+
             addAllHeadersBtn.addEventListener('click', () => {
                 if (headers.length === 0) return;
                 let yOffset = 0.1;
@@ -1951,8 +2648,24 @@
             });
             orientationHorizontalBtn.addEventListener('click', () => setOrientation('horizontal'));
             orientationVerticalBtn.addEventListener('click', () => setOrientation('vertical'));
-            frontCanvasWrapper.addEventListener('click', () => setActiveSide('front'));
-            backCanvasWrapper.addEventListener('click', () => setActiveSide('back'));
+            // Clicking the bare canvas background: switch active side + deselect any field.
+            // Using mousedown (not click) so it fires before any field's own mousedown handler,
+            // but we only act when the click target is the background itself, not a field.
+            const onCanvasBgMousedown = (e, side) => {
+                const isBackground = e.target === frontPlaceholderWrapper ||
+                                     e.target === backPlaceholderWrapper  ||
+                                     e.target === frontCanvas             ||
+                                     e.target === backCanvas;
+                if (!isBackground) return;          // field clicked — let it handle itself
+                if (activeSide !== side) {
+                    activeSide = side;
+                    frontCanvasWrapper.classList.toggle('active', side === 'front');
+                    backCanvasWrapper.classList.toggle('active', side === 'back');
+                }
+                setActivePlaceholder(null);         // deselect
+            };
+            frontCanvasWrapper.addEventListener('mousedown', (e) => onCanvasBgMousedown(e, 'front'));
+            backCanvasWrapper.addEventListener('mousedown',  (e) => onCanvasBgMousedown(e, 'back'));
             addTextBtn.addEventListener('click', () => addPlaceholder({ key: fieldNameInput.value || 'New Text', type: 'text' }));
             addLabelBtn.addEventListener('click', () => {
                 const labelText = fieldNameInput.value || 'Label:';
@@ -2450,8 +3163,8 @@
                 bgImages.back.onload = () => drawAllCanvases();
 
                 // Load default backgrounds
-                bgImages.front.src = defaultBgDataUrl;
-                bgImages.back.src = defaultBackBgDataUrl;
+                bgImages.front.src = getDefaultBg('front', 'horizontal');
+                bgImages.back.src  = getDefaultBg('back', 'horizontal');
 
                 // Set initial state
                 setOrientation('horizontal');
