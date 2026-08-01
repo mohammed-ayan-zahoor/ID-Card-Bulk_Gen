@@ -3425,7 +3425,10 @@
                     activateLicenseBtn.innerHTML = '<span>Activating...</span>';
 
                     try {
-                        const res = await fetch(KEYGEN_VALIDATE_URL, {
+                        const fp = this.getFingerprint();
+
+                        // 1. Initial Key Validation
+                        let res = await fetch(KEYGEN_VALIDATE_URL, {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/vnd.api+json',
@@ -3434,15 +3437,59 @@
                             body: JSON.stringify({
                                 meta: {
                                     key: key,
-                                    scope: {
-                                        fingerprint: this.getFingerprint()
-                                    }
+                                    scope: { fingerprint: fp }
                                 }
                             })
                         });
 
-                        const payload = await res.json();
-                        const meta = payload.meta || {};
+                        let payload = await res.json();
+                        let meta = payload.meta || {};
+
+                        // 2. If Node-locked policy requires machine registration, auto-activate machine
+                        if (meta.code === 'FINGERPRINT_NOT_ACTIVATED' || meta.code === 'NO_MACHINES' || meta.code === 'FINGERPRINT_SCOPE_REQUIRED') {
+                            const licenseId = payload.data ? payload.data.id : null;
+                            if (licenseId) {
+                                try {
+                                    await fetch(`https://api.keygen.sh/v1/accounts/${KEYGEN_ACCOUNT_ID}/machines`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Accept': 'application/vnd.api+json',
+                                            'Content-Type': 'application/vnd.api+json',
+                                            'Authorization': `License ${key}`
+                                        },
+                                        body: JSON.stringify({
+                                            data: {
+                                                type: 'machines',
+                                                attributes: {
+                                                    fingerprint: fp,
+                                                    platform: navigator.platform || 'macOS',
+                                                    name: `Desktop_${navigator.platform || 'Mac'}`
+                                                },
+                                                relationships: {
+                                                    license: {
+                                                        data: { type: 'licenses', id: licenseId }
+                                                    }
+                                                }
+                                            }
+                                        })
+                                    });
+                                } catch (_) {}
+
+                                // Re-validate key after machine registration
+                                res = await fetch(KEYGEN_VALIDATE_URL, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Accept': 'application/vnd.api+json',
+                                        'Content-Type': 'application/vnd.api+json'
+                                    },
+                                    body: JSON.stringify({
+                                        meta: { key: key, scope: { fingerprint: fp } }
+                                    })
+                                });
+                                payload = await res.json();
+                                meta = payload.meta || {};
+                            }
+                        }
 
                         if (res.ok && (meta.valid || meta.code === 'VALID')) {
                             const attr = (payload.data && payload.data.attributes) || {};
