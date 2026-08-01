@@ -844,11 +844,13 @@
                 <div class="space-y-2.5">
                     <div class="space-y-1">
                         <button id="preview-btn" class="w-full py-2 bg-surface text-ink-900 border border-ink-300 text-xs font-semibold rounded-full hover:bg-surface-sunken transition-all shadow-sm" disabled>Preview Cards</button>
-                        <div id="preview-nav" class="hidden flex items-center gap-1 justify-center">
-                            <button id="preview-prev-btn" class="px-2.5 py-1 bg-surface-sunken rounded-full text-xs font-bold hover:bg-ink-100">◀</button>
-                            <span id="preview-index" class="text-xs font-semibold text-ink-900 px-2">1 / 1</span>
-                            <button id="preview-next-btn" class="px-2.5 py-1 bg-surface-sunken rounded-full text-xs font-bold hover:bg-ink-100">▶</button>
-                            <button id="preview-exit-btn" class="px-3 py-1 bg-warning text-white rounded-full text-xs font-semibold shadow-sm">Exit</button>
+                        <div id="preview-nav" class="hidden flex flex-col gap-1.5 p-2 bg-surface-sunken rounded-2xl border border-ink-200">
+                            <div class="flex items-center justify-between gap-1">
+                                <button id="preview-prev-btn" class="px-2.5 py-1 bg-surface border border-ink-300 rounded-full text-xs font-bold hover:bg-ink-100 shadow-sm">◀</button>
+                                <span id="preview-index" class="text-xs font-semibold text-ink-900 font-mono px-2">1 / 1</span>
+                                <button id="preview-next-btn" class="px-2.5 py-1 bg-surface border border-ink-300 rounded-full text-xs font-bold hover:bg-ink-100 shadow-sm">▶</button>
+                                <button id="preview-exit-btn" class="px-3 py-1 bg-warning text-white rounded-full text-xs font-semibold shadow-sm">Exit</button>
+                            </div>
                         </div>
                     </div>
                     <!-- Primary Accent CTA -->
@@ -873,7 +875,11 @@
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span class="text-xs font-semibold text-ink-900 tracking-wider uppercase">Canvas Studio Stage</span>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-ink-700 select-none hover:text-ink-900 transition-colors">
+                        <input type="checkbox" id="allow-edit-preview-checkbox" class="w-3.5 h-3.5 accent-accent rounded cursor-pointer">
+                        <span>Edit in Preview</span>
+                    </label>
                     <div class="flex items-center gap-1.5">
                         <label class="text-xs font-medium text-ink-500">Zoom:</label>
                         <select id="zoom-select" class="px-2.5 py-1 bg-surface-sunken border border-ink-300 rounded-full text-xs text-ink-900 focus:bg-surface font-medium">
@@ -1583,10 +1589,11 @@
                 }
             };
             const drawAllCanvases = (rowData = null) => {
+                const currentData = rowData || (typeof _previewVisible !== 'undefined' && _previewVisible && data.length > 0 && typeof previewIndex !== 'undefined' ? data[previewIndex] : null);
                 const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
                 const h = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
-                drawCardOnContext(frontCtx, 'front', w, h, rowData);
-                drawCardOnContext(backCtx, 'back', w, h, rowData);
+                drawCardOnContext(frontCtx, 'front', w, h, currentData);
+                drawCardOnContext(backCtx, 'back', w, h, currentData);
             };
             const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
                 const words = text.split(' ');
@@ -2791,20 +2798,40 @@
             });
             // QR Code button event handler already defined above
 
-            // --- Preview with Prev/Next navigation ---
+            // --- Preview with Prev/Next navigation & Live Editing ---
             let _previewVisible = false;
+            let _allowPreviewEditing = false;
+            const allowEditPreviewCheckbox = document.getElementById('allow-edit-preview-checkbox');
+
+            const updatePreviewEditState = () => {
+                _allowPreviewEditing = allowEditPreviewCheckbox ? allowEditPreviewCheckbox.checked : false;
+                const displayStyle = (_previewVisible && !_allowPreviewEditing) ? 'none' : 'block';
+                frontPlaceholderWrapper.style.display = displayStyle;
+                backPlaceholderWrapper.style.display = displayStyle;
+            };
+
+            if (allowEditPreviewCheckbox) {
+                allowEditPreviewCheckbox.addEventListener('change', () => {
+                    updatePreviewEditState();
+                    if (_previewVisible) {
+                        showPreviewRecord(previewIndex);
+                    }
+                });
+            }
+
             const showPreviewRecord = async (idx) => {
                 previewIndex = Math.max(0, Math.min(idx, data.length - 1));
                 previewIndexEl.textContent = `${previewIndex + 1} / ${data.length}`;
                 await drawAllCanvases(data[previewIndex]);
+                updatePreviewEditState();
+                if (_previewVisible && _allowPreviewEditing) {
+                    syncPlaceholderWrappers();
+                    renderPlaceholders();
+                }
             };
 
             previewBtn.addEventListener('click', async () => {
                 if (data.length === 0) { toast('Please upload data to preview.', 'warn'); return; }
-                setActivePlaceholder(null);
-                syncPlaceholderWrappers();
-                frontPlaceholderWrapper.style.display = 'none';
-                backPlaceholderWrapper.style.display = 'none';
                 previewNav.classList.remove('hidden');
                 previewBtn.classList.add('hidden');
                 _previewVisible = true;
@@ -2815,6 +2842,7 @@
             previewNextBtn.addEventListener('click', () => showPreviewRecord(previewIndex + 1));
 
             previewExitBtn.addEventListener('click', () => {
+                _previewVisible = false;
                 frontPlaceholderWrapper.style.display = 'block';
                 backPlaceholderWrapper.style.display = 'block';
                 drawAllCanvases();
@@ -2822,7 +2850,6 @@
                 renderPlaceholders();
                 previewNav.classList.add('hidden');
                 previewBtn.classList.remove('hidden');
-                _previewVisible = false;
             });
 
             // --- PDF Generation (Always vertical 54mm x 85.6mm cards on A4) ---
