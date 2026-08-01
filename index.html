@@ -3404,6 +3404,15 @@
                     }
                 },
 
+                getFingerprint() {
+                    let fp = localStorage.getItem('quantech_machine_fingerprint');
+                    if (!fp) {
+                        fp = 'mac_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                        localStorage.setItem('quantech_machine_fingerprint', fp);
+                    }
+                    return fp;
+                },
+
                 async activateFromInput() {
                     const key = licenseKeyInput ? licenseKeyInput.value.trim() : '';
                     if (!key) {
@@ -3423,7 +3432,12 @@
                                 'Content-Type': 'application/vnd.api+json'
                             },
                             body: JSON.stringify({
-                                meta: { key: key }
+                                meta: {
+                                    key: key,
+                                    scope: {
+                                        fingerprint: this.getFingerprint()
+                                    }
+                                }
                             })
                         });
 
@@ -3463,7 +3477,14 @@
                                 'Accept': 'application/vnd.api+json',
                                 'Content-Type': 'application/vnd.api+json'
                             },
-                            body: JSON.stringify({ meta: { key: this.data.license_key } })
+                            body: JSON.stringify({
+                                meta: {
+                                    key: this.data.license_key,
+                                    scope: {
+                                        fingerprint: this.getFingerprint()
+                                    }
+                                }
+                            })
                         });
                         const payload = await res.json();
                         const meta = payload.meta || {};
