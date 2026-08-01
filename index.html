@@ -1054,7 +1054,7 @@
 
                     <div class="mb-8">
                         <h2 class="text-2xl font-bold text-ink-900 tracking-tight mb-2">Software Activation</h2>
-                        <p class="text-xs text-ink-500 leading-relaxed">Enter your LemonSqueezy license key to unlock the application on this machine.</p>
+                        <p class="text-xs text-ink-500 leading-relaxed">Enter your license key to unlock the application on this machine.</p>
                     </div>
 
                     <div class="space-y-4 mb-8">
@@ -1071,11 +1071,7 @@
                     </div>
 
                     <div class="pt-6 border-t border-ink-200/70 text-xs text-ink-500 flex items-center justify-between">
-                        <span>Don't have a license key?</span>
-                        <a href="https://lemonsqueezy.com" target="_blank" class="text-accent font-semibold hover:underline flex items-center gap-1">
-                            <span>Get Key</span>
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                        </a>
+                        <span>Contact administrator for a license key</span>
                     </div>
                 </div>
             </div>
@@ -3338,9 +3334,9 @@
                 setTimeout(() => document.body.removeChild(fileInput), 0);
             });
 
-            // --- LemonSqueezy License Manager ---
-            const LEMONSQUEEZY_ACTIVATION_URL = 'https://api.lemonsqueezy.com/v1/licenses/activate';
-            const LEMONSQUEEZY_VALIDATION_URL = 'https://api.lemonsqueezy.com/v1/licenses/validate';
+            // --- Keygen.sh License Manager ---
+            const KEYGEN_ACCOUNT_ID = '3df9b0f6-1272-4d62-8d02-e470c9794c80';
+            const KEYGEN_VALIDATE_URL = `https://api.keygen.sh/v1/accounts/${KEYGEN_ACCOUNT_ID}/licenses/actions/validate-key`;
             const LICENSE_STORAGE_KEY = 'quantech_license_data';
 
             const licenseGateModal = document.getElementById('license-gate-modal');
@@ -3411,7 +3407,7 @@
                 async activateFromInput() {
                     const key = licenseKeyInput ? licenseKeyInput.value.trim() : '';
                     if (!key) {
-                        this.showError('Please enter your LemonSqueezy license key.');
+                        this.showError('Please enter your license key.');
                         return;
                     }
 
@@ -3420,33 +3416,38 @@
                     activateLicenseBtn.innerHTML = '<span>Activating...</span>';
 
                     try {
-                        const instanceName = `Desktop_${navigator.platform ? navigator.platform.replace(/\s+/g, '_') : 'PC'}_${Math.floor(Math.random()*10000)}`;
-                        const res = await fetch(LEMONSQUEEZY_ACTIVATION_URL, {
+                        const res = await fetch(KEYGEN_VALIDATE_URL, {
                             method: 'POST',
-                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ license_key: key, instance_name: instanceName })
+                            headers: {
+                                'Accept': 'application/vnd.api+json',
+                                'Content-Type': 'application/vnd.api+json'
+                            },
+                            body: JSON.stringify({
+                                meta: { key: key }
+                            })
                         });
 
                         const payload = await res.json();
+                        const meta = payload.meta || {};
 
-                        if (res.ok && payload.activated) {
+                        if (res.ok && (meta.valid || meta.code === 'VALID')) {
+                            const attr = (payload.data && payload.data.attributes) || {};
                             this.data = {
                                 activated: true,
                                 license_key: key,
-                                instance_id: payload.instance ? payload.instance.id : null,
-                                customer_name: payload.meta ? payload.meta.customer_name : 'Valued Customer',
-                                customer_email: payload.meta ? payload.meta.customer_email : '',
+                                customer_name: attr.name || 'Valued Licensee',
+                                expires_at: attr.expiry || null,
                                 activated_at: new Date().toISOString()
                             };
                             localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(this.data));
                             this.unlockApp();
                             toast(`License Activated! Welcome ${this.data.customer_name}`, 'success', 5000);
                         } else {
-                            const errorReason = payload.error || payload.message || 'Invalid or expired license key.';
-                            this.showError(errorReason);
+                            const errorReason = meta.detail || meta.message || (payload.errors && payload.errors[0] && payload.errors[0].detail) || 'Invalid or expired license key.';
+                            this.showError(`Activation failed: ${errorReason}`);
                         }
                     } catch (err) {
-                        this.showError(`Connection error: ${err.message}. Please check your internet connection to activate.`);
+                        this.showError(`Connection error: ${err.message}. Check your internet connection to activate.`);
                     } finally {
                         activateLicenseBtn.disabled = false;
                         activateLicenseBtn.innerHTML = '<span>Activate License</span>';
@@ -3454,22 +3455,26 @@
                 },
 
                 async validateBackground() {
-                    if (!this.data || !this.data.license_key || !this.data.instance_id) return;
+                    if (!this.data || !this.data.license_key) return;
                     try {
-                        const res = await fetch(LEMONSQUEEZY_VALIDATION_URL, {
+                        const res = await fetch(KEYGEN_VALIDATE_URL, {
                             method: 'POST',
-                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ license_key: this.data.license_key, instance_id: this.data.instance_id })
+                            headers: {
+                                'Accept': 'application/vnd.api+json',
+                                'Content-Type': 'application/vnd.api+json'
+                            },
+                            body: JSON.stringify({ meta: { key: this.data.license_key } })
                         });
                         const payload = await res.json();
-                        if (res.ok && payload.valid === false) {
+                        const meta = payload.meta || {};
+                        if (res.ok && meta.valid === false) {
                             this.data = null;
                             localStorage.removeItem(LICENSE_STORAGE_KEY);
                             this.lockApp();
-                            toast('Your license key is no longer valid or has been deactivated.', 'error', 6000);
+                            toast('Your license key is no longer valid or has been revoked.', 'error', 6000);
                         }
                     } catch (_) {
-                        // Offline — cached token continues working!
+                        // Offline resilience: allow cached token to continue working!
                     }
                 },
 
