@@ -3546,11 +3546,23 @@
                     }
                 },
 
-                deactivateKey() {
+                async deactivateKey() {
+                    if (this.data && this.data.license_key) {
+                        try {
+                            const fp = this.getFingerprint();
+                            await fetch(`https://api.keygen.sh/v1/accounts/${KEYGEN_ACCOUNT_ID}/machines/${fp}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Accept': 'application/vnd.api+json',
+                                    'Authorization': `License ${this.data.license_key}`
+                                }
+                            });
+                        } catch (_) {}
+                    }
                     this.data = null;
                     localStorage.removeItem(LICENSE_STORAGE_KEY);
                     this.lockApp();
-                    toast('License deactivated on this machine.', 'info');
+                    toast('License deactivated and machine unbinded from server.', 'info');
                 },
 
                 showError(msg) {

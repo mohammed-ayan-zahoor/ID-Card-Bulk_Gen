@@ -12,6 +12,7 @@
   "build": {
     "appId": "com.quantech.idcardgen",
     "productName": "Quantech ID Card Generator",
+    "asar": false,
     "directories": {
       "output": "dist"
     },
@@ -31,6 +32,13 @@
       "target": [
         "nsis"
       ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Quantech ID Card Generator"
     }
   },
   "devDependencies": {

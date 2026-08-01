@@ -1,4 +1,5 @@
 const { app, BrowserWindow } = require('electron');
+const path = require('path');
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -8,13 +9,22 @@ function createWindow() {
     minHeight: 700,
     title: 'Quantech ID Card Generator Enterprise',
     autoHideMenuBar: true,
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false
     }
   });
 
-  mainWindow.loadFile('index.html');
+  const indexPath = path.join(__dirname, 'index.html');
+  mainWindow.loadFile(indexPath).catch(err => {
+    console.error('Error loading index.html:', err);
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
 }
 
 app.whenReady().then(() => {
