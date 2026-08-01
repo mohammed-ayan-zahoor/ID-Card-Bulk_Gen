@@ -5,10 +5,36 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack:mac": "electron-packager . 'Quantech ID Card Generator' --platform=darwin --arch=universal --out=dist --overwrite"
+    "build:mac": "electron-builder --mac",
+    "build:dmg": "electron-builder --mac dmg",
+    "build:win": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.quantech.idcardgen",
+    "productName": "Quantech ID Card Generator",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
   },
   "devDependencies": {
     "electron": "^28.2.0",
-    "electron-packager": "^17.1.2"
+    "electron-builder": "^24.9.0"
   }
 }
