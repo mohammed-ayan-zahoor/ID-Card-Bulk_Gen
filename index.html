@@ -437,7 +437,11 @@
                     </div>
                 </div>
             </div>
-            <div class="flex items-center gap-4 text-xs font-medium text-ink-500">
+            <div class="flex items-center gap-3 text-xs font-medium text-ink-500">
+                <div id="license-status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-tint-sand text-tint-sand-ink font-semibold cursor-pointer hover:bg-surface border border-ink-200 transition-all shadow-sm" title="Click to view license details or deactivate key">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span id="license-badge-text">License: Unverified</span>
+                </div>
                 <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-tint-mint text-tint-mint-ink font-semibold">
                     <span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
                     <span>A4 Print Engine Ready</span>
@@ -992,7 +996,32 @@
 
         </div><!-- end #app-grid -->
 
-        <!-- Modals -->
+        <!-- License Key Gate Modal Overlay -->
+        <div id="license-gate-modal" class="modal-overlay hidden" style="z-index: 10000; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);">
+            <div class="modal-content flex flex-col items-center max-w-md w-full p-8 rounded-3xl shadow-2xl bg-surface border border-ink-200 text-center relative overflow-hidden">
+                <div class="w-14 h-14 rounded-2xl bg-accent text-white flex items-center justify-center font-bold text-2xl mb-4 shadow-lg">
+                    Q
+                </div>
+                <h2 class="text-xl font-bold text-ink-900 mb-1">Activate Quantech ID Card Generator</h2>
+                <p class="text-xs text-ink-500 mb-6 max-w-xs">Enter your LemonSqueezy license key to unlock the Enterprise Studio software.</p>
+                
+                <div class="w-full space-y-3.5 mb-6 text-left">
+                    <div>
+                        <label class="block text-xs font-semibold text-ink-700 mb-1.5 uppercase tracking-wider">License Key</label>
+                        <input type="text" id="license-key-input" placeholder="e.g. 12345678-ABCD-EF12-3456-7890ABCDEF12" class="w-full px-3.5 py-2.5 bg-surface-sunken border border-ink-300 rounded-xl text-xs font-mono text-ink-900 focus:bg-surface focus:border-accent">
+                    </div>
+                    <div id="license-error-msg" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5"></div>
+                    <button id="activate-license-btn" class="w-full py-3 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-full transition-all shadow-md flex items-center justify-center gap-2">
+                        <span>Activate License</span>
+                    </button>
+                </div>
+
+                <div class="text-xs text-ink-500 border-t border-ink-200/60 pt-4 w-full flex items-center justify-between">
+                    <span>Don't have a key?</span>
+                    <a href="https://lemonsqueezy.com" target="_blank" class="text-accent font-semibold hover:underline">Get a License Key →</a>
+                </div>
+            </div>
+        </div>
 
         <div id="loading-modal" class="modal-overlay hidden">
             <div class="modal-content flex flex-col items-center">
@@ -3251,8 +3280,159 @@
                 setTimeout(() => document.body.removeChild(fileInput), 0);
             });
 
+            // --- LemonSqueezy License Manager ---
+            const LEMONSQUEEZY_ACTIVATION_URL = 'https://api.lemonsqueezy.com/v1/licenses/activate';
+            const LEMONSQUEEZY_VALIDATION_URL = 'https://api.lemonsqueezy.com/v1/licenses/validate';
+            const LICENSE_STORAGE_KEY = 'quantech_license_data';
+
+            const licenseGateModal = document.getElementById('license-gate-modal');
+            const licenseKeyInput = document.getElementById('license-key-input');
+            const activateLicenseBtn = document.getElementById('activate-license-btn');
+            const licenseErrorMsg = document.getElementById('license-error-msg');
+            const licenseStatusBadge = document.getElementById('license-status-badge');
+            const licenseBadgeText = document.getElementById('license-badge-text');
+
+            const LicenseManager = {
+                data: null,
+
+                init() {
+                    const saved = localStorage.getItem(LICENSE_STORAGE_KEY);
+                    if (saved) {
+                        try {
+                            this.data = JSON.parse(saved);
+                        } catch (e) {
+                            this.data = null;
+                        }
+                    }
+
+                    if (this.data && this.data.activated) {
+                        this.unlockApp();
+                        this.validateBackground();
+                    } else {
+                        this.lockApp();
+                    }
+
+                    if (activateLicenseBtn) {
+                        activateLicenseBtn.addEventListener('click', () => this.activateFromInput());
+                    }
+                    if (licenseStatusBadge) {
+                        licenseStatusBadge.addEventListener('click', () => {
+                            if (this.data && this.data.activated) {
+                                const confirmLogout = confirm(`Licensed to: ${this.data.customer_name || 'Active User'}\nKey: ${this.data.license_key}\n\nDo you want to deactivate and transfer this license to another computer?`);
+                                if (confirmLogout) this.deactivateKey();
+                            } else {
+                                this.lockApp();
+                            }
+                        });
+                    }
+                },
+
+                lockApp() {
+                    if (licenseGateModal) licenseGateModal.classList.remove('hidden');
+                    if (licenseBadgeText) {
+                        licenseBadgeText.textContent = 'Unlicensed (Click to Activate)';
+                        if (licenseStatusBadge) licenseStatusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-100 text-red-700 font-semibold cursor-pointer hover:bg-red-200 border border-red-300 transition-all shadow-sm';
+                    }
+                },
+
+                unlockApp() {
+                    if (licenseGateModal) licenseGateModal.classList.add('hidden');
+                    if (licenseBadgeText && this.data) {
+                        const name = this.data.customer_name ? `Licensed: ${this.data.customer_name}` : 'License: Active';
+                        licenseBadgeText.textContent = name;
+                        if (licenseStatusBadge) licenseStatusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-tint-mint text-tint-mint-ink font-semibold cursor-pointer hover:bg-surface border border-ink-200 transition-all shadow-sm';
+                    }
+                },
+
+                async activateFromInput() {
+                    const key = licenseKeyInput ? licenseKeyInput.value.trim() : '';
+                    if (!key) {
+                        this.showError('Please enter your LemonSqueezy license key.');
+                        return;
+                    }
+
+                    this.clearError();
+                    activateLicenseBtn.disabled = true;
+                    activateLicenseBtn.innerHTML = '<span>Activating...</span>';
+
+                    try {
+                        const instanceName = `Desktop_${navigator.platform ? navigator.platform.replace(/\s+/g, '_') : 'PC'}_${Math.floor(Math.random()*10000)}`;
+                        const res = await fetch(LEMONSQUEEZY_ACTIVATION_URL, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ license_key: key, instance_name: instanceName })
+                        });
+
+                        const payload = await res.json();
+
+                        if (res.ok && payload.activated) {
+                            this.data = {
+                                activated: true,
+                                license_key: key,
+                                instance_id: payload.instance ? payload.instance.id : null,
+                                customer_name: payload.meta ? payload.meta.customer_name : 'Valued Customer',
+                                customer_email: payload.meta ? payload.meta.customer_email : '',
+                                activated_at: new Date().toISOString()
+                            };
+                            localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(this.data));
+                            this.unlockApp();
+                            toast(`License Activated! Welcome ${this.data.customer_name}`, 'success', 5000);
+                        } else {
+                            const errorReason = payload.error || payload.message || 'Invalid or expired license key.';
+                            this.showError(errorReason);
+                        }
+                    } catch (err) {
+                        this.showError(`Connection error: ${err.message}. Please check your internet connection to activate.`);
+                    } finally {
+                        activateLicenseBtn.disabled = false;
+                        activateLicenseBtn.innerHTML = '<span>Activate License</span>';
+                    }
+                },
+
+                async validateBackground() {
+                    if (!this.data || !this.data.license_key || !this.data.instance_id) return;
+                    try {
+                        const res = await fetch(LEMONSQUEEZY_VALIDATION_URL, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ license_key: this.data.license_key, instance_id: this.data.instance_id })
+                        });
+                        const payload = await res.json();
+                        if (res.ok && payload.valid === false) {
+                            this.data = null;
+                            localStorage.removeItem(LICENSE_STORAGE_KEY);
+                            this.lockApp();
+                            toast('Your license key is no longer valid or has been deactivated.', 'error', 6000);
+                        }
+                    } catch (_) {
+                        // Offline — cached token continues working!
+                    }
+                },
+
+                deactivateKey() {
+                    this.data = null;
+                    localStorage.removeItem(LICENSE_STORAGE_KEY);
+                    this.lockApp();
+                    toast('License deactivated on this machine.', 'info');
+                },
+
+                showError(msg) {
+                    if (licenseErrorMsg) {
+                        licenseErrorMsg.textContent = msg;
+                        licenseErrorMsg.classList.remove('hidden');
+                    }
+                },
+                clearError() {
+                    if (licenseErrorMsg) {
+                        licenseErrorMsg.textContent = '';
+                        licenseErrorMsg.classList.add('hidden');
+                    }
+                }
+            };
+
             // --- Initial Setup ---
             const initialSetup = () => {
+                LicenseManager.init();
                 // Set canvas dimensions based on orientation
                 const w = HORIZONTAL_WIDTH;
                 const h = HORIZONTAL_HEIGHT;
