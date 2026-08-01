@@ -344,27 +344,51 @@
             z-index: 1000;
         }
 
+        /* Modern Progress Modal & Spinner */
         .modal-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 0.5rem;
-            max-width: 500px;
+            background: #FFFFFF;
+            padding: 2.25rem 2.5rem;
+            border-radius: 1.5rem;
+            max-width: 440px;
+            width: 90%;
             text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(229, 231, 235, 0.8);
         }
 
-        /* Loader spinner (moved from inline body style) */
-        .loader {
-            border-top-color: #4f46e5;
-            animation: spinner 1.5s linear infinite;
+        .spinner-ring {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            padding: 4px;
+            background: linear-gradient(135deg, #5B4CF0 0%, #EC4899 100%);
+            mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 0);
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 0);
+            animation: spinner 1.2s linear infinite;
         }
         @keyframes spinner {
             0%   { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
 
-        /* Progress bar */
-        #progress-bar-wrap { width: 100%; background: #e5e7eb; border-radius: 9999px; height: 10px; margin-top: 12px; overflow: hidden; }
-        #progress-bar      { height: 100%; background: #4f46e5; border-radius: 9999px; transition: width 0.2s; width: 0%; }
+        #progress-bar-wrap {
+            width: 100%;
+            background: #F1F5F9;
+            border: 1px solid #E2E8F0;
+            border-radius: 9999px;
+            height: 12px;
+            margin-top: 14px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+        }
+        #progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #5B4CF0 0%, #8B5CF6 50%, #EC4899 100%);
+            border-radius: 9999px;
+            transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+        }
 
         /* Toast notifications */
         #toast-container {
@@ -966,9 +990,15 @@
 
         <div id="loading-modal" class="modal-overlay hidden">
             <div class="modal-content flex flex-col items-center">
-                <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4"></div>
-                <p id="loading-text" class="text-lg font-semibold text-gray-700">Thinking...</p>
-                <div id="progress-bar-wrap" class="hidden"><div id="progress-bar"></div></div>
+                <div class="spinner-ring mb-4"></div>
+                <h3 id="loading-text" class="text-base font-bold text-ink-900 mb-1">Processing...</h3>
+                <div id="progress-bar-wrap" class="hidden">
+                    <div id="progress-bar"></div>
+                </div>
+                <div id="progress-text-wrap" class="hidden flex items-center justify-between w-full mt-2 px-1">
+                    <span id="progress-status-subtext" class="text-xs text-ink-500 font-medium">Please wait...</span>
+                    <span id="progress-pct-text" class="text-xs font-bold text-accent font-mono">0%</span>
+                </div>
             </div>
         </div>
         <div id="error-modal" class="modal-overlay hidden">
@@ -1022,9 +1052,13 @@
             const signColumnInput = document.getElementById('sign-column-input');
             const signFolderStatus = document.getElementById('sign-folder-status');
             const signFolderCount = document.getElementById('sign-folder-count');
-            // Progress bar
+            // Progress bar elements
             const progressBarWrap = document.getElementById('progress-bar-wrap');
             const progressBar = document.getElementById('progress-bar');
+            const progressTextWrap = document.getElementById('progress-text-wrap');
+            const progressStatusSubtext = document.getElementById('progress-status-subtext');
+            const progressPctText = document.getElementById('progress-pct-text');
+
             const frontCanvas = document.getElementById('front-canvas');
             const backCanvas = document.getElementById('back-canvas');
             const frontCtx = frontCanvas.getContext('2d');
@@ -1057,13 +1091,19 @@
             };
 
             // --- Progress bar helpers ---
-            const showProgress = (pct) => {
+            const showProgress = (pct, subtext = '') => {
+                const rounded = Math.min(100, Math.max(0, Math.round(pct)));
                 progressBarWrap.classList.remove('hidden');
-                progressBar.style.width = `${pct}%`;
+                if (progressTextWrap) progressTextWrap.classList.remove('hidden');
+                progressBar.style.width = `${rounded}%`;
+                if (progressPctText) progressPctText.textContent = `${rounded}%`;
+                if (subtext && progressStatusSubtext) progressStatusSubtext.textContent = subtext;
             };
             const hideProgress = () => {
                 progressBarWrap.classList.add('hidden');
+                if (progressTextWrap) progressTextWrap.classList.add('hidden');
                 progressBar.style.width = '0%';
+                if (progressPctText) progressPctText.textContent = '0%';
             };
 
             // --- State ---
@@ -1202,6 +1242,18 @@
                 return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
             };
             // --- Canvas Drawing ---
+            const getRowValue = (rowData, key) => {
+                if (!rowData || key === undefined || key === null) return '';
+                if (rowData[key] !== undefined && rowData[key] !== null) return String(rowData[key]);
+                const targetKey = String(key).trim().toLowerCase();
+                for (const k of Object.keys(rowData)) {
+                    if (k.trim().toLowerCase() === targetKey) {
+                        return String(rowData[k]);
+                    }
+                }
+                return '';
+            };
+
             const drawCardOnContext = async (targetCtx, side, width, height, rowData) => {
                 targetCtx.clearRect(0, 0, width, height);
                 const bg = bgImages[side];
@@ -1242,7 +1294,7 @@
                 if (!rowData) return;
                 for (const p of placeholders[side]) {
                     const isStaticText = (p.key === 'title' && p.staticText) || (p.key === 'label' && p.staticText) || p.staticText;
-                    let value = isStaticText ? p.staticText : String(rowData[p.key] || '');
+                    let value = isStaticText ? p.staticText : getRowValue(rowData, p.key);
 
                     // Format date fields if they contain DOB, Date, or similar
                     if (!isStaticText && value && (p.key.toLowerCase().includes('dob') || p.key.toLowerCase().includes('date') || p.key.toLowerCase().includes('birth'))) {
@@ -1553,9 +1605,12 @@
                 context.fillText(line, x, currentY);
             };
             const loadImage = async (src, columnKey) => {
+                const srcStr = String(src || '').trim();
+                if (!srcStr) throw new Error('Empty image source');
+
                 // 1. Check sign/extra folder if a column name is set and matches
                 if (signColumnName && columnKey === signColumnName && signFiles.size > 0) {
-                    const file = getFileByKey(signFiles, src);
+                    const file = getFileByKey(signFiles, srcStr);
                     if (file) {
                         const dataURL = await createPhotoDataURL(file);
                         return new Promise((resolve, reject) => {
@@ -1567,9 +1622,9 @@
                     }
                 }
 
-                // 2. Check photo folder for numeric values
-                if (photoFolderLoaded && /^\d+$/.test(String(src).trim())) {
-                    const photoFile = getPhotoByNumber(src);
+                // 2. Check photo folder if loaded
+                if (photoFolderLoaded && photoFiles.size > 0) {
+                    const photoFile = getPhotoByNumber(srcStr);
                     if (photoFile) {
                         try {
                             const dataURL = await createPhotoDataURL(photoFile);
@@ -1589,30 +1644,46 @@
                     img.crossOrigin = 'Anonymous';
                     img.onload = () => resolve(img);
                     img.onerror = (e) => {
-                        if (src.toString().startsWith('http')) {
+                        if (srcStr.startsWith('http://') || srcStr.startsWith('https://')) {
                             const proxyImg = new Image();
                             proxyImg.crossOrigin = 'Anonymous';
                             proxyImg.onload = () => resolve(proxyImg);
                             proxyImg.onerror = reject;
-                            proxyImg.src = `https://corsproxy.io/?${encodeURIComponent(src)}`;
+                            proxyImg.src = `https://corsproxy.io/?${encodeURIComponent(srcStr)}`;
                         } else {
                             reject(e);
                         }
                     };
-                    img.src = src;
+                    img.src = srcStr;
                 });
             };
+
             // --- Photo Folder / Sign Folder shared loader ---
             const processImageFolder = (files, targetMap) => {
                 targetMap.clear();
                 let count = 0;
                 for (const file of files) {
-                    if (!file.type.startsWith('image/')) continue;
-                    const nameWithoutExt = file.name.split('.').slice(0, -1).join('.');
-                    // Index by full stem AND by any numeric run found in the stem
+                    const isImgType = file.type && file.type.startsWith('image/');
+                    const isImgExt = /\.(jpg|jpeg|png|webp|gif|bmp|tiff|svg)$/i.test(file.name);
+                    if (!isImgType && !isImgExt) continue;
+
+                    const fullName = file.name;
+                    const fullNameLower = fullName.toLowerCase();
+                    const nameWithoutExt = fullName.split('.').slice(0, -1).join('.') || fullName;
+                    const nameWithoutExtLower = nameWithoutExt.toLowerCase();
+
+                    targetMap.set(fullName, file);
+                    targetMap.set(fullNameLower, file);
                     targetMap.set(nameWithoutExt, file);
+                    targetMap.set(nameWithoutExtLower, file);
+
                     const numMatch = nameWithoutExt.match(/\d+/);
-                    if (numMatch) targetMap.set(numMatch[0], file);
+                    if (numMatch) {
+                        const numStr = numMatch[0];
+                        targetMap.set(numStr, file);
+                        const stripped = numStr.replace(/^0+/, '') || '0';
+                        targetMap.set(stripped, file);
+                    }
                     count++;
                 }
                 return count;
@@ -1625,30 +1696,46 @@
                 if (photoFolderLoaded) {
                     photoFolderStatus.classList.remove('hidden');
                     photoCount.textContent = `Found ${validCount} photos ready for matching`;
+                    toast(`Loaded ${validCount} photos successfully!`, 'success');
+                    if (data.length > 0) {
+                        if (typeof _previewVisible !== 'undefined' && _previewVisible) {
+                            showPreviewRecord(previewIndex);
+                        } else {
+                            drawAllCanvases();
+                        }
+                    }
                 } else {
                     photoFolderStatus.classList.add('hidden');
-                    toast('No valid photos found. Ensure photos are named with numbers (e.g., 3956.jpg)', 'warn');
+                    toast('No valid photo files found in selected folder.', 'warn');
                 }
             };
 
             const getPhotoByNumber = (photoNumber) => {
-                const numberStr = String(photoNumber).trim();
-                if (photoFiles.has(numberStr)) return photoFiles.get(numberStr);
-                const stripped = numberStr.replace(/^0+/, '') || '0';
-                if (photoFiles.has(stripped)) return photoFiles.get(stripped);
-                const padded = numberStr.padStart(4, '0');
-                if (photoFiles.has(padded)) return photoFiles.get(padded);
-                return null;
+                return getFileByKey(photoFiles, photoNumber);
             };
 
-            // Generic file lookup: checks signFiles (or any map) the same way
+            // Generic file lookup: checks signFiles (or photoFiles) in order of specificity
             const getFileByKey = (map, key) => {
+                if (!key || !map || map.size === 0) return null;
                 const s = String(key).trim();
+                if (!s) return null;
+
                 if (map.has(s)) return map.get(s);
-                const stripped = s.replace(/^0+/, '') || '0';
-                if (map.has(stripped)) return map.get(stripped);
-                const padded = s.padStart(4, '0');
-                if (map.has(padded)) return map.get(padded);
+                if (map.has(s.toLowerCase())) return map.get(s.toLowerCase());
+
+                const noExt = s.replace(/\.[^/.]+$/, "");
+                if (map.has(noExt)) return map.get(noExt);
+                if (map.has(noExt.toLowerCase())) return map.get(noExt.toLowerCase());
+
+                const numMatch = s.match(/\d+/);
+                if (numMatch) {
+                    const numStr = numMatch[0];
+                    if (map.has(numStr)) return map.get(numStr);
+                    const stripped = numStr.replace(/^0+/, '') || '0';
+                    if (map.has(stripped)) return map.get(stripped);
+                    const padded = numStr.padStart(4, '0');
+                    if (map.has(padded)) return map.get(padded);
+                }
                 return null;
             };
 
@@ -2808,7 +2895,7 @@
                     for (let i = 0; i < data.length; i += cardsPerPage) {
                         if (i > 0) pdf.addPage();
                         const pageNum = Math.floor(i / cardsPerPage) + 1;
-                        showProgress(Math.round((pageNum / totalPages) * 100));
+                        showProgress(Math.round((pageNum / totalPages) * 100), `Page ${pageNum} of ${totalPages}`);
                         loadingText.textContent = `Generating PDF... page ${pageNum} / ${totalPages}`;
 
                         // ROW 1 (Fronts)
@@ -2884,7 +2971,7 @@
                         const firstVal = Object.values(data[i])[0];
                         const baseName = `ID_Card_${data[i].ID ?? data[i].id ?? firstVal ?? (i + 1)}`;
                         loadingText.textContent = `Generating ZIP... (${i + 1} / ${data.length})`;
-                        showProgress(Math.round(((i + 1) / data.length) * 100));
+                        showProgress(Math.round(((i + 1) / data.length) * 100), `Card ${i + 1} of ${data.length}`);
 
                         await drawCardOnContext(tempCtx, 'front', w, h, data[i]);
                         zip.file(`${baseName}_Front.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
