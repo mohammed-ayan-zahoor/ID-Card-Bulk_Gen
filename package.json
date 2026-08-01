@@ -1,0 +1,14 @@
+{
+  "name": "quantech-id-card-generator",
+  "version": "1.0.0",
+  "description": "Quantech ID Card Generator Enterprise Pro for macOS and Windows",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack:mac": "electron-packager . 'Quantech ID Card Generator' --platform=darwin --arch=universal --out=dist --overwrite"
+  },
+  "devDependencies": {
+    "electron": "^28.2.0",
+    "electron-packager": "^17.1.2"
+  }
+}
