@@ -3171,6 +3171,15 @@
             };
 
             // --- Layout Management ---
+            const getSavedLayouts = () => {
+                try {
+                    return JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
+                } catch (e) {
+                    console.error('Error reading saved layouts:', e);
+                    return {};
+                }
+            };
+
             const saveLayout = () => {
                 const layoutName = layoutNameInput.value.trim();
                 if (!layoutName) { toast('Please enter a name for your layout!', 'warn'); return; }
@@ -3182,32 +3191,41 @@
                     dateCreated: new Date().toISOString()
                 };
 
-                const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
+                const savedLayouts = getSavedLayouts();
                 savedLayouts[layoutName] = layoutData;
 
-                // Warn if storage is near limit (~4.5MB of 5MB)
                 const jsonStr = JSON.stringify(savedLayouts);
-                if (jsonStr.length > 4.5 * 1024 * 1024) {
-                    toast('Warning: saved layouts are near the browser storage limit. Consider exporting and deleting old ones.', 'warn', 6000);
-                }
                 try {
                     localStorage.setItem('idCardLayouts', jsonStr);
                 } catch (e) {
-                    toast('Storage full — export your layouts then delete some before saving again.', 'error', 6000);
-                    return;
+                    // Fallback if base64 backgrounds exceed 5MB quota
+                    try {
+                        const fallbackLayouts = getSavedLayouts();
+                        const fallbackData = { ...layoutData };
+                        delete fallbackData.backgrounds;
+                        fallbackLayouts[layoutName] = fallbackData;
+                        localStorage.setItem('idCardLayouts', JSON.stringify(fallbackLayouts));
+                        toast(`Layout "${layoutName}" saved (layout fields saved, background skipped due to storage limit).`, 'warn', 6000);
+                    } catch (err2) {
+                        toast('Storage full — please export and delete old layouts.', 'error', 6000);
+                        return;
+                    }
                 }
 
                 updateLayoutSelect();
+                if (layoutSelect) layoutSelect.value = layoutName;
                 toast(`Layout "${layoutName}" saved!`, 'success');
             };
 
             const loadLayout = (layoutName) => {
-                const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
+                const savedLayouts = getSavedLayouts();
                 const layout = savedLayouts[layoutName];
                 if (!layout) { toast('Layout not found!', 'warn'); return; }
-                setOrientation(layout.orientation);
-                placeholders.front = JSON.parse(JSON.stringify(layout.placeholders.front));
-                placeholders.back  = JSON.parse(JSON.stringify(layout.placeholders.back));
+                if (layout.orientation) setOrientation(layout.orientation);
+                if (layout.placeholders) {
+                    placeholders.front = JSON.parse(JSON.stringify(layout.placeholders.front || []));
+                    placeholders.back  = JSON.parse(JSON.stringify(layout.placeholders.back || []));
+                }
                 if (layout.backgrounds) {
                     if (layout.backgrounds.front) bgImages.front.src = layout.backgrounds.front;
                     if (layout.backgrounds.back)  bgImages.back.src  = layout.backgrounds.back;
@@ -3218,15 +3236,12 @@
             };
 
             const updateLayoutSelect = () => {
-                // Clear existing options except the first default one
+                if (!layoutSelect) return;
                 while (layoutSelect.options.length > 1) {
                     layoutSelect.remove(1);
                 }
 
-                // Get saved layouts
-                const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
-
-                // Add each layout to the dropdown
+                const savedLayouts = getSavedLayouts();
                 for (const layoutName in savedLayouts) {
                     const option = document.createElement('option');
                     option.value = layoutName;
@@ -3236,74 +3251,100 @@
             };
 
             // --- Image Helper Event Listeners ---
-            convertImagesBtn.addEventListener('click', convertImagesToDataUrls);
+            if (convertImagesBtn) convertImagesBtn.addEventListener('click', convertImagesToDataUrls);
 
             // --- Event Listeners for Layout Management ---
-            saveLayoutBtn.addEventListener('click', saveLayout);
-            loadLayoutBtn.addEventListener('click', () => {
+            if (saveLayoutBtn) saveLayoutBtn.addEventListener('click', saveLayout);
+            if (loadLayoutBtn) loadLayoutBtn.addEventListener('click', () => {
                 const sel = layoutSelect.value;
                 if (!sel) { toast('Please select a layout to load!', 'warn'); return; }
                 loadLayout(sel);
             });
-            deleteLayoutBtn.addEventListener('click', () => {
+            if (deleteLayoutBtn) deleteLayoutBtn.addEventListener('click', () => {
                 const sel = layoutSelect.value;
                 if (!sel) { toast('Please select a layout to delete!', 'warn'); return; }
                 if (!confirm(`Delete layout "${sel}"? This cannot be undone.`)) return;
-                const saved = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
+                const saved = getSavedLayouts();
                 delete saved[sel];
                 localStorage.setItem('idCardLayouts', JSON.stringify(saved));
                 updateLayoutSelect();
-                layoutNameInput.value = '';
+                if (layoutNameInput) layoutNameInput.value = '';
                 toast(`Layout "${sel}" deleted.`, 'info');
             });
 
-            layoutSelect.addEventListener('change', () => {
-                const selectedLayout = layoutSelect.value;
-                if (selectedLayout) {
-                    layoutNameInput.value = selectedLayout;
-                }
-            });
-
-            exportLayoutsBtn.addEventListener('click', () => {
-                const savedLayouts = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
-                if (Object.keys(savedLayouts).length === 0) { toast('No layouts to export. Save a layout first.', 'warn'); return; }
-                const exportData = { type: 'ID_Card_Generator_Layouts', version: '1.0', timestamp: new Date().toISOString(), layouts: savedLayouts };
-                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'ID_Card_Layouts_' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
-            });
-
-            importLayoutsBtn.addEventListener('click', () => {
-                const fileInput = document.createElement('input');
-                fileInput.type = 'file'; fileInput.accept = 'application/json'; fileInput.style.display = 'none';
-                fileInput.addEventListener('change', (e) => {
-                    const file = e.target.files[0]; if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            const imported = JSON.parse(event.target.result);
-                            if (!imported.type || imported.type !== 'ID_Card_Generator_Layouts') throw new Error('Invalid layout file');
-                            const current = JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
-                            let added = 0, updated = 0;
-                            for (const [name, layout] of Object.entries(imported.layouts)) {
-                                current[name] ? updated++ : added++;
-                                current[name] = layout;
-                            }
-                            localStorage.setItem('idCardLayouts', JSON.stringify(current));
-                            updateLayoutSelect();
-                            toast(`Imported: ${added} new, ${updated} updated.`, 'success');
-                        } catch (error) { toast(`Import error: ${error.message}`, 'error'); }
-                    };
-                    reader.readAsText(file);
+            if (layoutSelect) {
+                layoutSelect.addEventListener('change', () => {
+                    const selectedLayout = layoutSelect.value;
+                    if (selectedLayout && layoutNameInput) {
+                        layoutNameInput.value = selectedLayout;
+                    }
                 });
-                document.body.appendChild(fileInput); fileInput.click();
-                setTimeout(() => document.body.removeChild(fileInput), 0);
-            });
+            }
+
+            if (exportLayoutsBtn) {
+                exportLayoutsBtn.addEventListener('click', () => {
+                    const savedLayouts = getSavedLayouts();
+                    if (Object.keys(savedLayouts).length === 0) { toast('No layouts to export. Save a layout first.', 'warn'); return; }
+                    const exportData = { type: 'ID_Card_Generator_Layouts', version: '1.0', timestamp: new Date().toISOString(), layouts: savedLayouts };
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'ID_Card_Layouts_' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => { if (a.parentNode) document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+                });
+            }
+
+            if (importLayoutsBtn) {
+                importLayoutsBtn.addEventListener('click', () => {
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = 'application/json,.json';
+                    fileInput.style.display = 'none';
+                    fileInput.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            try {
+                                const imported = JSON.parse(event.target.result);
+                                let layoutsToImport = {};
+
+                                if (imported.layouts && typeof imported.layouts === 'object') {
+                                    layoutsToImport = imported.layouts;
+                                } else if (imported.placeholders) {
+                                    const name = imported.name || file.name.replace(/\.[^/.]+$/, "");
+                                    layoutsToImport[name] = imported;
+                                } else if (typeof imported === 'object' && imported !== null) {
+                                    layoutsToImport = imported;
+                                } else {
+                                    throw new Error('Unrecognized layout file format');
+                                }
+
+                                const current = getSavedLayouts();
+                                let added = 0, updated = 0;
+                                for (const [name, layout] of Object.entries(layoutsToImport)) {
+                                    if (layout && (layout.placeholders || layout.orientation)) {
+                                        current[name] ? updated++ : added++;
+                                        current[name] = layout;
+                                    }
+                                }
+                                localStorage.setItem('idCardLayouts', JSON.stringify(current));
+                                updateLayoutSelect();
+                                toast(`Imported: ${added} new, ${updated} updated layout(s).`, 'success');
+                            } catch (error) {
+                                toast(`Import error: ${error.message}`, 'error');
+                            }
+                        };
+                        reader.readAsText(file);
+                    });
+                    document.body.appendChild(fileInput);
+                    fileInput.click();
+                    setTimeout(() => { if (fileInput.parentNode) document.body.removeChild(fileInput); }, 1000);
+                });
+            }
 
             // --- Initial Setup ---
             const initialSetup = () => {
