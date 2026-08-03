@@ -1260,6 +1260,45 @@
                 return '';
             };
 
+            const drawQrCodeOnContext = (targetCtx, value, x, y, pWidth, pHeight, qrColor = '#000000') => {
+                if (!value) return;
+                try {
+                    const qrSize = Math.max(Math.round(Math.min(pWidth, pHeight)), 128);
+                    const qrContainer = document.createElement('div');
+                    qrContainer.style.position = 'absolute';
+                    qrContainer.style.top = '-9999px';
+                    qrContainer.style.left = '-9999px';
+                    qrContainer.style.width = qrSize + 'px';
+                    qrContainer.style.height = qrSize + 'px';
+                    qrContainer.style.backgroundColor = '#ffffff';
+                    document.body.appendChild(qrContainer);
+
+                    new QRCode(qrContainer, {
+                        text: String(value),
+                        width: qrSize,
+                        height: qrSize,
+                        colorDark: qrColor || '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+
+                    const qrCanvas = qrContainer.querySelector('canvas');
+                    const qrImg = qrContainer.querySelector('img');
+
+                    if (qrCanvas && qrCanvas.width > 0) {
+                        targetCtx.drawImage(qrCanvas, x, y, pWidth, pHeight);
+                    } else if (qrImg && qrImg.complete && qrImg.naturalWidth > 0) {
+                        targetCtx.drawImage(qrImg, x, y, pWidth, pHeight);
+                    }
+
+                    if (qrContainer.parentNode) {
+                        document.body.removeChild(qrContainer);
+                    }
+                } catch (err) {
+                    console.error('QR code render error:', err);
+                }
+            };
+
             const drawCardOnContext = async (targetCtx, side, width, height, rowData) => {
                 targetCtx.clearRect(0, 0, width, height);
                 const bg = bgImages[side];
@@ -1294,38 +1333,7 @@
                         } else if (p.type === 'qr') {
                             const pWidth = p.width * width;
                             const pHeight = p.height * height;
-                            try {
-                                const qrSize = Math.max(Math.min(pWidth, pHeight), 150);
-                                const qrContainer = document.createElement('div');
-                                qrContainer.style.position = 'absolute';
-                                qrContainer.style.top = '-9999px';
-                                qrContainer.style.left = '-9999px';
-                                qrContainer.style.width = qrSize + 'px';
-                                qrContainer.style.height = qrSize + 'px';
-                                qrContainer.style.backgroundColor = '#ffffff';
-                                document.body.appendChild(qrContainer);
-
-                                new QRCode(qrContainer, {
-                                    text: value,
-                                    width: qrSize,
-                                    height: qrSize,
-                                    colorDark: p.qrColor || "#000000",
-                                    colorLight: "#ffffff",
-                                    correctLevel: QRCode.CorrectLevel.H
-                                });
-
-                                const qrCanvas = qrContainer.querySelector('canvas');
-                                const qrImg = qrContainer.querySelector('img');
-
-                                if (qrCanvas && qrCanvas.width > 0) {
-                                    targetCtx.drawImage(qrCanvas, x, y, pWidth, pHeight);
-                                } else if (qrImg && qrImg.complete && qrImg.naturalWidth > 0) {
-                                    targetCtx.drawImage(qrImg, x, y, pWidth, pHeight);
-                                }
-                                if (qrContainer.parentNode) document.body.removeChild(qrContainer);
-                            } catch (err) {
-                                console.error('Static QR draw error:', err);
-                            }
+                            drawQrCodeOnContext(targetCtx, value, x, y, pWidth, pHeight, p.qrColor);
                         }
                     }
                 }
@@ -1383,101 +1391,7 @@
                     if (p.type === 'qr') {
                         const pWidth = p.width * width;
                         const pHeight = p.height * height;
-                        try {
-                            console.log(`Rendering QR code for value: ${value}`);
-
-                            // Create a QR code using QRCode.js
-                            // Force a large enough size to be visible, minimum 150px
-                            const qrSize = Math.max(Math.min(pWidth, pHeight), 150);
-
-                            // Create a hidden container for QR code generation
-                            const qrContainer = document.createElement('div');
-                            qrContainer.id = 'qr-container-temp';
-                            qrContainer.style.position = 'absolute';
-                            qrContainer.style.top = '-9999px';  // Hide it off-screen
-                            qrContainer.style.left = '-9999px'; // Hide it off-screen
-                            qrContainer.style.width = qrSize + 'px';
-                            qrContainer.style.height = qrSize + 'px';
-                            qrContainer.style.backgroundColor = '#ffffff';
-                            qrContainer.style.padding = '0'; // Remove padding
-                            qrContainer.style.boxSizing = 'border-box';
-                            document.body.appendChild(qrContainer);
-
-                            // Create QR code instance with enhanced settings for visibility
-                            new QRCode(qrContainer, {
-                                text: value,
-                                width: qrSize,
-                                height: qrSize,
-                                colorDark: '#000000', // Force black for best contrast
-                                colorLight: '#ffffff', // White background
-                                correctLevel: QRCode.CorrectLevel.L, // Lower error correction for cleaner codes
-                                margin: 4 // Add margin to improve scannability
-                            });
-
-                            // Add a label to the QR container to confirm what's being generated
-                            const qrLabel = document.createElement('div');
-                            qrLabel.textContent = `QR Code: ${value}`;
-                            qrLabel.style.textAlign = 'center';
-                            qrLabel.style.marginTop = '5px';
-                            qrContainer.appendChild(qrLabel);
-
-                            // Get the QR code image from the container
-                            const qrImage = qrContainer.querySelector('img');
-                            if (qrImage) {
-                                // Make sure to wait for the image to be fully loaded before drawing
-                                await new Promise((resolve, reject) => {
-                                    if (qrImage.complete) {
-                                        resolve();
-                                    } else {
-                                        qrImage.onload = resolve;
-                                        qrImage.onerror = reject;
-                                        // Set a timeout just in case
-                                        setTimeout(resolve, 500);
-                                    }
-                                });
-
-                                // Use the actual placeholder position instead of hard-coded coordinates
-                                const qrX = x; // Use placeholder's x position
-                                const qrY = y; // Use placeholder's y position
-                                const qrWidth = pWidth; // Use placeholder's width
-                                const qrHeight = pHeight; // Use placeholder's height
-
-                                // Center the QR code within its area
-                                const offsetX = (qrWidth - qrSize) / 2;
-                                const offsetY = (qrHeight - qrSize) / 2;
-
-                                // White background behind QR
-                                targetCtx.fillStyle = '#ffffff';
-                                targetCtx.fillRect(qrX, qrY, qrWidth, qrHeight);
-
-                                // Border
-                                targetCtx.strokeStyle = '#000000';
-                                targetCtx.lineWidth = 2;
-                                targetCtx.strokeRect(qrX, qrY, qrWidth, qrHeight);
-
-                                // Draw QR centered in placeholder area
-                                targetCtx.drawImage(qrImage, qrX + offsetX, qrY + offsetY, qrSize, qrSize);
-
-                                // Label below QR
-                                targetCtx.fillStyle = '#000000';
-                                targetCtx.font = 'bold 14px Inter';
-                                targetCtx.textAlign = 'center';
-                                targetCtx.textBaseline = 'top';
-                                targetCtx.fillText(`${p.key}`, qrX + qrWidth / 2, qrY + qrHeight - 20);
-                            }
-
-                            // Remove QR temp container
-                            const container = document.getElementById('qr-container-temp');
-                            if (container) document.body.removeChild(container);
-
-                        } catch (error) {
-                            console.error(`Could not generate QR code for: ${value}`, error);
-                            targetCtx.fillStyle = '#fee2e2';
-                            targetCtx.fillRect(x, y, pWidth, pHeight);
-                            targetCtx.fillStyle = '#ef4444';
-                            targetCtx.textAlign = 'center';
-                            targetCtx.fillText('QR Error', x + pWidth / 2, y + pHeight / 2);
-                        }
+                        drawQrCodeOnContext(targetCtx, value, x, y, pWidth, pHeight, p.qrColor);
                     } else if (p.type === 'photo') {
                         const pWidth = p.width * width;
                         const pHeight = p.height * height;
