@@ -974,20 +974,20 @@
                 </div>
             </div>
 
-            <!-- Image Helper (Mint Tint) -->
-            <div id="image-helper" class="step-card bg-tint-mint">
+            <!-- Static QR Code Tool (Sky Tint) -->
+            <div id="static-qr-tool" class="step-card bg-tint-sky">
                 <div class="step-header">
-                    <span class="w-8 h-8 rounded-full bg-surface text-tint-mint-ink shadow-sm flex items-center justify-center shrink-0 mr-2.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span class="w-8 h-8 rounded-full bg-surface text-tint-sky-ink shadow-sm flex items-center justify-center shrink-0 mr-2.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
                     </span>
-                    <h2 class="flex items-center justify-between w-full">Image to CSV <span title="Select local image files. The tool converts them to base64 and downloads a CSV template with your photos embedded — ready to upload as data."><svg class="w-3.5 h-3.5 inline text-ink-500 hover:text-ink-700 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
+                    <h2 class="flex items-center justify-between w-full">Static QR Code <span title="Create a static QR code (e.g. school website link, fixed contact, or custom text) and add it to your ID card design."><svg class="w-3.5 h-3.5 inline text-ink-500 hover:text-ink-700 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <div class="space-y-2">
-                    <input type="file" id="image-converter-input" accept="image/*" multiple class="file-input-sm">
-                    <button id="convert-images-btn" class="w-full py-1.5 bg-surface text-tint-mint-ink border border-tint-mint-ink/30 text-xs font-semibold rounded-full shadow-sm hover:bg-surface/80 transition-all">Convert & Download CSV</button>
-                    <div id="conversion-output" class="hidden">
-                        <div id="converted-list" class="max-h-32 overflow-y-auto text-xs"></div>
-                    </div>
+                    <input type="text" id="static-qr-input" placeholder="URL or text (e.g. https://school.edu)" class="w-full px-3 py-1.5 bg-surface border border-ink-300 rounded-lg text-xs">
+                    <button id="add-static-qr-btn" class="w-full py-1.5 bg-surface text-tint-sky-ink border border-tint-sky-ink/30 text-xs font-semibold rounded-full shadow-sm hover:bg-surface/80 transition-all flex items-center justify-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        <span>Add Static QR to Design</span>
+                    </button>
                 </div>
             </div>
 
@@ -1350,9 +1350,8 @@
                     targetCtx.drawImage(bg, 0, 0, width, height);
                 }
 
-                // Always render static text placeholders, even without data
+                // Always render static text and static QR placeholders, even without data
                 for (const p of placeholders[side]) {
-                    // Handle static text (labels and titles)
                     if (p.staticText) {
                         const value = p.staticText;
                         const x = p.x * width;
@@ -1367,7 +1366,6 @@
                             targetCtx.textBaseline = 'top';
                             const maxWidth = p.width * width;
 
-                            // Calculate x position based on alignment
                             let textX = x;
                             if (p.align === 'center') {
                                 textX = x + (p.width * width) / 2;
@@ -1376,6 +1374,41 @@
                             }
 
                             wrapText(targetCtx, value, textX, y, maxWidth, p.lineHeight);
+                        } else if (p.type === 'qr') {
+                            const pWidth = p.width * width;
+                            const pHeight = p.height * height;
+                            try {
+                                const qrSize = Math.max(Math.min(pWidth, pHeight), 150);
+                                const qrContainer = document.createElement('div');
+                                qrContainer.style.position = 'absolute';
+                                qrContainer.style.top = '-9999px';
+                                qrContainer.style.left = '-9999px';
+                                qrContainer.style.width = qrSize + 'px';
+                                qrContainer.style.height = qrSize + 'px';
+                                qrContainer.style.backgroundColor = '#ffffff';
+                                document.body.appendChild(qrContainer);
+
+                                new QRCode(qrContainer, {
+                                    text: value,
+                                    width: qrSize,
+                                    height: qrSize,
+                                    colorDark: p.qrColor || "#000000",
+                                    colorLight: "#ffffff",
+                                    correctLevel: QRCode.CorrectLevel.H
+                                });
+
+                                const qrCanvas = qrContainer.querySelector('canvas');
+                                const qrImg = qrContainer.querySelector('img');
+
+                                if (qrCanvas && qrCanvas.width > 0) {
+                                    targetCtx.drawImage(qrCanvas, x, y, pWidth, pHeight);
+                                } else if (qrImg && qrImg.complete && qrImg.naturalWidth > 0) {
+                                    targetCtx.drawImage(qrImg, x, y, pWidth, pHeight);
+                                }
+                                if (qrContainer.parentNode) document.body.removeChild(qrContainer);
+                            } catch (err) {
+                                console.error('Static QR draw error:', err);
+                            }
                         }
                     }
                 }
@@ -1910,7 +1943,8 @@
 
                         const displayText = p.staticText ? p.staticText : `{{${p.key}}}`;
                         if (p.type === 'qr') {
-                            el.innerHTML = `<div class="qr-placeholder-preview"><span class="ph-label">QR • ${p.key}</span></div>`;
+                            const label = p.staticText ? `QR • Static` : `QR • ${p.key}`;
+                            el.innerHTML = `<div class="qr-placeholder-preview"><span class="ph-label">${label}</span></div>`;
                         } else if (p.type === 'photo') {
                             el.innerHTML = `<span class="ph-label">🖼️ ${displayText}</span>`;
                         } else {
@@ -2857,6 +2891,26 @@
                 addPlaceholder({ key: qrField, type: 'qr', width: 0.25, height: 0.25, x: 0.65, y: 0.20, qrColor: '#000000' });
                 toast(`QR code for "${qrField}" added.`, 'success');
             });
+
+            // Static QR tool handler
+            const staticQrInput = document.getElementById('static-qr-input');
+            const addStaticQrBtn = document.getElementById('add-static-qr-btn');
+            if (addStaticQrBtn) {
+                addStaticQrBtn.addEventListener('click', () => {
+                    const val = (staticQrInput && staticQrInput.value.trim()) || 'https://example.com';
+                    addPlaceholder({
+                        key: 'Static QR',
+                        type: 'qr',
+                        staticText: val,
+                        width: 0.22,
+                        height: 0.22,
+                        x: 0.65,
+                        y: 0.65,
+                        qrColor: '#000000'
+                    });
+                    toast(`Static QR code added for "${val}".`, 'success');
+                });
+            }
 
             // Sign / extra folder
             signFolderInput.addEventListener('change', (e) => {
