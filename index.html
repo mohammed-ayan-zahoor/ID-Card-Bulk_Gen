@@ -1418,25 +1418,42 @@
                     const isStaticText = (p.key === 'title' && p.staticText) || (p.key === 'label' && p.staticText) || p.staticText;
                     let value = isStaticText ? p.staticText : getRowValue(rowData, p.key);
 
-                    // Handle date fields: preserve user text as-is, only convert numeric Excel serial dates (e.g. 44927)
+                    // Format all date/DOB fields strictly to DD/MM/YYYY (Day-First format)
                     if (!isStaticText && value !== undefined && value !== null && (p.key.toLowerCase().includes('dob') || p.key.toLowerCase().includes('date') || p.key.toLowerCase().includes('birth'))) {
                         try {
                             const strVal = String(value).trim();
-                            const numValue = Number(strVal);
 
-                            // Only convert if it's a raw numeric Excel serial date (e.g. 44927)
-                            if (!isNaN(numValue) && numValue >= 10000 && numValue <= 50000 && /^\d+(\.\d+)?$/.test(strVal)) {
+                            // 1. Excel serial number (e.g. 44927)
+                            const numVal = Number(strVal);
+                            if (!isNaN(numVal) && numVal >= 10000 && numVal <= 50000 && /^\d+(\.\d+)?$/.test(strVal)) {
                                 const excelEpoch = new Date(1899, 11, 30);
-                                const millisecondsPerDay = 24 * 60 * 60 * 1000;
-                                const jsDate = new Date(excelEpoch.getTime() + numValue * millisecondsPerDay);
-                                if (jsDate.getFullYear() >= 1900 && jsDate.getFullYear() <= new Date().getFullYear()) {
-                                    const day = jsDate.getDate().toString().padStart(2, '0');
-                                    const month = (jsDate.getMonth() + 1).toString().padStart(2, '0');
-                                    const year = jsDate.getFullYear();
-                                    value = `${day}/${month}/${year}`;
+                                const msPerDay = 24 * 60 * 60 * 1000;
+                                const jsDate = new Date(excelEpoch.getTime() + numVal * msPerDay);
+                                if (jsDate.getFullYear() >= 1900 && jsDate.getFullYear() <= 2100) {
+                                    const d = String(jsDate.getDate()).padStart(2, '0');
+                                    const m = String(jsDate.getMonth() + 1).padStart(2, '0');
+                                    const y = jsDate.getFullYear();
+                                    value = `${d}/${m}/${y}`;
                                 }
                             }
-                            // String dates (e.g. "4-9-2015", "04/09/2015") remain 100% untouched exactly as typed in Excel
+                            // 2. Day-first string dates (e.g. "4-9-2015", "4/9/2015", "04-09-2015") -> format to DD/MM/YYYY
+                            else {
+                                const dayFirstMatch = strVal.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+                                if (dayFirstMatch) {
+                                    const d = String(parseInt(dayFirstMatch[1], 10)).padStart(2, '0');
+                                    const m = String(parseInt(dayFirstMatch[2], 10)).padStart(2, '0');
+                                    const y = dayFirstMatch[3];
+                                    value = `${d}/${m}/${y}`;
+                                } else {
+                                    const yearFirstMatch = strVal.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+                                    if (yearFirstMatch) {
+                                        const y = yearFirstMatch[1];
+                                        const m = String(parseInt(yearFirstMatch[2], 10)).padStart(2, '0');
+                                        const d = String(parseInt(yearFirstMatch[3], 10)).padStart(2, '0');
+                                        value = `${d}/${m}/${y}`;
+                                    }
+                                }
+                            }
                         } catch (e) {
                             console.error(`Date formatting error for ${p.key}:`, e);
                         }
