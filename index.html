@@ -758,6 +758,11 @@
                     <h2 class="flex items-center justify-between w-full">Upload Data <span title="Upload Excel (.xlsx) or CSV. If your photo column has numbers (e.g. 3956), use the Photo Folder tool on the right."><svg class="w-3.5 h-3.5 inline text-ink-500 hover:text-ink-700 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <input type="file" id="data-file-input" accept=".xlsx,.csv" class="file-input-sm">
+                <button id="open-photo-audit-btn" class="w-full mt-2.5 py-2 bg-surface text-ink-900 border border-ink-300 text-xs font-semibold rounded-full hover:bg-ink-100 transition-all shadow-sm hidden flex items-center justify-center gap-1.5">
+                    <svg class="w-4 h-4 shrink-0 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Audit Photo Matches</span>
+                    <span id="photo-audit-badge" class="px-2 py-0.5 rounded-full text-[10px] bg-red-100 text-red-700 font-bold ml-1 hidden">0 Missing</span>
+                </button>
             </div>
 
             <!-- Step 3: Design Card (Lavender Tint) -->
@@ -945,11 +950,15 @@
                     <h2 class="flex items-center justify-between w-full">Photo Folder <span title="Select a folder of photos named by number (e.g. 3956.jpg). The app matches them to the number in your Excel photo column automatically."><svg class="w-3.5 h-3.5 inline text-ink-500 hover:text-ink-700 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg></span></h2>
                 </div>
                 <input type="file" id="photo-folder-input" webkitdirectory multiple class="file-input-sm">
-                <div id="photo-folder-status" class="hidden mt-2">
+                <div id="photo-folder-status" class="hidden mt-2 space-y-2">
                     <div class="p-2 bg-tint-mint border border-tint-mint-ink/20 rounded-full text-xs text-tint-mint-ink font-semibold flex items-center gap-1.5 px-3">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                         <span id="photo-count"></span>
                     </div>
+                    <button id="sidebar-photo-audit-btn" class="w-full py-1.5 bg-surface text-tint-sky-ink border border-tint-sky-ink/30 text-xs font-semibold rounded-full hover:bg-surface/80 transition-all shadow-sm flex items-center justify-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>Audit Connections</span>
+                    </button>
                 </div>
             </div>
 
@@ -1479,7 +1488,7 @@
                         const pWidth = p.width * width;
                         const pHeight = p.height * height;
                         try {
-                            const img = await loadImage(value, p.key);
+                            const img = await loadImage(value, p.key, rowData);
                             // Add rounded corners or circular mask
                             if (p.shape === 'circle') {
                                 // For circular photos
@@ -1589,8 +1598,28 @@
                 }
                 context.fillText(line, x, currentY);
             };
-            const loadImage = async (src, columnKey) => {
+            const loadImage = async (src, columnKey, rowData = null) => {
                 const srcStr = String(src || '').trim();
+
+                // 0. Check manual custom photo bindings for current record
+                if (rowData && typeof data !== 'undefined' && data && typeof customPhotoBindings !== 'undefined') {
+                    const recordIdx = data.indexOf(rowData);
+                    if (recordIdx !== -1 && customPhotoBindings.has(recordIdx)) {
+                        const customFile = customPhotoBindings.get(recordIdx);
+                        if (customFile) {
+                            try {
+                                const dataURL = await createPhotoDataURL(customFile);
+                                return new Promise((resolve, reject) => {
+                                    const img = new Image();
+                                    img.onload = () => resolve(img);
+                                    img.onerror = reject;
+                                    img.src = dataURL;
+                                });
+                            } catch (_) { /* fall through */ }
+                        }
+                    }
+                }
+
                 if (!srcStr) throw new Error('Empty image source');
 
                 // 1. Check sign/extra folder if a column name is set and matches
@@ -3562,6 +3591,602 @@
 
             initialSetup();
         });
+    </script>
+    <!-- Photo Diagnostic & Match Visualizer Modal -->
+    <div id="photo-audit-modal" class="fixed inset-0 z-[9999] bg-surface flex flex-col hidden">
+        <!-- Top Navigation / Stats Header -->
+        <div class="px-6 py-3.5 bg-surface border-b border-ink-200 flex items-center justify-between shrink-0 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center font-bold text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-ink-900 tracking-tight">Photo Diagnostics & Match Visualizer</h1>
+                    <p class="text-[11px] text-ink-500">Analyze Excel student records vs photo files to catch and fix mismatches instantly.</p>
+                </div>
+            </div>
+
+            <!-- Stats Overview Pills -->
+            <div class="flex items-center gap-2">
+                <div class="px-2.5 py-1 rounded-full bg-tint-mint text-tint-mint-ink text-xs font-semibold border border-tint-mint-ink/20">
+                    Matched: <span id="audit-stat-matched" class="font-bold">0</span>
+                </div>
+                <div class="px-2.5 py-1 rounded-full bg-red-50 text-red-700 text-xs font-semibold border border-red-200">
+                    Missing: <span id="audit-stat-missing" class="font-bold">0</span>
+                </div>
+                <div class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200">
+                    Unused Photos: <span id="audit-stat-unused" class="font-bold">0</span>
+                </div>
+                <div class="px-2.5 py-1 rounded-full bg-sky-50 text-sky-800 text-xs font-semibold border border-sky-200">
+                    Suggested: <span id="audit-stat-suggested" class="font-bold">0</span>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex items-center gap-2">
+                <div class="flex bg-surface-sunken p-0.5 rounded-full border border-ink-200">
+                    <button id="audit-view-grid-btn" class="px-3 py-1 rounded-full text-xs font-semibold bg-surface text-ink-900 shadow-sm">Grid Audit View</button>
+                    <button id="audit-view-graph-btn" class="px-3 py-1 rounded-full text-xs font-semibold text-ink-500 hover:text-ink-900">Visual Graph View</button>
+                </div>
+
+                <button id="audit-autolink-btn" class="px-3 py-1 bg-tint-mint text-tint-mint-ink text-xs font-semibold rounded-full border border-tint-mint-ink/30 hover:bg-surface transition-all shadow-sm">
+                    Auto-Link Suggested
+                </button>
+                <button id="audit-export-csv-btn" class="px-3 py-1 bg-surface text-ink-900 text-xs font-semibold rounded-full border border-ink-300 hover:bg-ink-100 transition-all shadow-sm">
+                    Export Missing List (CSV)
+                </button>
+                <button id="close-audit-modal-btn" class="px-3.5 py-1 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-full shadow-sm">
+                    Close / Back to Studio
+                </button>
+            </div>
+        </div>
+
+        <!-- Audit Main Workspace -->
+        <div class="flex-1 overflow-hidden relative bg-surface-sunken">
+            <!-- View 1: Audit Grid View -->
+            <div id="audit-grid-view" class="h-full flex flex-col p-4 overflow-hidden">
+                <!-- Search & Status Filter Bar -->
+                <div class="mb-3 flex items-center justify-between gap-4 shrink-0 bg-surface p-2.5 rounded-2xl border border-ink-200 shadow-sm">
+                    <div class="flex items-center gap-1.5">
+                        <button class="audit-filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-ink-900 text-white" data-filter="all">All Records</button>
+                        <button class="audit-filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-surface border border-ink-300 text-ink-700 hover:border-ink-500" data-filter="missing">Missing Photos Only</button>
+                        <button class="audit-filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-surface border border-ink-300 text-ink-700 hover:border-ink-500" data-filter="suggested">Suggested Matches Only</button>
+                        <button class="audit-filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-surface border border-ink-300 text-ink-700 hover:border-ink-500" data-filter="unused">Unused Folder Photos</button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="audit-search-input" placeholder="Search record, ID, or file..." class="px-3 py-1 bg-surface border border-ink-300 rounded-lg text-xs w-64">
+                    </div>
+                </div>
+
+                <!-- Grid Table Container -->
+                <div class="flex-1 overflow-y-auto bg-surface rounded-2xl border border-ink-200 shadow-sm">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="bg-surface-sunken border-b border-ink-200 sticky top-0 z-10 text-ink-500 font-semibold uppercase tracking-wider">
+                            <tr>
+                                <th class="p-2.5 w-14 text-center">Row</th>
+                                <th class="p-2.5">Student / Record Info</th>
+                                <th class="p-2.5 w-36 text-center">Match Status</th>
+                                <th class="p-2.5 w-24 text-center">Preview</th>
+                                <th class="p-2.5">Matched File / Quick Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-grid-tbody" class="divide-y divide-ink-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- View 2: Visual Connection Graph View -->
+            <div id="audit-graph-view" class="h-full hidden p-4 overflow-hidden flex flex-col">
+                <div class="mb-2 text-xs text-ink-500 flex items-center justify-between shrink-0">
+                    <span>Visual Node Diagram: Left nodes represent Excel records, right nodes represent photo files. Solid green lines indicate matched connections.</span>
+                </div>
+                <div id="audit-graph-canvas-wrap" class="flex-1 bg-surface rounded-2xl border border-ink-200 shadow-sm relative overflow-auto p-4">
+                    <svg id="audit-graph-svg" class="w-full min-h-[700px]"></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Photo Audit & Visual Match Diagnostic Engine ---
+        const customPhotoBindings = new Map(); // recordIndex -> File
+
+        const PhotoAuditEngine = {
+            activeFilter: 'all',
+            searchQuery: '',
+            viewMode: 'grid',
+
+            analyze() {
+                if (!data || data.length === 0) return null;
+
+                const photoCol = headers.find(h => {
+                    const l = h.toLowerCase();
+                    return l.includes('photo') || l.includes('image') || l.includes('pic') || l.includes('sign');
+                }) || headers.find(h => {
+                    const l = h.toLowerCase();
+                    return l.includes('id') || l.includes('roll') || l.includes('adm') || l.includes('code');
+                }) || headers[0];
+
+                const nameCol = headers.find(h => {
+                    const l = h.toLowerCase();
+                    return l.includes('name') || l.includes('student');
+                }) || headers[0];
+
+                const matched = [];
+                const missing = [];
+                const usedFileNames = new Set();
+
+                // Compute unique files available in photoFiles map
+                const availableFilesMap = new Map();
+                if (photoFolderLoaded && photoFiles && photoFiles.size > 0) {
+                    for (const [_, file] of photoFiles.entries()) {
+                        availableFilesMap.set(file.name, file);
+                    }
+                }
+
+                data.forEach((row, idx) => {
+                    const rawVal = getRowValue(row, photoCol) || getRowValue(row, 'ID') || getRowValue(row, headers[0]) || '';
+                    const photoKey = String(rawVal).trim();
+                    const studentName = getRowValue(row, nameCol) || `Record #${idx + 1}`;
+
+                    let matchedFile = null;
+                    let matchType = 'none';
+                    let suggestedFile = null;
+
+                    if (customPhotoBindings.has(idx)) {
+                        matchedFile = customPhotoBindings.get(idx);
+                        matchType = 'custom';
+                    } else if (photoFolderLoaded && photoFiles.size > 0 && photoKey) {
+                        matchedFile = getPhotoByNumber(photoKey);
+                        if (matchedFile) {
+                            matchType = 'exact';
+                        } else {
+                            // Fuzzy candidate search
+                            const cleanKey = photoKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+                            if (cleanKey) {
+                                for (const [fName, file] of availableFilesMap.entries()) {
+                                    const cleanFileName = fName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    if (cleanFileName.includes(cleanKey) || cleanKey.includes(cleanFileName)) {
+                                        suggestedFile = file;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (matchedFile) {
+                        usedFileNames.add(matchedFile.name);
+                        matched.push({ index: idx, row, photoKey, studentName, file: matchedFile, matchType });
+                    } else {
+                        missing.push({ index: idx, row, photoKey, studentName, suggestedFile });
+                    }
+                });
+
+                // Unused files in photo folder
+                const unusedPhotos = [];
+                availableFilesMap.forEach((file, fName) => {
+                    if (!usedFileNames.has(fName)) {
+                        unusedPhotos.push({ name: fName, file });
+                    }
+                });
+
+                return {
+                    photoCol,
+                    nameCol,
+                    matched,
+                    missing,
+                    unusedPhotos,
+                    availableFiles: Array.from(availableFilesMap.values()),
+                    stats: {
+                        totalRecords: data.length,
+                        totalPhotos: availableFilesMap.size,
+                        matchedCount: matched.length,
+                        missingCount: missing.length,
+                        unusedCount: unusedPhotos.length,
+                        suggestedCount: missing.filter(m => m.suggestedFile).length
+                    }
+                };
+            }
+        };
+
+        // --- Render Audit UI & Modal Handler ---
+        const photoAuditModal = document.getElementById('photo-audit-modal');
+        const openPhotoAuditBtn = document.getElementById('open-photo-audit-btn');
+        const sidebarPhotoAuditBtn = document.getElementById('sidebar-photo-audit-btn');
+        const closeAuditModalBtn = document.getElementById('close-audit-modal-btn');
+        const photoAuditBadge = document.getElementById('photo-audit-badge');
+
+        const auditStatMatched = document.getElementById('audit-stat-matched');
+        const auditStatMissing = document.getElementById('audit-stat-missing');
+        const auditStatUnused = document.getElementById('audit-stat-unused');
+        const auditStatSuggested = document.getElementById('audit-stat-suggested');
+
+        const auditViewGridBtn = document.getElementById('audit-view-grid-btn');
+        const auditViewGraphBtn = document.getElementById('audit-view-graph-btn');
+        const auditGridView = document.getElementById('audit-grid-view');
+        const auditGraphView = document.getElementById('audit-graph-view');
+
+        const auditGridTbody = document.getElementById('audit-grid-tbody');
+        const auditSearchInput = document.getElementById('audit-search-input');
+        const auditAutolinkBtn = document.getElementById('audit-autolink-btn');
+        const auditExportCsvBtn = document.getElementById('audit-export-csv-btn');
+        const auditGraphSvg = document.getElementById('audit-graph-svg');
+
+        const updateAuditBadge = () => {
+            if (!data || data.length === 0) {
+                if (openPhotoAuditBtn) openPhotoAuditBtn.classList.add('hidden');
+                if (sidebarPhotoAuditBtn) sidebarPhotoAuditBtn.classList.add('hidden');
+                return;
+            }
+
+            const analysis = PhotoAuditEngine.analyze();
+            if (!analysis) return;
+
+            if (openPhotoAuditBtn) openPhotoAuditBtn.classList.remove('hidden');
+            if (sidebarPhotoAuditBtn) sidebarPhotoAuditBtn.classList.remove('hidden');
+
+            if (photoAuditBadge) {
+                if (analysis.stats.missingCount > 0) {
+                    photoAuditBadge.textContent = `${analysis.stats.missingCount} Missing`;
+                    photoAuditBadge.classList.remove('hidden');
+                } else {
+                    photoAuditBadge.classList.add('hidden');
+                }
+            }
+        };
+
+        const renderAuditModal = () => {
+            const analysis = PhotoAuditEngine.analyze();
+            if (!analysis) return;
+
+            // Update stats
+            auditStatMatched.textContent = analysis.stats.matchedCount;
+            auditStatMissing.textContent = analysis.stats.missingCount;
+            auditStatUnused.textContent = analysis.stats.unusedCount;
+            auditStatSuggested.textContent = analysis.stats.suggestedCount;
+
+            // Render Table Rows
+            const query = (auditSearchInput ? auditSearchInput.value.trim().toLowerCase() : '');
+            const filter = PhotoAuditEngine.activeFilter;
+
+            let recordsToDisplay = [];
+
+            if (filter === 'unused') {
+                // Display unused photo files
+                recordsToDisplay = analysis.unusedPhotos.map((item, i) => ({
+                    type: 'unused',
+                    index: i,
+                    fileName: item.name,
+                    file: item.file
+                }));
+            } else {
+                // Combine matched and missing into single list ordered by record index
+                const allItems = [...analysis.matched, ...analysis.missing].sort((a, b) => a.index - b.index);
+
+                recordsToDisplay = allItems.filter(item => {
+                    if (filter === 'missing' && !item.missing && item.matchType !== 'none') return false;
+                    if (filter === 'suggested' && !item.suggestedFile) return false;
+
+                    if (query) {
+                        const matchText = `${item.studentName} ${item.photoKey} ${item.file ? item.file.name : ''}`.toLowerCase();
+                        if (!matchText.includes(query)) return false;
+                    }
+                    return true;
+                });
+            }
+
+            let html = '';
+            if (recordsToDisplay.length === 0) {
+                html = `<tr><td colspan="5" class="p-8 text-center text-ink-500 text-xs">No records found matching your filter criteria.</td></tr>`;
+            } else if (filter === 'unused') {
+                recordsToDisplay.forEach((item, idx) => {
+                    html += `
+                    <tr class="hover:bg-surface-sunken/50 transition-colors">
+                        <td class="p-2.5 text-center font-mono text-ink-500">${idx + 1}</td>
+                        <td class="p-2.5 font-semibold text-ink-900">${item.fileName}</td>
+                        <td class="p-2.5 text-center">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800">Unused Photo</span>
+                        </td>
+                        <td class="p-2.5 text-center">
+                            <div class="w-10 h-10 mx-auto rounded border border-ink-200 overflow-hidden bg-surface-sunken flex items-center justify-center">
+                                <img id="unused-thumb-${idx}" class="w-full h-full object-cover">
+                            </div>
+                        </td>
+                        <td class="p-2.5 text-ink-500">File in photo folder not assigned to any student.</td>
+                    </tr>`;
+
+                    createPhotoDataURL(item.file).then(url => {
+                        const imgEl = document.getElementById(`unused-thumb-${idx}`);
+                        if (imgEl) imgEl.src = url;
+                    }).catch(() => {});
+                });
+            } else {
+                recordsToDisplay.forEach((item) => {
+                    const isMissing = !item.file;
+                    const isCustom = item.matchType === 'custom';
+                    const isSuggested = Boolean(item.suggestedFile);
+
+                    let statusBadge = '';
+                    if (isCustom) {
+                        statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-100 text-indigo-800">Manual Link</span>`;
+                    } else if (!isMissing) {
+                        statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-tint-mint text-tint-mint-ink">Connected</span>`;
+                    } else if (isSuggested) {
+                        statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-100 text-sky-800">Suggested Match</span>`;
+                    } else {
+                        statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-800">Missing Photo</span>`;
+                    }
+
+                    // Build dropdown select options of all available photos
+                    let selectOptions = `<option value="">-- Assign Photo File --</option>`;
+                    analysis.availableFiles.forEach(f => {
+                        const isSelected = item.file && item.file.name === f.name;
+                        selectOptions += `<option value="${f.name}" ${isSelected ? 'selected' : ''}>${f.name}</option>`;
+                    });
+
+                    html += `
+                    <tr class="hover:bg-surface-sunken/50 transition-colors">
+                        <td class="p-2.5 text-center font-mono text-ink-500">${item.index + 1}</td>
+                        <td class="p-2.5">
+                            <div class="font-semibold text-ink-900">${item.studentName}</div>
+                            <div class="text-[11px] text-ink-500 font-mono">Photo Key: "${item.photoKey}"</div>
+                        </td>
+                        <td class="p-2.5 text-center">${statusBadge}</td>
+                        <td class="p-2.5 text-center">
+                            <div class="w-10 h-10 mx-auto rounded border border-ink-200 overflow-hidden bg-surface-sunken flex items-center justify-center">
+                                ${item.file ? `<img id="audit-thumb-${item.index}" class="w-full h-full object-cover">` : `<span class="text-[10px] text-ink-400">No Img</span>`}
+                            </div>
+                        </td>
+                        <td class="p-2.5">
+                            <div class="flex items-center gap-2">
+                                <select class="audit-assign-select p-1.5 border border-ink-300 rounded-lg text-xs flex-1 bg-surface text-ink-900" data-index="${item.index}">
+                                    ${selectOptions}
+                                </select>
+                                ${isSuggested && !item.file ? `
+                                    <button class="audit-accept-suggested-btn px-2.5 py-1 bg-sky-600 text-white rounded-lg text-xs font-semibold hover:bg-sky-700 shadow-sm" data-index="${item.index}" data-filename="${item.suggestedFile.name}">
+                                        Link "${item.suggestedFile.name}"
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>`;
+
+                    if (item.file) {
+                        createPhotoDataURL(item.file).then(url => {
+                            const imgEl = document.getElementById(`audit-thumb-${item.index}`);
+                            if (imgEl) imgEl.src = url;
+                        }).catch(() => {});
+                    }
+                });
+            }
+
+            auditGridTbody.innerHTML = html;
+
+            // Bind change handlers for photo assign dropdowns
+            document.querySelectorAll('.audit-assign-select').forEach(sel => {
+                sel.addEventListener('change', (e) => {
+                    const idx = parseInt(e.target.getAttribute('data-index'), 10);
+                    const fileName = e.target.value;
+                    if (!fileName) {
+                        customPhotoBindings.delete(idx);
+                    } else {
+                        const fileObj = analysis.availableFiles.find(f => f.name === fileName);
+                        if (fileObj) customPhotoBindings.set(idx, fileObj);
+                    }
+                    renderAuditModal();
+                    drawAllCanvases();
+                    updateAuditBadge();
+                });
+            });
+
+            // Bind click handlers for accept suggested buttons
+            document.querySelectorAll('.audit-accept-suggested-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(e.target.getAttribute('data-index'), 10);
+                    const fileName = e.target.getAttribute('data-filename');
+                    const fileObj = analysis.availableFiles.find(f => f.name === fileName);
+                    if (fileObj) {
+                        customPhotoBindings.set(idx, fileObj);
+                        renderAuditModal();
+                        drawAllCanvases();
+                        updateAuditBadge();
+                        toast(`Linked photo "${fileName}" to record #${idx + 1}`, 'success');
+                    }
+                });
+            });
+
+            // Render Visual Connection Graph SVG if active
+            if (PhotoAuditEngine.viewMode === 'graph') {
+                renderAuditGraph(analysis);
+            }
+        };
+
+        const renderAuditGraph = (analysis) => {
+            if (!auditGraphSvg) return;
+            const records = [...analysis.matched, ...analysis.missing].sort((a, b) => a.index - b.index).slice(0, 50); // limit to 50 for clean graph view
+            const photos = analysis.availableFiles.slice(0, 50);
+
+            const rowHeight = 48;
+            const svgHeight = Math.max(600, Math.max(records.length, photos.length) * rowHeight + 100);
+            const svgWidth = auditGraphSvg.parentElement ? auditGraphSvg.parentElement.clientWidth - 40 : 900;
+
+            auditGraphSvg.setAttribute('height', svgHeight);
+            auditGraphSvg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+
+            let svgHtml = `<g transform="translate(20, 40)">`;
+
+            const leftX = 180;
+            const rightX = svgWidth - 220;
+
+            // Draw connecting lines
+            records.forEach((rec, idx) => {
+                const y1 = idx * rowHeight + 20;
+                let y2 = y1;
+                let strokeColor = '#ef4444';
+                let strokeDash = '4 4';
+
+                if (rec.file) {
+                    const pIdx = photos.findIndex(p => p.name === rec.file.name);
+                    if (pIdx !== -1) y2 = pIdx * rowHeight + 20;
+                    strokeColor = '#10b981';
+                    strokeDash = 'none';
+                }
+
+                svgHtml += `<line x1="${leftX + 120}" y1="${y1}" x2="${rightX - 120}" y2="${y2}" stroke="${strokeColor}" stroke-width="2" stroke-dasharray="${strokeDash}" opacity="0.8" />`;
+            });
+
+            // Draw Student Nodes (Left)
+            records.forEach((rec, idx) => {
+                const y = idx * rowHeight + 20;
+                const statusColor = rec.file ? '#10b981' : '#ef4444';
+                svgHtml += `
+                    <g transform="translate(${leftX}, ${y})">
+                        <rect x="-140" y="-16" width="260" height="32" rx="16" fill="#ffffff" stroke="${statusColor}" stroke-width="2" />
+                        <text x="-120" y="4" font-size="11" font-weight="bold" fill="#0f172a">#${rec.index + 1} ${rec.studentName.substring(0, 18)}</text>
+                        <circle cx="120" cy="0" r="6" fill="${statusColor}" />
+                    </g>
+                `;
+            });
+
+            // Draw Photo Nodes (Right)
+            photos.forEach((photo, idx) => {
+                const y = idx * rowHeight + 20;
+                svgHtml += `
+                    <g transform="translate(${rightX}, ${y})">
+                        <rect x="-120" y="-16" width="260" height="32" rx="16" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" />
+                        <circle cx="-120" cy="0" r="6" fill="#64748b" />
+                        <text x="-105" y="4" font-size="11" font-weight="bold" fill="#334155">${photo.name.substring(0, 22)}</text>
+                    </g>
+                `;
+            });
+
+            svgHtml += `</g>`;
+            auditGraphSvg.innerHTML = svgHtml;
+        };
+
+        // Event Listeners for Audit Modal
+        if (openPhotoAuditBtn) openPhotoAuditBtn.addEventListener('click', () => {
+            if (photoAuditModal) photoAuditModal.classList.remove('hidden');
+            renderAuditModal();
+        });
+
+        if (sidebarPhotoAuditBtn) sidebarPhotoAuditBtn.addEventListener('click', () => {
+            if (photoAuditModal) photoAuditModal.classList.remove('hidden');
+            renderAuditModal();
+        });
+
+        if (closeAuditModalBtn) closeAuditModalBtn.addEventListener('click', () => {
+            if (photoAuditModal) photoAuditModal.classList.add('hidden');
+        });
+
+        if (auditViewGridBtn && auditViewGraphBtn) {
+            auditViewGridBtn.addEventListener('click', () => {
+                PhotoAuditEngine.viewMode = 'grid';
+                auditViewGridBtn.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-surface text-ink-900 shadow-sm';
+                auditViewGraphBtn.className = 'px-3 py-1 rounded-full text-xs font-semibold text-ink-500 hover:text-ink-900';
+                auditGridView.classList.remove('hidden');
+                auditGraphView.classList.add('hidden');
+                renderAuditModal();
+            });
+
+            auditViewGraphBtn.addEventListener('click', () => {
+                PhotoAuditEngine.viewMode = 'graph';
+                auditViewGraphBtn.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-surface text-ink-900 shadow-sm';
+                auditViewGridBtn.className = 'px-3 py-1 rounded-full text-xs font-semibold text-ink-500 hover:text-ink-900';
+                auditGraphView.classList.remove('hidden');
+                auditGridView.classList.add('hidden');
+                renderAuditModal();
+            });
+        }
+
+        // Filter Pills
+        document.querySelectorAll('.audit-filter-pill').forEach(pill => {
+            pill.addEventListener('click', (e) => {
+                document.querySelectorAll('.audit-filter-pill').forEach(p => {
+                    p.className = 'audit-filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-surface border border-ink-300 text-ink-700 hover:border-ink-500';
+                });
+                e.target.className = 'audit-filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-ink-900 text-white';
+                PhotoAuditEngine.activeFilter = e.target.getAttribute('data-filter');
+                renderAuditModal();
+            });
+        });
+
+        if (auditSearchInput) {
+            auditSearchInput.addEventListener('input', () => renderAuditModal());
+        }
+
+        // Auto-link Suggested Matches Button
+        if (auditAutolinkBtn) {
+            auditAutolinkBtn.addEventListener('click', () => {
+                const analysis = PhotoAuditEngine.analyze();
+                if (!analysis) return;
+
+                let linkedCount = 0;
+                analysis.missing.forEach(m => {
+                    if (m.suggestedFile && !customPhotoBindings.has(m.index)) {
+                        customPhotoBindings.set(m.index, m.suggestedFile);
+                        linkedCount++;
+                    }
+                });
+
+                if (linkedCount > 0) {
+                    renderAuditModal();
+                    drawAllCanvases();
+                    updateAuditBadge();
+                    toast(`Auto-linked ${linkedCount} suggested photo matches!`, 'success');
+                } else {
+                    toast('No new suggested matches to auto-link.', 'info');
+                }
+            });
+        }
+
+        // Export Missing Photos List CSV
+        if (auditExportCsvBtn) {
+            auditExportCsvBtn.addEventListener('click', () => {
+                const analysis = PhotoAuditEngine.analyze();
+                if (!analysis || analysis.missing.length === 0) {
+                    toast('No missing photos to export.', 'info');
+                    return;
+                }
+
+                let csvContent = "Row,Student Name,Photo Key,Status,Suggested File\n";
+                analysis.missing.forEach(m => {
+                    const rowNum = m.index + 1;
+                    const name = `"${m.studentName.replace(/"/g, '""')}"`;
+                    const key = `"${m.photoKey.replace(/"/g, '""')}"`;
+                    const sug = m.suggestedFile ? `"${m.suggestedFile.name}"` : 'None';
+                    csvContent += `${rowNum},${name},${key},Missing,${sug}\n`;
+                });
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Missing_Photos_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => { if (a.parentNode) document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+            });
+        }
+
+        // Hook into data upload and photo folder loading to update badge automatically
+        const origProcessPhotoFolder = processPhotoFolder;
+        processPhotoFolder = (files) => {
+            origProcessPhotoFolder(files);
+            updateAuditBadge();
+        };
+
+        const origProcessDataFile = processDataFile;
+        if (typeof processDataFile !== 'undefined') {
+            processDataFile = (file) => {
+                origProcessDataFile(file);
+                updateAuditBadge();
+            };
+        }
     </script>
 </body>
 
