@@ -3760,9 +3760,9 @@
 
                     if (matchedFile) {
                         usedFileNames.add(matchedFile.name);
-                        matched.push({ index: idx, row, photoKey, studentName, file: matchedFile, matchType });
+                        matched.push({ index: idx, row, photoKey, studentName, file: matchedFile, matchType, isMissing: false });
                     } else {
-                        missing.push({ index: idx, row, photoKey, studentName, suggestedFile });
+                        missing.push({ index: idx, row, photoKey, studentName, suggestedFile, isMissing: true });
                     }
                 });
 
@@ -3840,6 +3840,17 @@
         };
 
         const renderAuditModal = () => {
+            if (!data || data.length === 0) {
+                if (auditGridTbody) {
+                    auditGridTbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-ink-500 text-xs">No Excel data loaded yet. Please upload an Excel or CSV file in Step 2 to audit photo matches.</td></tr>`;
+                }
+                if (auditStatMatched) auditStatMatched.textContent = 0;
+                if (auditStatMissing) auditStatMissing.textContent = 0;
+                if (auditStatUnused) auditStatUnused.textContent = photoFiles ? photoFiles.size : 0;
+                if (auditStatSuggested) auditStatSuggested.textContent = 0;
+                return;
+            }
+
             const analysis = PhotoAuditEngine.analyze();
             if (!analysis) return;
 
@@ -3868,8 +3879,8 @@
                 const allItems = [...analysis.matched, ...analysis.missing].sort((a, b) => a.index - b.index);
 
                 recordsToDisplay = allItems.filter(item => {
-                    if (filter === 'missing' && !item.missing && item.matchType !== 'none') return false;
-                    if (filter === 'suggested' && !item.suggestedFile) return false;
+                    if (filter === 'missing' && !item.isMissing) return false;
+                    if (filter === 'suggested' && (!item.isMissing || !item.suggestedFile)) return false;
 
                     if (query) {
                         const matchText = `${item.studentName} ${item.photoKey} ${item.file ? item.file.name : ''}`.toLowerCase();
