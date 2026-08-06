@@ -437,7 +437,11 @@
                     </div>
                 </div>
             </div>
-            <div class="flex items-center gap-4 text-xs font-medium text-ink-500">
+            <div class="flex items-center gap-3 text-xs font-medium text-ink-500">
+                <div id="license-status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-tint-sand text-tint-sand-ink font-semibold cursor-pointer hover:bg-surface border border-ink-200 transition-all shadow-sm" title="Click to view license details or deactivate key">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span id="license-badge-text">License: Unverified</span>
+                </div>
                 <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-tint-mint text-tint-mint-ink font-semibold">
                     <span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
                     <span>A4 Print Engine Ready</span>
@@ -1001,7 +1005,86 @@
 
         </div><!-- end #app-grid -->
 
-        <!-- Modals -->
+        <!-- Full-Screen Software Activation Gate (Split Screen Layout) -->
+        <div id="license-gate-modal" class="fixed inset-0 hidden bg-surface flex items-stretch overflow-hidden" style="z-index: 10000;">
+            <!-- Left Side: ID Card Studio Vector Illustration & Branding -->
+            <div class="hidden lg:flex flex-1 bg-surface-sunken border-r border-ink-200/80 p-12 flex-col justify-between relative overflow-hidden">
+                <!-- Background Subtle Grid Pattern -->
+                <div class="absolute inset-0 opacity-40 pointer-events-none" style="background-image: radial-gradient(#D8D6D1 1.2px, transparent 1.2px); background-size: 20px 20px;"></div>
+
+
+
+                <!-- Center Graphic Illustration -->
+                <div class="relative z-10 my-auto flex flex-col items-center justify-center text-center px-6 lg:px-12 w-full">
+                    <div class="w-full max-w-lg xl:max-w-xl 2xl:max-w-2xl mb-8 transition-all">
+                        <svg viewBox="0 0 460 260" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-2xl">
+                            <!-- Card Container Shadow & Shape -->
+                            <rect x="30" y="20" width="400" height="220" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+                            <!-- Top Header Band -->
+                            <path d="M30 36 C 30 27.1634 37.1634 20 46 20 H414 C 422.837 20 430 27.1634 430 36 V90 C 330 110, 150 70, 30 90 Z" fill="#0F172A"/>
+                            <path d="M30 88 C 150 68, 330 108, 430 88" stroke="#5B4CF0" stroke-width="3"/>
+                            <!-- Lanyard Hole Slot -->
+                            <rect x="212" y="28" width="36" height="6" rx="3" fill="#334155"/>
+                            <!-- Avatar Placeholder Circle -->
+                            <circle cx="100" cy="140" r="38" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="2"/>
+                            <circle cx="100" cy="130" r="14" fill="#94A3B8"/>
+                            <path d="M72 166 C72 152, 84 148, 100 148 C116 148, 128 152, 128 166 Z" fill="#94A3B8"/>
+                            <!-- Text Placeholder Skeleton Lines -->
+                            <rect x="160" y="115" width="160" height="14" rx="4" fill="#0F172A"/>
+                            <rect x="160" y="138" width="110" height="10" rx="3" fill="#5B4CF0"/>
+                            <rect x="160" y="158" width="210" height="8" rx="2" fill="#CBD5E1"/>
+                            <rect x="160" y="172" width="180" height="8" rx="2" fill="#CBD5E1"/>
+                            <rect x="160" y="186" width="140" height="8" rx="2" fill="#CBD5E1"/>
+                            <!-- QR Code Placeholder Graphic -->
+                            <rect x="350" y="115" width="55" height="55" rx="6" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5"/>
+                            <rect x="357" y="122" width="16" height="16" fill="#0F172A"/>
+                            <rect x="382" y="122" width="16" height="16" fill="#0F172A"/>
+                            <rect x="357" y="147" width="16" height="16" fill="#0F172A"/>
+                            <rect x="376" y="141" width="8" height="8" fill="#5B4CF0"/>
+                            <!-- Bottom Accent Ribbon -->
+                            <rect x="30" y="226" width="400" height="14" rx="0" fill="#5B4CF0"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl xl:text-2xl 2xl:text-3xl font-bold text-ink-900 mb-3 tracking-tight">Automated Bulk ID Card Studio</h2>
+                    <p class="text-xs xl:text-sm 2xl:text-base text-ink-500 max-w-md xl:max-w-lg leading-relaxed">High-performance desktop solution for batch generating double-sided ID cards, A4 PDF print layouts, and barcode integration.</p>
+                </div>
+
+                <!-- Bottom Footer -->
+                <div class="relative z-10 text-[11px] text-ink-500 flex items-center justify-between">
+                    <span>© 2026 Quantech Systems</span>
+                    <span class="font-mono">v1.0.0-desktop</span>
+                </div>
+            </div>
+
+            <!-- Right Side: Clean Flat Activation Form -->
+            <div class="w-full lg:w-[480px] xl:w-[520px] bg-surface p-8 sm:p-12 md:p-16 flex flex-col justify-between overflow-y-auto">
+                <div class="my-auto max-w-sm mx-auto w-full">
+
+
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-ink-900 tracking-tight mb-2">Software Activation</h2>
+                        <p class="text-xs text-ink-500 leading-relaxed">Enter your license key to unlock the application on this machine.</p>
+                    </div>
+
+                    <div class="space-y-4 mb-8">
+                        <div>
+                            <label class="block text-xs font-semibold text-ink-700 mb-1.5 uppercase tracking-wider">License Key</label>
+                            <input type="text" id="license-key-input" placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" class="w-full px-4 py-3 bg-surface-sunken border border-ink-300 rounded-xl text-xs font-mono text-ink-900 focus:bg-surface focus:border-accent">
+                        </div>
+
+                        <div id="license-error-msg" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-3"></div>
+
+                        <button id="activate-license-btn" class="w-full py-3.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-full transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Activate License</span>
+                        </button>
+                    </div>
+
+                    <div class="pt-6 border-t border-ink-200/70 text-xs text-ink-500 flex items-center justify-between">
+                        <span>Contact administrator for a license key</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div id="loading-modal" class="modal-overlay hidden">
             <div class="modal-content flex flex-col items-center">
@@ -3237,8 +3320,230 @@
                 });
             }
 
+            // --- Keygen.sh License Manager ---
+            const KEYGEN_ACCOUNT_ID = 'mohammedayan76766';
+            const KEYGEN_VALIDATE_URL = `https://api.keygen.sh/v1/accounts/${KEYGEN_ACCOUNT_ID}/licenses/actions/validate-key`;
+            const LICENSE_STORAGE_KEY = 'quantech_license_data';
+
+            const licenseGateModal = document.getElementById('license-gate-modal');
+            const licenseKeyInput = document.getElementById('license-key-input');
+            const activateLicenseBtn = document.getElementById('activate-license-btn');
+            const licenseErrorMsg = document.getElementById('license-error-msg');
+            const licenseStatusBadge = document.getElementById('license-status-badge');
+            const licenseBadgeText = document.getElementById('license-badge-text');
+
+            const LicenseManager = {
+                data: null,
+
+                init() {
+                    const saved = localStorage.getItem(LICENSE_STORAGE_KEY);
+                    if (saved) {
+                        try {
+                            this.data = JSON.parse(saved);
+                        } catch (e) {
+                            this.data = null;
+                        }
+                    }
+
+                    if (this.data && this.data.activated) {
+                        this.unlockApp();
+                        this.validateBackground();
+                    } else {
+                        this.lockApp();
+                    }
+
+                    if (activateLicenseBtn) {
+                        activateLicenseBtn.addEventListener('click', () => this.activateFromInput());
+                    }
+                    if (licenseStatusBadge) {
+                        licenseStatusBadge.addEventListener('click', () => {
+                            if (this.data && this.data.activated) {
+                                const confirmLogout = confirm(`Licensed to: ${this.data.customer_name || 'Active User'}\nKey: ${this.data.license_key}\n\nDo you want to deactivate and transfer this license to another computer?`);
+                                if (confirmLogout) this.deactivateKey();
+                            } else {
+                                this.lockApp();
+                            }
+                        });
+                    }
+                },
+
+                lockApp() {
+                    if (licenseGateModal) {
+                        licenseGateModal.classList.remove('hidden');
+                        licenseGateModal.classList.add('flex');
+                    }
+                    if (licenseBadgeText) {
+                        licenseBadgeText.textContent = 'Unlicensed (Click to Activate)';
+                        if (licenseStatusBadge) licenseStatusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-100 text-red-700 font-semibold cursor-pointer hover:bg-red-200 border border-red-300 transition-all shadow-sm';
+                    }
+                },
+
+                unlockApp() {
+                    if (licenseGateModal) {
+                        licenseGateModal.classList.add('hidden');
+                        licenseGateModal.classList.remove('flex');
+                    }
+                    if (licenseBadgeText && this.data) {
+                        const name = this.data.customer_name ? `Licensed: ${this.data.customer_name}` : 'License: Active';
+                        licenseBadgeText.textContent = name;
+                        if (licenseStatusBadge) licenseStatusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-tint-mint text-tint-mint-ink font-semibold cursor-pointer hover:bg-surface border border-ink-200 transition-all shadow-sm';
+                    }
+                },
+
+                getFingerprint() {
+                    let fp = localStorage.getItem('quantech_machine_fingerprint');
+                    if (!fp) {
+                        fp = 'mac_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                        localStorage.setItem('quantech_machine_fingerprint', fp);
+                    }
+                    return fp;
+                },
+
+                async activateFromInput() {
+                    const key = licenseKeyInput ? licenseKeyInput.value.trim() : '';
+                    if (!key) {
+                        this.showError('Please enter your license key.');
+                        return;
+                    }
+
+                    this.clearError();
+                    activateLicenseBtn.disabled = true;
+                    activateLicenseBtn.innerHTML = '<span>Activating...</span>';
+
+                    try {
+                        const fp = this.getFingerprint();
+
+                        // 1. Register/Activate Machine for this license
+                        try {
+                            await fetch(`https://api.keygen.sh/v1/accounts/${KEYGEN_ACCOUNT_ID}/machines`, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/vnd.api+json',
+                                    'Content-Type': 'application/vnd.api+json',
+                                    'Authorization': `License ${key}`
+                                },
+                                body: JSON.stringify({
+                                    data: {
+                                        type: 'machines',
+                                        attributes: {
+                                            fingerprint: fp,
+                                            platform: navigator.platform || 'Desktop',
+                                            name: `Desktop_${navigator.platform || 'Machine'}`
+                                        }
+                                    }
+                                })
+                            });
+                        } catch (_) {}
+
+                        // 2. Validate Key with Machine Scope
+                        const res = await fetch(KEYGEN_VALIDATE_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/vnd.api+json',
+                                'Content-Type': 'application/vnd.api+json'
+                            },
+                            body: JSON.stringify({
+                                meta: {
+                                    key: key,
+                                    scope: { fingerprint: fp }
+                                }
+                            })
+                        });
+
+                        const payload = await res.json();
+                        const meta = payload.meta || {};
+
+                        if (res.ok && (meta.valid || meta.code === 'VALID')) {
+                            const attr = (payload.data && payload.data.attributes) || {};
+                            this.data = {
+                                activated: true,
+                                license_key: key,
+                                customer_name: attr.name || 'Valued Licensee',
+                                expires_at: attr.expiry || null,
+                                activated_at: new Date().toISOString()
+                            };
+                            localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(this.data));
+                            this.unlockApp();
+                            toast(`License Activated! Welcome ${this.data.customer_name}`, 'success', 5000);
+                        } else {
+                            const errorReason = meta.detail || meta.message || (payload.errors && payload.errors[0] && payload.errors[0].detail) || 'Invalid or expired license key.';
+                            this.showError(`Activation failed: ${errorReason}`);
+                        }
+                    } catch (err) {
+                        this.showError(`Connection error: ${err.message}. Check your internet connection to activate.`);
+                    } finally {
+                        activateLicenseBtn.disabled = false;
+                        activateLicenseBtn.innerHTML = '<span>Activate License</span>';
+                    }
+                },
+
+                async validateBackground() {
+                    if (!this.data || !this.data.license_key) return;
+                    try {
+                        const res = await fetch(KEYGEN_VALIDATE_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/vnd.api+json',
+                                'Content-Type': 'application/vnd.api+json'
+                            },
+                            body: JSON.stringify({
+                                meta: {
+                                    key: this.data.license_key,
+                                    scope: {
+                                        fingerprint: this.getFingerprint()
+                                    }
+                                }
+                            })
+                        });
+                        const payload = await res.json();
+                        const meta = payload.meta || {};
+                        if (res.ok && meta.valid === false) {
+                            this.data = null;
+                            localStorage.removeItem(LICENSE_STORAGE_KEY);
+                            this.lockApp();
+                            toast('Your license key is no longer valid or has been revoked.', 'error', 6000);
+                        }
+                    } catch (_) {
+                        // Offline resilience: allow cached token to continue working!
+                    }
+                },
+
+                async deactivateKey() {
+                    if (this.data && this.data.license_key) {
+                        try {
+                            const fp = this.getFingerprint();
+                            await fetch(`https://api.keygen.sh/v1/accounts/${KEYGEN_ACCOUNT_ID}/machines/${fp}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Accept': 'application/vnd.api+json',
+                                    'Authorization': `License ${this.data.license_key}`
+                                }
+                            });
+                        } catch (_) {}
+                    }
+                    this.data = null;
+                    localStorage.removeItem(LICENSE_STORAGE_KEY);
+                    this.lockApp();
+                    toast('License deactivated and machine unbinded from server.', 'info');
+                },
+
+                showError(msg) {
+                    if (licenseErrorMsg) {
+                        licenseErrorMsg.textContent = msg;
+                        licenseErrorMsg.classList.remove('hidden');
+                    }
+                },
+                clearError() {
+                    if (licenseErrorMsg) {
+                        licenseErrorMsg.textContent = '';
+                        licenseErrorMsg.classList.add('hidden');
+                    }
+                }
+            };
+
             // --- Initial Setup ---
             const initialSetup = () => {
+                LicenseManager.init();
                 // Set canvas dimensions based on orientation
                 const w = HORIZONTAL_WIDTH;
                 const h = HORIZONTAL_HEIGHT;
@@ -3585,11 +3890,21 @@
                 });
             }
 
+            const getThumbUrl = (file) => {
+                if (!file) return '';
+                try {
+                    return URL.createObjectURL(file);
+                } catch (_) {
+                    return '';
+                }
+            };
+
             let html = '';
             if (recordsToDisplay.length === 0) {
                 html = `<tr><td colspan="5" class="p-8 text-center text-ink-500 text-xs">No records found matching your filter criteria.</td></tr>`;
             } else if (filter === 'unused') {
                 recordsToDisplay.forEach((item, idx) => {
+                    const imgUrl = getThumbUrl(item.file);
                     html += `
                     <tr class="hover:bg-surface-sunken/50 transition-colors">
                         <td class="p-2.5 text-center font-mono text-ink-500">${idx + 1}</td>
@@ -3599,22 +3914,18 @@
                         </td>
                         <td class="p-2.5 text-center">
                             <div class="w-10 h-10 mx-auto rounded border border-ink-200 overflow-hidden bg-surface-sunken flex items-center justify-center">
-                                <img id="unused-thumb-${idx}" class="w-full h-full object-cover">
+                                ${imgUrl ? `<img src="${imgUrl}" class="w-full h-full object-cover" alt="photo">` : `<span class="text-[10px] text-ink-400">No Img</span>`}
                             </div>
                         </td>
                         <td class="p-2.5 text-ink-500">File in photo folder not assigned to any student.</td>
                     </tr>`;
-
-                    createPhotoDataURL(item.file).then(url => {
-                        const imgEl = document.getElementById(`unused-thumb-${idx}`);
-                        if (imgEl) imgEl.src = url;
-                    }).catch(() => {});
                 });
             } else {
                 recordsToDisplay.forEach((item) => {
                     const isMissing = !item.file;
                     const isCustom = item.matchType === 'custom';
                     const isSuggested = Boolean(item.suggestedFile);
+                    const imgUrl = getThumbUrl(item.file || (isSuggested ? item.suggestedFile : null));
 
                     let statusBadge = '';
                     if (isCustom) {
@@ -3644,7 +3955,7 @@
                         <td class="p-2.5 text-center">${statusBadge}</td>
                         <td class="p-2.5 text-center">
                             <div class="w-10 h-10 mx-auto rounded border border-ink-200 overflow-hidden bg-surface-sunken flex items-center justify-center">
-                                ${item.file ? `<img id="audit-thumb-${item.index}" class="w-full h-full object-cover">` : `<span class="text-[10px] text-ink-400">No Img</span>`}
+                                ${imgUrl ? `<img src="${imgUrl}" class="w-full h-full object-cover" alt="photo">` : `<span class="text-[10px] text-ink-400">No Img</span>`}
                             </div>
                         </td>
                         <td class="p-2.5">
@@ -3660,13 +3971,6 @@
                             </div>
                         </td>
                     </tr>`;
-
-                    if (item.file) {
-                        createPhotoDataURL(item.file).then(url => {
-                            const imgEl = document.getElementById(`audit-thumb-${item.index}`);
-                            if (imgEl) imgEl.src = url;
-                        }).catch(() => {});
-                    }
                 });
             }
 

@@ -1,0 +1,48 @@
+{
+  "name": "quantech-id-card-generator",
+  "version": "1.0.0",
+  "description": "Quantech ID Card Generator Enterprise Pro for macOS and Windows",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:dmg": "electron-builder --mac dmg",
+    "build:win": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.quantech.idcardgen",
+    "productName": "Quantech ID Card Generator",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Quantech ID Card Generator"
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.0"
+  }
+}
