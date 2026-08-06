@@ -3890,11 +3890,21 @@
                 });
             }
 
+            const getThumbUrl = (file) => {
+                if (!file) return '';
+                try {
+                    return URL.createObjectURL(file);
+                } catch (_) {
+                    return '';
+                }
+            };
+
             let html = '';
             if (recordsToDisplay.length === 0) {
                 html = `<tr><td colspan="5" class="p-8 text-center text-ink-500 text-xs">No records found matching your filter criteria.</td></tr>`;
             } else if (filter === 'unused') {
                 recordsToDisplay.forEach((item, idx) => {
+                    const imgUrl = getThumbUrl(item.file);
                     html += `
                     <tr class="hover:bg-surface-sunken/50 transition-colors">
                         <td class="p-2.5 text-center font-mono text-ink-500">${idx + 1}</td>
@@ -3904,22 +3914,18 @@
                         </td>
                         <td class="p-2.5 text-center">
                             <div class="w-10 h-10 mx-auto rounded border border-ink-200 overflow-hidden bg-surface-sunken flex items-center justify-center">
-                                <img id="unused-thumb-${idx}" class="w-full h-full object-cover">
+                                ${imgUrl ? `<img src="${imgUrl}" class="w-full h-full object-cover" alt="photo">` : `<span class="text-[10px] text-ink-400">No Img</span>`}
                             </div>
                         </td>
                         <td class="p-2.5 text-ink-500">File in photo folder not assigned to any student.</td>
                     </tr>`;
-
-                    createPhotoDataURL(item.file).then(url => {
-                        const imgEl = document.getElementById(`unused-thumb-${idx}`);
-                        if (imgEl) imgEl.src = url;
-                    }).catch(() => {});
                 });
             } else {
                 recordsToDisplay.forEach((item) => {
                     const isMissing = !item.file;
                     const isCustom = item.matchType === 'custom';
                     const isSuggested = Boolean(item.suggestedFile);
+                    const imgUrl = getThumbUrl(item.file || (isSuggested ? item.suggestedFile : null));
 
                     let statusBadge = '';
                     if (isCustom) {
@@ -3949,7 +3955,7 @@
                         <td class="p-2.5 text-center">${statusBadge}</td>
                         <td class="p-2.5 text-center">
                             <div class="w-10 h-10 mx-auto rounded border border-ink-200 overflow-hidden bg-surface-sunken flex items-center justify-center">
-                                ${item.file ? `<img id="audit-thumb-${item.index}" class="w-full h-full object-cover">` : `<span class="text-[10px] text-ink-400">No Img</span>`}
+                                ${imgUrl ? `<img src="${imgUrl}" class="w-full h-full object-cover" alt="photo">` : `<span class="text-[10px] text-ink-400">No Img</span>`}
                             </div>
                         </td>
                         <td class="p-2.5">
@@ -3965,13 +3971,6 @@
                             </div>
                         </td>
                     </tr>`;
-
-                    if (item.file) {
-                        createPhotoDataURL(item.file).then(url => {
-                            const imgEl = document.getElementById(`audit-thumb-${item.index}`);
-                            if (imgEl) imgEl.src = url;
-                        }).catch(() => {});
-                    }
                 });
             }
 
