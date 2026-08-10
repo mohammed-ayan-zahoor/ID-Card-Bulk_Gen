@@ -2855,29 +2855,25 @@
             });
 
 
-            addAllHeadersBtn.addEventListener('click', () => {
-                if (headers.length === 0) return;
-                let yOffset = 0.1;
-                headers.forEach(header => {
-                    // Check if the header name contains "photo" or "image" and make it a photo field
-                    const type = header.toLowerCase().includes('photo') || header.toLowerCase().includes('image') ? 'photo' : 'text';
+            if (addAllHeadersBtn) {
+                addAllHeadersBtn.addEventListener('click', () => {
+                    if (headers.length === 0) return;
+                    let yOffset = 0.1;
+                    headers.forEach(header => {
+                        const type = header.toLowerCase().includes('photo') || header.toLowerCase().includes('image') ? 'photo' : 'text';
+                        const options = type === 'photo' ?
+                            { width: 0.25, height: 0.3, x: 0.7, y: 0.1, shape: 'circle' } :
+                            { y: yOffset };
 
-                    // For photo fields, adjust the height and width proportions and make it circular
-                    const options = type === 'photo' ?
-                        { width: 0.25, height: 0.3, x: 0.7, y: 0.1, shape: 'circle' } :
-                        { y: yOffset };
-
-                    addPlaceholder({ key: header, type, ...options });
-
-                    // Only increment yOffset for text fields
-                    if (type === 'text') yOffset += 0.1;
+                        addPlaceholder({ key: header, type, ...options });
+                        if (type === 'text') yOffset += 0.1;
+                    });
                 });
-            });
-            orientationHorizontalBtn.addEventListener('click', () => setOrientation('horizontal'));
-            orientationVerticalBtn.addEventListener('click', () => setOrientation('vertical'));
-            // Clicking the bare canvas background: switch active side + deselect any field.
-            // Using mousedown (not click) so it fires before any field's own mousedown handler,
-            // but we only act when the click target is the background itself, not a field.
+            }
+
+            if (orientationHorizontalBtn) orientationHorizontalBtn.addEventListener('click', () => setOrientation('horizontal'));
+            if (orientationVerticalBtn) orientationVerticalBtn.addEventListener('click', () => setOrientation('vertical'));
+
             const onCanvasBgMousedown = (e, side) => {
                 const isBackground = e.target === frontPlaceholderWrapper ||
                                      e.target === backPlaceholderWrapper  ||
@@ -2886,21 +2882,22 @@
                 if (!isBackground) return;          // field clicked — let it handle itself
                 if (activeSide !== side) {
                     activeSide = side;
-                    frontCanvasWrapper.classList.toggle('active', side === 'front');
-                    backCanvasWrapper.classList.toggle('active', side === 'back');
+                    if (frontCanvasWrapper) frontCanvasWrapper.classList.toggle('active', side === 'front');
+                    if (backCanvasWrapper) backCanvasWrapper.classList.toggle('active', side === 'back');
                 }
                 setActivePlaceholder(null);         // deselect
             };
-            frontCanvasWrapper.addEventListener('mousedown', (e) => onCanvasBgMousedown(e, 'front'));
-            backCanvasWrapper.addEventListener('mousedown',  (e) => onCanvasBgMousedown(e, 'back'));
-            addTextBtn.addEventListener('click', () => addPlaceholder({ key: fieldNameInput.value || 'New Text', type: 'text' }));
-            addLabelBtn.addEventListener('click', () => {
-                const labelText = fieldNameInput.value || 'Label:';
+
+            if (frontCanvasWrapper) frontCanvasWrapper.addEventListener('mousedown', (e) => onCanvasBgMousedown(e, 'front'));
+            if (backCanvasWrapper) backCanvasWrapper.addEventListener('mousedown',  (e) => onCanvasBgMousedown(e, 'back'));
+            if (addTextBtn) addTextBtn.addEventListener('click', () => addPlaceholder({ key: (fieldNameInput ? fieldNameInput.value : '') || 'New Text', type: 'text' }));
+            if (addLabelBtn) addLabelBtn.addEventListener('click', () => {
+                const labelText = (fieldNameInput ? fieldNameInput.value : '') || 'Label:';
                 addPlaceholder({ key: 'label', type: 'text', staticText: labelText });
             });
-            addPhotoBtn.addEventListener('click', () => addPlaceholder({ key: fieldNameInput.value || 'Photo', type: 'photo', shape: 'circle' }));
-            addQrBtn.addEventListener('click', () => {
-                const qrField = qrFieldSelect.value || fieldNameInput.value || 'ID';
+            if (addPhotoBtn) addPhotoBtn.addEventListener('click', () => addPlaceholder({ key: (fieldNameInput ? fieldNameInput.value : '') || 'Photo', type: 'photo', shape: 'circle' }));
+            if (addQrBtn) addQrBtn.addEventListener('click', () => {
+                const qrField = (qrFieldSelect ? qrFieldSelect.value : '') || (fieldNameInput ? fieldNameInput.value : '') || 'ID';
                 if (data.length > 0 && !headers.includes(qrField) && qrField !== 'ID') {
                     toast(`Warning: field "${qrField}" not found in data — QR may be empty.`, 'warn');
                 }
@@ -2929,27 +2926,30 @@
             }
 
             // Sign / extra folder
-            signFolderInput.addEventListener('change', (e) => {
-                const files = Array.from(e.target.files);
-                const col = signColumnInput.value.trim();
-                if (!col) { toast('Please enter the Excel column name this folder maps to.', 'warn'); return; }
-                signColumnName = col;
-                const count = processImageFolder(files, signFiles);
-                if (count > 0) {
-                    signFolderStatus.classList.remove('hidden');
-                    signFolderCount.textContent = `${count} images loaded for column "${col}"`;
-                    toast(`Sign folder loaded: ${count} images mapped to "${col}"`, 'success');
-                } else {
-                    toast('No valid images found in that folder.', 'warn');
-                }
-            });
+            if (signFolderInput) {
+                signFolderInput.addEventListener('change', (e) => {
+                    const files = Array.from(e.target.files);
+                    const col = (signColumnInput ? signColumnInput.value : '').trim();
+                    if (!col) { toast('Please enter the Excel column name this folder maps to.', 'warn'); return; }
+                    signColumnName = col;
+                    const count = processImageFolder(files, signFiles);
+                    if (count > 0) {
+                        if (signFolderStatus) signFolderStatus.classList.remove('hidden');
+                        if (signFolderCount) signFolderCount.textContent = `${count} images loaded for column "${col}"`;
+                        toast(`Sign folder loaded: ${count} images mapped to "${col}"`, 'success');
+                    } else {
+                        toast('No valid images found in that folder.', 'warn');
+                    }
+                });
+            }
 
             // Zoom control
-            zoomSelect.addEventListener('change', (e) => {
-                const zoomLevel = e.target.value === 'actual' ? 'actual' : parseFloat(e.target.value);
-                applyZoom(zoomLevel);
-            });
-            // QR Code button event handler already defined above
+            if (zoomSelect) {
+                zoomSelect.addEventListener('change', (e) => {
+                    const zoomLevel = e.target.value === 'actual' ? 'actual' : parseFloat(e.target.value);
+                    applyZoom(zoomLevel);
+                });
+            }
 
             // --- Preview with Prev/Next navigation & Live Editing ---
             let _previewVisible = false;
@@ -2959,8 +2959,8 @@
             const updatePreviewEditState = () => {
                 _allowPreviewEditing = allowEditPreviewCheckbox ? allowEditPreviewCheckbox.checked : false;
                 const displayStyle = (_previewVisible && !_allowPreviewEditing) ? 'none' : 'block';
-                frontPlaceholderWrapper.style.display = displayStyle;
-                backPlaceholderWrapper.style.display = displayStyle;
+                if (frontPlaceholderWrapper) frontPlaceholderWrapper.style.display = displayStyle;
+                if (backPlaceholderWrapper) backPlaceholderWrapper.style.display = displayStyle;
             };
 
             if (allowEditPreviewCheckbox) {
@@ -2974,7 +2974,7 @@
 
             const showPreviewRecord = async (idx) => {
                 previewIndex = Math.max(0, Math.min(idx, data.length - 1));
-                previewIndexEl.textContent = `${previewIndex + 1} / ${data.length}`;
+                if (previewIndexEl) previewIndexEl.textContent = `${previewIndex + 1} / ${data.length}`;
                 await drawAllCanvases(data[previewIndex]);
                 updatePreviewEditState();
                 if (_previewVisible && _allowPreviewEditing) {
@@ -2983,34 +2983,39 @@
                 }
             };
 
-            previewBtn.addEventListener('click', async () => {
-                if (data.length === 0) { toast('Please upload data to preview.', 'warn'); return; }
-                previewNav.classList.remove('hidden');
-                previewBtn.classList.add('hidden');
-                _previewVisible = true;
-                await showPreviewRecord(0);
-            });
+            if (previewBtn) {
+                previewBtn.addEventListener('click', async () => {
+                    if (data.length === 0) { toast('Please upload data to preview.', 'warn'); return; }
+                    if (previewNav) previewNav.classList.remove('hidden');
+                    previewBtn.classList.add('hidden');
+                    _previewVisible = true;
+                    await showPreviewRecord(0);
+                });
+            }
 
-            previewPrevBtn.addEventListener('click', () => showPreviewRecord(previewIndex - 1));
-            previewNextBtn.addEventListener('click', () => showPreviewRecord(previewIndex + 1));
+            if (previewPrevBtn) previewPrevBtn.addEventListener('click', () => showPreviewRecord(previewIndex - 1));
+            if (previewNextBtn) previewNextBtn.addEventListener('click', () => showPreviewRecord(previewIndex + 1));
 
-            previewExitBtn.addEventListener('click', () => {
-                _previewVisible = false;
-                frontPlaceholderWrapper.style.display = 'block';
-                backPlaceholderWrapper.style.display = 'block';
-                drawAllCanvases();
-                syncPlaceholderWrappers();
-                renderPlaceholders();
-                previewNav.classList.add('hidden');
-                previewBtn.classList.remove('hidden');
-            });
+            if (previewExitBtn) {
+                previewExitBtn.addEventListener('click', () => {
+                    _previewVisible = false;
+                    if (frontPlaceholderWrapper) frontPlaceholderWrapper.style.display = 'block';
+                    if (backPlaceholderWrapper) backPlaceholderWrapper.style.display = 'block';
+                    drawAllCanvases();
+                    syncPlaceholderWrappers();
+                    renderPlaceholders();
+                    if (previewNav) previewNav.classList.add('hidden');
+                    if (previewBtn) previewBtn.classList.remove('hidden');
+                });
+            }
 
             // --- PDF Generation (Always vertical 54mm x 85.6mm cards on A4) ---
-            generatePdfBtn.addEventListener('click', async () => {
-                if (data.length === 0) { toast('Please upload data and add fields before generating.', 'warn'); return; }
-                loadingModal.classList.remove('hidden');
-                loadingText.textContent = 'Generating A4 PDF...';
-                showProgress(0);
+            if (generatePdfBtn) {
+                generatePdfBtn.addEventListener('click', async () => {
+                    if (data.length === 0) { toast('Please upload data and add fields before generating.', 'warn'); return; }
+                    if (loadingModal) loadingModal.classList.remove('hidden');
+                    if (loadingText) loadingText.textContent = 'Generating A4 PDF...';
+                    showProgress(0);
 
                 try {
                     const { jsPDF } = window.jspdf;
