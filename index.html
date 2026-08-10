@@ -1238,6 +1238,7 @@
             // Sign / extra image folder
             let signFiles = new Map();  // Map of value -> file, for the custom column
             let signColumnName = '';    // Excel column this folder maps to
+            let userCustomBg = { front: false, back: false };
             const loadedGoogleFonts = new Set(['Inter', 'Arial', 'Times New Roman', 'Helvetica', 'Georgia', 'Verdana', 'Courier New']);
 
             const ensureGoogleFontLoaded = (fontName) => {
