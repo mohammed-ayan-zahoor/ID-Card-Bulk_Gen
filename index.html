@@ -2896,8 +2896,10 @@
                         parsedData = parsedData.filter(row => row && Object.keys(row).length > 0 && Object.values(row).some(v => v !== null && v !== undefined && String(v).trim() !== ''));
 
                         data = parsedData;
+                        window.data = data;
                         if (data.length > 0) {
                             headers = Object.keys(data[0]);
+                            window.headers = headers;
                             qrFieldSelect.innerHTML = '<option value="">Select a field from data</option>';
                             headers.forEach(header => {
                                 const option = document.createElement('option');
@@ -3984,38 +3986,43 @@
             viewMode: 'grid',
 
             analyze() {
-                if (!data || data.length === 0) return null;
+                const dataset = (typeof data !== 'undefined' ? data : window.data) || [];
+                const headerList = (typeof headers !== 'undefined' ? headers : window.headers) || [];
+                if (!dataset || dataset.length === 0) return null;
 
-                const photoCol = headers.find(h => {
+                const photoCol = headerList.find(h => {
                     const l = h.toLowerCase();
                     return l.includes('photo') || l.includes('image') || l.includes('pic') || l.includes('sign');
-                }) || headers.find(h => {
+                }) || headerList.find(h => {
                     const l = h.toLowerCase();
                     return l.includes('id') || l.includes('roll') || l.includes('adm') || l.includes('code');
-                }) || headers[0];
+                }) || headerList[0];
 
-                const nameCol = headers.find(h => {
+                const nameCol = headerList.find(h => {
                     const l = h.toLowerCase();
                     return l.includes('name') || l.includes('student');
-                }) || headers[0];
+                }) || headerList[0];
 
                 const matched = [];
                 const missing = [];
                 const usedFileNames = new Set();
 
+                const photosMap = (typeof photoFiles !== 'undefined' ? photoFiles : window.photoFiles) || new Map();
+                const bindingsMap = (typeof customPhotoBindings !== 'undefined' ? customPhotoBindings : window.customPhotoBindings) || new Map();
+
                 // Compute unique files available in photoFiles map
                 const availableFilesMap = new Map();
-                if (photoFiles && photoFiles.size > 0) {
-                    for (const [_, file] of photoFiles.entries()) {
+                if (photosMap && photosMap.size > 0) {
+                    for (const [_, file] of photosMap.entries()) {
                         availableFilesMap.set(file.name, file);
                     }
                 }
 
-                data.forEach((row, idx) => {
+                dataset.forEach((row, idx) => {
                     let photoKey = String(getRowValue(row, photoCol) || '').trim();
                     if (!photoKey) {
                         // Fallback column checks
-                        for (const h of headers) {
+                        for (const h of headerList) {
                             const val = String(getRowValue(row, h) || '').trim();
                             if (val) { photoKey = val; break; }
                         }
@@ -4112,7 +4119,8 @@
         const auditGraphSvg = document.getElementById('audit-graph-svg');
 
         const updateAuditBadge = () => {
-            if (!data || data.length === 0) {
+            const dataset = (typeof data !== 'undefined' ? data : window.data) || [];
+            if (!dataset || dataset.length === 0) {
                 if (openPhotoAuditBtn) openPhotoAuditBtn.classList.add('hidden');
                 if (sidebarPhotoAuditBtn) sidebarPhotoAuditBtn.classList.add('hidden');
                 return;
