@@ -2148,10 +2148,7 @@
                 if (p.type === 'text') {
                     content += `
                     <div>
-                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1 flex items-center justify-between">
-                            <span>Font Family</span>
-                            <span class="text-[10px] text-accent lowercase font-normal">Google Fonts</span>
-                        </label>
+                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Font Family (Select or Type Any Google Font)</label>
                         <select onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900 mb-1.5 font-medium">
                             <optgroup label="Modern Sans-Serif">
                                 <option value="Inter" ${(p.fontFamily || 'Inter') === 'Inter' ? 'selected' : ''}>Inter (Default)</option>
@@ -2204,7 +2201,27 @@
                                 <option value="Courier New" ${p.fontFamily === 'Courier New' ? 'selected' : ''}>Courier New</option>
                             </optgroup>
                         </select>
-                        <input type="text" placeholder="Or type ANY Google Font name (e.g. Josefin Sans)..." value="${p.fontFamily || ''}" onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" oninput="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900">
+                        <input type="text" list="gfonts-datalist" placeholder="Or type any font name (e.g., Josefin Sans)..." value="${p.fontFamily || ''}" onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" oninput="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900">
+                        <datalist id="gfonts-datalist">
+                            <option value="Poppins"></option>
+                            <option value="Inter"></option>
+                            <option value="Roboto"></option>
+                            <option value="Montserrat"></option>
+                            <option value="Bebas Neue"></option>
+                            <option value="Playfair Display"></option>
+                            <option value="Cinzel"></option>
+                            <option value="Dancing Script"></option>
+                            <option value="Caveat"></option>
+                            <option value="Josefin Sans"></option>
+                            <option value="Fira Code"></option>
+                            <option value="Oswald"></option>
+                            <option value="Raleway"></option>
+                            <option value="Space Grotesk"></option>
+                            <option value="Outfit"></option>
+                            <option value="Urbanist"></option>
+                            <option value="Satisfy"></option>
+                            <option value="Great Vibes"></option>
+                        </datalist>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
@@ -2791,38 +2808,57 @@
                 reader.onload = (event) => {
                     try {
                         let parsedData = [];
-                        if (file.name.endsWith('.csv')) {
-                            // Proper quoted-CSV parser — handles commas inside quoted fields
-                            const content = event.target.result;
-                            const lines = content.split(/\r?\n/);
-                            const parseCSVLine = (line) => {
-                                const result = [];
-                                let cur = '', inQuote = false;
-                                for (let i = 0; i < line.length; i++) {
-                                    const ch = line[i];
-                                    if (ch === '"') {
-                                        if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
-                                        else inQuote = !inQuote;
-                                    } else if (ch === ',' && !inQuote) {
-                                        result.push(cur.trim()); cur = '';
-                                    } else { cur += ch; }
+                        const arrayBuffer = event.target.result;
+                        const filenameLower = file.name.toLowerCase();
+
+                        if (filenameLower.endsWith('.csv')) {
+                            try {
+                                const dataArr = new Uint8Array(arrayBuffer);
+                                const workbook = XLSX.read(dataArr, { type: 'array' });
+                                if (workbook && workbook.SheetNames && workbook.SheetNames.length > 0) {
+                                    const sheetName = workbook.SheetNames[0];
+                                    parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
                                 }
-                                result.push(cur.trim());
-                                return result;
-                            };
-                            const csvHeaders = parseCSVLine(lines[0]);
-                            for (let i = 1; i < lines.length; i++) {
-                                if (!lines[i].trim()) continue;
-                                const values = parseCSVLine(lines[i]);
-                                const rowData = {};
-                                csvHeaders.forEach((h, idx) => { rowData[h] = values[idx] || ''; });
-                                parsedData.push(rowData);
+                            } catch (csvErr) {
+                                // Manual fallback for raw text CSV files
+                                const content = new TextDecoder('utf-8').decode(arrayBuffer);
+                                const lines = content.split(/\r?\n/);
+                                const parseCSVLine = (line) => {
+                                    const result = [];
+                                    let cur = '', inQuote = false;
+                                    for (let i = 0; i < line.length; i++) {
+                                        const ch = line[i];
+                                        if (ch === '"') {
+                                            if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
+                                            else inQuote = !inQuote;
+                                        } else if (ch === ',' && !inQuote) {
+                                            result.push(cur.trim()); cur = '';
+                                        } else { cur += ch; }
+                                    }
+                                    result.push(cur.trim());
+                                    return result;
+                                };
+                                const csvHeaders = parseCSVLine(lines[0]);
+                                for (let i = 1; i < lines.length; i++) {
+                                    if (!lines[i].trim()) continue;
+                                    const values = parseCSVLine(lines[i]);
+                                    const rowData = {};
+                                    csvHeaders.forEach((h, idx) => { rowData[h] = values[idx] || ''; });
+                                    parsedData.push(rowData);
+                                }
                             }
                         } else {
-                            const workbook = XLSX.read(event.target.result, { type: 'binary' });
+                            const dataArr = new Uint8Array(arrayBuffer);
+                            const workbook = XLSX.read(dataArr, { type: 'array' });
+                            if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+                                throw new Error("No worksheets found in file.");
+                            }
                             const sheetName = workbook.SheetNames[0];
-                            parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                            parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
                         }
+
+                        // Filter empty rows
+                        parsedData = parsedData.filter(row => row && Object.keys(row).length > 0 && Object.values(row).some(v => v !== null && v !== undefined && String(v).trim() !== ''));
 
                         data = parsedData;
                         if (data.length > 0) {
@@ -2835,13 +2871,14 @@
                                 qrFieldSelect.appendChild(option);
                             });
                             qrFieldSelect.disabled = false;
-                            document.getElementById('qr-field-container').classList.remove('opacity-70');
+                            const qrContainer = document.getElementById('qr-field-container');
+                            if (qrContainer) qrContainer.classList.remove('opacity-70');
                             const addAllWrap = document.getElementById('ai-controls');
                             if (addAllWrap) addAllWrap.classList.remove('opacity-50');
-                            addAllHeadersBtn.disabled = false;
-                            previewBtn.disabled = false;
-                            generateZipBtn.disabled = false;
-                            generatePdfBtn.disabled = false;
+                            if (addAllHeadersBtn) addAllHeadersBtn.disabled = false;
+                            if (previewBtn) previewBtn.disabled = false;
+                            if (generateZipBtn) generateZipBtn.disabled = false;
+                            if (generatePdfBtn) generatePdfBtn.disabled = false;
                             updateAuditBadge();
                             toast(`${data.length} records loaded successfully!`, 'success');
                         } else {
@@ -2851,8 +2888,7 @@
                         toast(`Error parsing file: ${error.message}`, 'error');
                     }
                 };
-                if (file.name.endsWith('.csv')) reader.readAsText(file);
-                else reader.readAsBinaryString(file);
+                reader.readAsArrayBuffer(file);
             });
 
 
