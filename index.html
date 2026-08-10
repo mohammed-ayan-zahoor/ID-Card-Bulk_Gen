@@ -3127,60 +3127,62 @@
                     pdf.save(filename);
                     toast('PDF generated successfully!', 'success');
                 } catch (error) {
-                    errorText.textContent = `Error generating PDF: ${error.message}`;
-                    errorModal.classList.remove('hidden');
+                    if (errorText) errorText.textContent = `Error generating PDF: ${error.message}`;
+                    if (errorModal) errorModal.classList.remove('hidden');
                 } finally {
-                    loadingModal.classList.add('hidden');
+                    if (loadingModal) loadingModal.classList.add('hidden');
                     hideProgress();
                 }
-            });
+                });
+            }
 
 
             // ZIP Generation
-            generateZipBtn.addEventListener('click', async () => {
-                if (data.length === 0) { toast('Please upload data and add fields before generating.', 'warn'); return; }
-                setActivePlaceholder(null);
-                loadingModal.classList.remove('hidden');
-                showProgress(0);
+            if (generateZipBtn) {
+                generateZipBtn.addEventListener('click', async () => {
+                    if (data.length === 0) { toast('Please upload data and add fields before generating.', 'warn'); return; }
+                    setActivePlaceholder(null);
+                    if (loadingModal) loadingModal.classList.remove('hidden');
+                    showProgress(0);
 
-                try {
-                    const zip = new JSZip();
-                    const tempCanvas = document.createElement('canvas');
-                    const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
-                    const h = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
-                    tempCanvas.width = w; tempCanvas.height = h;
-                    const tempCtx = tempCanvas.getContext('2d');
+                    try {
+                        const zip = new JSZip();
+                        const tempCanvas = document.createElement('canvas');
+                        const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                        const h = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                        tempCanvas.width = w; tempCanvas.height = h;
+                        const tempCtx = tempCanvas.getContext('2d');
 
-                    for (let i = 0; i < data.length; i++) {
-                        // Use first column value as name fallback
-                        const firstVal = Object.values(data[i])[0];
-                        const baseName = `ID_Card_${data[i].ID ?? data[i].id ?? firstVal ?? (i + 1)}`;
-                        loadingText.textContent = `Generating ZIP... (${i + 1} / ${data.length})`;
-                        showProgress(Math.round(((i + 1) / data.length) * 100), `Card ${i + 1} of ${data.length}`);
+                        for (let i = 0; i < data.length; i++) {
+                            const firstVal = Object.values(data[i])[0];
+                            const baseName = `ID_Card_${data[i].ID ?? data[i].id ?? firstVal ?? (i + 1)}`;
+                            if (loadingText) loadingText.textContent = `Generating ZIP... (${i + 1} / ${data.length})`;
+                            showProgress(Math.round(((i + 1) / data.length) * 100), `Card ${i + 1} of ${data.length}`);
 
-                        await drawCardOnContext(tempCtx, 'front', w, h, data[i]);
-                        zip.file(`${baseName}_Front.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
+                            await drawCardOnContext(tempCtx, 'front', w, h, data[i]);
+                            zip.file(`${baseName}_Front.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
 
-                        await drawCardOnContext(tempCtx, 'back', w, h, data[i]);
-                        zip.file(`${baseName}_Back.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
+                            await drawCardOnContext(tempCtx, 'back', w, h, data[i]);
+                            zip.file(`${baseName}_Back.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
+                        }
+
+                        const content = await zip.generateAsync({ type: 'blob' });
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(content);
+                        link.download = 'ID_Cards_Double_Sided.zip';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        toast('ZIP downloaded successfully!', 'success');
+                    } catch (error) {
+                        if (errorText) errorText.textContent = `Error generating ZIP: ${error.message}`;
+                        if (errorModal) errorModal.classList.remove('hidden');
+                    } finally {
+                        if (loadingModal) loadingModal.classList.add('hidden');
+                        hideProgress();
                     }
-
-                    const content = await zip.generateAsync({ type: 'blob' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(content);
-                    link.download = 'ID_Cards_Double_Sided.zip';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    toast('ZIP downloaded successfully!', 'success');
-                } catch (error) {
-                    errorText.textContent = `Error generating ZIP: ${error.message}`;
-                    errorModal.classList.remove('hidden');
-                } finally {
-                    loadingModal.classList.add('hidden');
-                    hideProgress();
-                }
-            });
+                });
+            }
 
             // --- Image Helper Functions ---
             const convertImagesToDataUrls = async () => {
