@@ -1234,7 +1234,37 @@
             // Sign / extra image folder
             let signFiles = new Map();  // Map of value -> file, for the custom column
             let signColumnName = '';    // Excel column this folder maps to
-            let userCustomBg = { front: false, back: false };
+            const loadedGoogleFonts = new Set(['Inter', 'Arial', 'Times New Roman', 'Helvetica', 'Georgia', 'Verdana', 'Courier New']);
+
+            const ensureGoogleFontLoaded = (fontName) => {
+                if (!fontName) return;
+                const cleanName = fontName.trim();
+                if (!cleanName || loadedGoogleFonts.has(cleanName)) return;
+
+                loadedGoogleFonts.add(cleanName);
+                const fontId = `gfont-${cleanName.replace(/\s+/g, '-').toLowerCase()}`;
+                if (document.getElementById(fontId)) return;
+
+                const link = document.createElement('link');
+                link.id = fontId;
+                link.rel = 'stylesheet';
+                link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(cleanName)}:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap`;
+
+                link.onload = () => {
+                    if (document.fonts && document.fonts.ready) {
+                        document.fonts.ready.then(() => {
+                            drawAllCanvases();
+                            renderPlaceholders();
+                        });
+                    } else {
+                        drawAllCanvases();
+                        renderPlaceholders();
+                    }
+                };
+
+                document.head.appendChild(link);
+            };
+
             // --- Constants ---
             const HORIZONTAL_WIDTH = 856;
             const HORIZONTAL_HEIGHT = 540;
@@ -1420,8 +1450,9 @@
                         if (p.type === 'text') {
                             targetCtx.fillStyle = p.color;
                             const fontFamily = p.fontFamily || 'Inter';
+                            ensureGoogleFontLoaded(fontFamily);
                             const fontWeight = p.fontWeight || 'normal';
-                            targetCtx.font = `${fontWeight} ${p.fontSize}px ${fontFamily}`;
+                            targetCtx.font = `${fontWeight} ${p.fontSize}px "${fontFamily}", sans-serif`;
                             targetCtx.textAlign = p.align;
                             targetCtx.textBaseline = 'top';
                             const maxWidth = p.width * width;
@@ -1569,8 +1600,9 @@
                     } else {
                         targetCtx.fillStyle = p.color;
                         const fontFamily = p.fontFamily || 'Inter';
+                        ensureGoogleFontLoaded(fontFamily);
                         const fontWeight = p.fontWeight || 'normal';
-                        targetCtx.font = `${fontWeight} ${p.fontSize}px ${fontFamily}`;
+                        targetCtx.font = `${fontWeight} ${p.fontSize}px "${fontFamily}", sans-serif`;
                         targetCtx.textAlign = p.align;
                         targetCtx.textBaseline = 'top';
                         const maxWidth = p.width * width;
@@ -2111,16 +2143,63 @@
                 if (p.type === 'text') {
                     content += `
                     <div>
-                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Font Family</label>
-                        <select onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded">
-                            <option value="Inter" ${(p.fontFamily || 'Inter') === 'Inter' ? 'selected' : ''}>Inter (Default)</option>
-                            <option value="Arial" ${p.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>
-                            <option value="Times New Roman" ${p.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
-                            <option value="Helvetica" ${p.fontFamily === 'Helvetica' ? 'selected' : ''}>Helvetica</option>
-                            <option value="Georgia" ${p.fontFamily === 'Georgia' ? 'selected' : ''}>Georgia</option>
-                            <option value="Verdana" ${p.fontFamily === 'Verdana' ? 'selected' : ''}>Verdana</option>
-                            <option value="Courier New" ${p.fontFamily === 'Courier New' ? 'selected' : ''}>Courier New</option>
+                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1 flex items-center justify-between">
+                            <span>Font Family</span>
+                            <span class="text-[10px] text-accent lowercase font-normal">Google Fonts</span>
+                        </label>
+                        <select onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900 mb-1.5 font-medium">
+                            <optgroup label="Modern Sans-Serif">
+                                <option value="Inter" ${(p.fontFamily || 'Inter') === 'Inter' ? 'selected' : ''}>Inter (Default)</option>
+                                <option value="Roboto" ${p.fontFamily === 'Roboto' ? 'selected' : ''}>Roboto</option>
+                                <option value="Poppins" ${p.fontFamily === 'Poppins' ? 'selected' : ''}>Poppins</option>
+                                <option value="Montserrat" ${p.fontFamily === 'Montserrat' ? 'selected' : ''}>Montserrat</option>
+                                <option value="Open Sans" ${p.fontFamily === 'Open Sans' ? 'selected' : ''}>Open Sans</option>
+                                <option value="Lato" ${p.fontFamily === 'Lato' ? 'selected' : ''}>Lato</option>
+                                <option value="Oswald" ${p.fontFamily === 'Oswald' ? 'selected' : ''}>Oswald</option>
+                                <option value="Raleway" ${p.fontFamily === 'Raleway' ? 'selected' : ''}>Raleway</option>
+                                <option value="Nunito" ${p.fontFamily === 'Nunito' ? 'selected' : ''}>Nunito</option>
+                                <option value="Outfit" ${p.fontFamily === 'Outfit' ? 'selected' : ''}>Outfit</option>
+                                <option value="Space Grotesk" ${p.fontFamily === 'Space Grotesk' ? 'selected' : ''}>Space Grotesk</option>
+                                <option value="DM Sans" ${p.fontFamily === 'DM Sans' ? 'selected' : ''}>DM Sans</option>
+                                <option value="Plus Jakarta Sans" ${p.fontFamily === 'Plus Jakarta Sans' ? 'selected' : ''}>Plus Jakarta Sans</option>
+                                <option value="Urbanist" ${p.fontFamily === 'Urbanist' ? 'selected' : ''}>Urbanist</option>
+                                <option value="Quicksand" ${p.fontFamily === 'Quicksand' ? 'selected' : ''}>Quicksand</option>
+                                <option value="Lexend" ${p.fontFamily === 'Lexend' ? 'selected' : ''}>Lexend</option>
+                                <option value="Jost" ${p.fontFamily === 'Jost' ? 'selected' : ''}>Jost</option>
+                            </optgroup>
+                            <optgroup label="Elegant Serif">
+                                <option value="Playfair Display" ${p.fontFamily === 'Playfair Display' ? 'selected' : ''}>Playfair Display</option>
+                                <option value="Merriweather" ${p.fontFamily === 'Merriweather' ? 'selected' : ''}>Merriweather</option>
+                                <option value="Cinzel" ${p.fontFamily === 'Cinzel' ? 'selected' : ''}>Cinzel</option>
+                                <option value="Cormorant Garamond" ${p.fontFamily === 'Cormorant Garamond' ? 'selected' : ''}>Cormorant Garamond</option>
+                                <option value="PT Serif" ${p.fontFamily === 'PT Serif' ? 'selected' : ''}>PT Serif</option>
+                                <option value="Lora" ${p.fontFamily === 'Lora' ? 'selected' : ''}>Lora</option>
+                                <option value="Georgia" ${p.fontFamily === 'Georgia' ? 'selected' : ''}>Georgia</option>
+                                <option value="Times New Roman" ${p.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
+                            </optgroup>
+                            <optgroup label="Display & Bold Headers">
+                                <option value="Bebas Neue" ${p.fontFamily === 'Bebas Neue' ? 'selected' : ''}>Bebas Neue</option>
+                                <option value="Abril Fatface" ${p.fontFamily === 'Abril Fatface' ? 'selected' : ''}>Abril Fatface</option>
+                                <option value="Syne" ${p.fontFamily === 'Syne' ? 'selected' : ''}>Syne</option>
+                                <option value="Righteous" ${p.fontFamily === 'Righteous' ? 'selected' : ''}>Righteous</option>
+                                <option value="Comfortaa" ${p.fontFamily === 'Comfortaa' ? 'selected' : ''}>Comfortaa</option>
+                                <option value="Anton" ${p.fontFamily === 'Anton' ? 'selected' : ''}>Anton</option>
+                            </optgroup>
+                            <optgroup label="Calligraphy & Script">
+                                <option value="Dancing Script" ${p.fontFamily === 'Dancing Script' ? 'selected' : ''}>Dancing Script</option>
+                                <option value="Caveat" ${p.fontFamily === 'Caveat' ? 'selected' : ''}>Caveat</option>
+                                <option value="Pacifico" ${p.fontFamily === 'Pacifico' ? 'selected' : ''}>Pacifico</option>
+                                <option value="Great Vibes" ${p.fontFamily === 'Great Vibes' ? 'selected' : ''}>Great Vibes</option>
+                                <option value="Sacramento" ${p.fontFamily === 'Sacramento' ? 'selected' : ''}>Sacramento</option>
+                            </optgroup>
+                            <optgroup label="Monospace & Code">
+                                <option value="Fira Code" ${p.fontFamily === 'Fira Code' ? 'selected' : ''}>Fira Code</option>
+                                <option value="JetBrains Mono" ${p.fontFamily === 'JetBrains Mono' ? 'selected' : ''}>JetBrains Mono</option>
+                                <option value="Space Mono" ${p.fontFamily === 'Space Mono' ? 'selected' : ''}>Space Mono</option>
+                                <option value="Courier New" ${p.fontFamily === 'Courier New' ? 'selected' : ''}>Courier New</option>
+                            </optgroup>
                         </select>
+                        <input type="text" placeholder="Or type ANY Google Font name (e.g. Josefin Sans)..." value="${p.fontFamily || ''}" onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" oninput="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
@@ -2223,6 +2302,9 @@
 
                     // Redraw canvas for visual property changes
                     if (prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight' || prop === 'fontWeight' || prop === 'shape' || prop === 'align') {
+                        if (prop === 'fontFamily' && value) {
+                            ensureGoogleFontLoaded(value);
+                        }
                         drawAllCanvases();
                     }
                 }
