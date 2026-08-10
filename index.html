@@ -2750,6 +2750,7 @@
                             previewBtn.disabled = false;
                             generateZipBtn.disabled = false;
                             generatePdfBtn.disabled = false;
+                            updateAuditBadge();
                             toast(`${data.length} records loaded successfully!`, 'success');
                         } else {
                             toast('The file seems to be empty or in an incorrect format.', 'warn');
@@ -3834,15 +3835,23 @@
 
                 // Compute unique files available in photoFiles map
                 const availableFilesMap = new Map();
-                if (photoFolderLoaded && photoFiles && photoFiles.size > 0) {
+                if (photoFiles && photoFiles.size > 0) {
                     for (const [_, file] of photoFiles.entries()) {
                         availableFilesMap.set(file.name, file);
                     }
                 }
 
                 data.forEach((row, idx) => {
-                    const rawVal = getRowValue(row, photoCol) || getRowValue(row, 'ID') || getRowValue(row, headers[0]) || '';
-                    const photoKey = String(rawVal).trim();
+                    let photoKey = String(getRowValue(row, photoCol) || '').trim();
+                    if (!photoKey) {
+                        // Fallback column checks
+                        for (const h of headers) {
+                            const val = String(getRowValue(row, h) || '').trim();
+                            if (val) { photoKey = val; break; }
+                        }
+                    }
+                    if (!photoKey) photoKey = String(idx + 1);
+
                     const studentName = getRowValue(row, nameCol) || `Record #${idx + 1}`;
 
                     let matchedFile = null;
@@ -3852,14 +3861,17 @@
                     if (customPhotoBindings.has(idx)) {
                         matchedFile = customPhotoBindings.get(idx);
                         matchType = 'custom';
-                    } else if (photoFolderLoaded && photoFiles.size > 0 && photoKey) {
-                        matchedFile = getPhotoByNumber(photoKey);
+                    } else if (photoFiles && photoFiles.size > 0) {
+                        if (photoKey) matchedFile = getPhotoByNumber(photoKey);
+                        if (!matchedFile) matchedFile = getPhotoByNumber(studentName);
+                        if (!matchedFile) matchedFile = getPhotoByNumber(idx + 1);
+
                         if (matchedFile) {
                             matchType = 'exact';
-                        } else {
+                        } else if (photoKey) {
                             // Fuzzy candidate search
                             const cleanKey = photoKey.toLowerCase().replace(/[^a-z0-9]/g, '');
-                            if (cleanKey) {
+                            if (cleanKey && cleanKey.length >= 2) {
                                 for (const [fName, file] of availableFilesMap.entries()) {
                                     const cleanFileName = fName.toLowerCase().replace(/[^a-z0-9]/g, '');
                                     if (cleanFileName.includes(cleanKey) || cleanKey.includes(cleanFileName)) {
