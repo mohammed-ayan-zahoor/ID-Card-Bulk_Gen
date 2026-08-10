@@ -2896,8 +2896,19 @@
                             parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
                         }
 
-                        // Filter empty rows
-                        parsedData = parsedData.filter(row => row && Object.keys(row).length > 0 && Object.values(row).some(v => v !== null && v !== undefined && String(v).trim() !== ''));
+                        // Filter valid headers and clean data rows (strips Excel __EMPTY junk columns)
+                        if (parsedData.length > 0) {
+                            const rawHeaders = Object.keys(parsedData[0] || {});
+                            const validHeaders = rawHeaders.filter(k => k && typeof k === 'string' && !k.startsWith('__EMPTY') && !k.toLowerCase().includes('empty-field') && k.trim() !== '');
+                            
+                            parsedData = parsedData.map(row => {
+                                const cleanRow = {};
+                                validHeaders.forEach(h => {
+                                    cleanRow[h] = row[h] !== undefined && row[h] !== null ? String(row[h]).trim() : '';
+                                });
+                                return cleanRow;
+                            }).filter(row => Object.values(row).some(v => v !== ''));
+                        }
 
                         data = parsedData;
                         window.data = data;
