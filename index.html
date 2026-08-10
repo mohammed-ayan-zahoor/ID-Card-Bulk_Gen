@@ -1457,7 +1457,11 @@
                             const fontFamily = p.fontFamily || 'Inter';
                             ensureGoogleFontLoaded(fontFamily);
                             const fontWeight = p.fontWeight || 'normal';
-                            targetCtx.font = `${fontWeight} ${p.fontSize}px "${fontFamily}", sans-serif`;
+                            const fontStyle = p.fontStyle === 'italic' ? 'italic ' : '';
+                            targetCtx.font = `${fontStyle}${fontWeight} ${p.fontSize}px "${fontFamily}", sans-serif`;
+                            if ('letterSpacing' in targetCtx) {
+                                targetCtx.letterSpacing = p.letterSpacing ? `${p.letterSpacing}px` : '0px';
+                            }
                             targetCtx.textAlign = p.align;
                             targetCtx.textBaseline = 'top';
                             const maxWidth = p.width * width;
@@ -1607,7 +1611,11 @@
                         const fontFamily = p.fontFamily || 'Inter';
                         ensureGoogleFontLoaded(fontFamily);
                         const fontWeight = p.fontWeight || 'normal';
-                        targetCtx.font = `${fontWeight} ${p.fontSize}px "${fontFamily}", sans-serif`;
+                        const fontStyle = p.fontStyle === 'italic' ? 'italic ' : '';
+                        targetCtx.font = `${fontStyle}${fontWeight} ${p.fontSize}px "${fontFamily}", sans-serif`;
+                        if ('letterSpacing' in targetCtx) {
+                            targetCtx.letterSpacing = p.letterSpacing ? `${p.letterSpacing}px` : '0px';
+                        }
                         targetCtx.textAlign = p.align;
                         targetCtx.textBaseline = 'top';
                         const maxWidth = p.width * width;
@@ -1878,8 +1886,17 @@
                         el.style.left = `${p.x * 100}%`;
                         el.style.top = `${p.y * 100}%`;
                         el.style.width = `${p.width * 100}%`;
-                        el.style.height = `${p.height * 100}%`;
                         el.style.position = 'absolute';
+
+                        if (p.type === 'text') {
+                            if (p.fontFamily) {
+                                ensureGoogleFontLoaded(p.fontFamily);
+                                el.style.fontFamily = `"${p.fontFamily}", sans-serif`;
+                            }
+                            if (p.fontWeight) el.style.fontWeight = p.fontWeight;
+                            if (p.fontStyle) el.style.fontStyle = p.fontStyle;
+                            if (p.letterSpacing) el.style.letterSpacing = `${p.letterSpacing}px`;
+                        }
 
                         const displayText = p.staticText ? p.staticText : `{{${p.key}}}`;
                         if (p.type === 'qr') {
@@ -2235,17 +2252,35 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3 items-center">
                         <div>
+                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Font Weight</label>
+                            <select onchange="updatePlaceholderProp('${p.id}', 'fontWeight', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900 font-medium">
+                                <option value="300" ${String(p.fontWeight) === '300' ? 'selected' : ''}>Light (300)</option>
+                                <option value="normal" ${(!p.fontWeight || String(p.fontWeight) === 'normal' || String(p.fontWeight) === '400') ? 'selected' : ''}>Regular (400)</option>
+                                <option value="500" ${String(p.fontWeight) === '500' ? 'selected' : ''}>Medium (500)</option>
+                                <option value="600" ${String(p.fontWeight) === '600' ? 'selected' : ''}>SemiBold (600)</option>
+                                <option value="bold" ${(p.fontWeight === 'bold' || String(p.fontWeight) === '700') ? 'selected' : ''}>Bold (700)</option>
+                                <option value="800" ${String(p.fontWeight) === '800' ? 'selected' : ''}>ExtraBold (800)</option>
+                                <option value="900" ${String(p.fontWeight) === '900' ? 'selected' : ''}>Black (900)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Style / Italic</label>
+                            <div class="flex bg-surface-sunken rounded-lg p-0.5 border border-ink-200">
+                                <button onclick="updatePlaceholderProp('${p.id}', 'fontStyle', 'normal')" class="flex-1 py-1 rounded text-xs font-semibold ${p.fontStyle !== 'italic' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Normal</button>
+                                <button onclick="updatePlaceholderProp('${p.id}', 'fontStyle', 'italic')" class="flex-1 py-1 rounded text-xs font-semibold ${p.fontStyle === 'italic' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Italic</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 items-center">
+                        <div>
+                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Letter Spacing (Narrow)</label>
+                            <input type="number" step="0.5" placeholder="0 (Normal)" value="${p.letterSpacing || 0}" oninput="updatePlaceholderProp('${p.id}', 'letterSpacing', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900">
+                        </div>
+                        <div>
                             <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Color</label>
                             <div class="flex items-center gap-2">
                                 <input type="color" value="${p.color}" oninput="updatePlaceholderProp('${p.id}', 'color', this.value)" class="w-10 h-8 border rounded cursor-pointer p-0">
                                 <span class="text-xs font-mono text-ink-700">${p.color}</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Font Weight</label>
-                            <div class="flex bg-surface-sunken rounded-lg p-0.5 border border-ink-200">
-                                <button onclick="updatePlaceholderProp('${p.id}', 'fontWeight', 'normal')" class="flex-1 py-1 rounded text-xs font-semibold ${p.fontWeight !== 'bold' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Normal</button>
-                                <button onclick="updatePlaceholderProp('${p.id}', 'fontWeight', 'bold')" class="flex-1 py-1 rounded text-xs font-semibold ${p.fontWeight === 'bold' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Bold</button>
                             </div>
                         </div>
                     </div>
@@ -2323,7 +2358,7 @@
                     }
 
                     // Redraw canvas for visual property changes
-                    if (prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight' || prop === 'fontWeight' || prop === 'shape' || prop === 'align') {
+                    if (prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight' || prop === 'fontWeight' || prop === 'fontStyle' || prop === 'letterSpacing' || prop === 'shape' || prop === 'align') {
                         if (prop === 'fontFamily' && value) {
                             ensureGoogleFontLoaded(value);
                         }
