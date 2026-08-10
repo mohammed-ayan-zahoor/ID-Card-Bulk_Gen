@@ -562,14 +562,18 @@
                 border: 1px solid rgba(216, 214, 209, 0.5);
                 min-height: 540px;
                 box-shadow: inset 0 2px 6px rgba(0,0,0,0.03);
+                overflow: auto;
+                max-width: 100%;
             }
             #canvas-area[data-orientation="horizontal"] {
                 flex-direction: column;
             }
             #canvas-area[data-orientation="vertical"] {
                 flex-direction: row;
+                flex-wrap: wrap;
             }
             .canvas-wrapper {
+                flex-shrink: 0;
                 border: 2px solid #E5E7EB;
                 border-radius: 1.25rem;
                 transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2618,8 +2622,8 @@
             });
 
             // --- Orientation Logic ---
-            const setOrientation = (newOrientation) => {
-                if (orientation === newOrientation) return;
+            const setOrientation = (newOrientation, force = false) => {
+                if (!force && orientation === newOrientation) return;
                 orientation = newOrientation;
 
                 const isHorizontal = newOrientation === 'horizontal';
@@ -2638,36 +2642,41 @@
 
                 // Reset canvas dimensions and styles
                 [frontCanvas, backCanvas].forEach(c => {
-                    c.width = newW;
-                    c.height = newH;
-                    c.style.transform = '';
+                    if (c) {
+                        c.width = newW;
+                        c.height = newH;
+                        c.style.transform = '';
+                    }
                 });
 
                 // Reset wrapper styles
                 [frontCanvasWrapper, backCanvasWrapper].forEach(w => {
-                    w.style.aspectRatio = `${newW} / ${newH}`;
-                    w.style.width = '';
-                    w.style.height = '';
+                    if (w) {
+                        w.style.aspectRatio = `${newW} / ${newH}`;
+                        w.style.width = '';
+                        w.style.height = '';
+                    }
                 });
 
                 // Reset placeholder wrapper styles
                 [frontPlaceholderWrapper, backPlaceholderWrapper].forEach(w => {
-                    w.style.transform = '';
+                    if (w) w.style.transform = '';
                 });
 
                 // Flip canvas-area layout between stacked (horizontal) and side-by-side (vertical)
-                document.getElementById('canvas-area').dataset.orientation = newOrientation;
+                const canvasArea = document.getElementById('canvas-area');
+                if (canvasArea) canvasArea.dataset.orientation = newOrientation;
 
                 // Update orientation buttons
-                orientationHorizontalBtn.className = `flex-1 py-1.5 rounded-full text-xs font-semibold transition-all ${isHorizontal ? 'bg-surface text-ink-900 shadow-sm' : 'bg-transparent text-ink-500 hover:text-ink-900'}`;
-                orientationVerticalBtn.className = `flex-1 py-1.5 rounded-full text-xs font-semibold transition-all ${!isHorizontal ? 'bg-surface text-ink-900 shadow-sm' : 'bg-transparent text-ink-500 hover:text-ink-900'}`;
+                if (orientationHorizontalBtn) orientationHorizontalBtn.className = `flex-1 py-1.5 rounded-full text-xs font-semibold transition-all ${isHorizontal ? 'bg-surface text-ink-900 shadow-sm' : 'bg-transparent text-ink-500 hover:text-ink-900'}`;
+                if (orientationVerticalBtn) orientationVerticalBtn.className = `flex-1 py-1.5 rounded-full text-xs font-semibold transition-all ${!isHorizontal ? 'bg-surface text-ink-900 shadow-sm' : 'bg-transparent text-ink-500 hover:text-ink-900'}`;
 
                 // Redraw canvases with new dimensions
                 drawAllCanvases();
                 renderPlaceholders();
 
                 // Reapply current zoom level
-                const currentZoom = zoomSelect.value === 'actual' ? 'actual' : parseFloat(zoomSelect.value);
+                const currentZoom = (zoomSelect && zoomSelect.value === 'actual') ? 'actual' : (zoomSelect ? parseFloat(zoomSelect.value) : 0.7);
                 applyZoom(currentZoom);
             };
             // --- Zoom Management ---
@@ -3768,7 +3777,7 @@
                 bgImages.back.src  = getDefaultBg('back', 'horizontal');
 
                 // Set initial state
-                setOrientation('horizontal');
+                setOrientation('horizontal', true);
                 setActiveSide('front');
 
                 // Load saved layouts into the dropdown
