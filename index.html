@@ -4130,59 +4130,173 @@
 
         const renderAuditGraph = (analysis) => {
             if (!auditGraphSvg) return;
-            const records = [...analysis.matched, ...analysis.missing].sort((a, b) => a.index - b.index).slice(0, 50); // limit to 50 for clean graph view
-            const photos = analysis.availableFiles.slice(0, 50);
 
-            const rowHeight = 48;
-            const svgHeight = Math.max(600, Math.max(records.length, photos.length) * rowHeight + 100);
-            const svgWidth = auditGraphSvg.parentElement ? auditGraphSvg.parentElement.clientWidth - 40 : 900;
+            const filter = PhotoAuditEngine.activeFilter;
+            const query = (PhotoAuditEngine.searchQuery || '').toLowerCase();
 
+            // 1. Filter Records & Photos according to search & filter pills
+            let allRecords = [...analysis.matched, ...analysis.missing].sort((a, b) => a.index - b.index);
+
+            if (filter === 'missing') {
+                allRecords = allRecords.filter(r => r.isMissing);
+            } else if (filter === 'suggested') {
+                allRecords = allRecords.filter(r => r.isMissing && r.suggestedFile);
+            }
+
+            if (query) {
+                allRecords = allRecords.filter(r => {
+                    const matchText = `${r.studentName} ${r.photoKey} ${r.file ? r.file.name : ''}`.toLowerCase();
+                    return matchText.includes(query);
+                });
+            }
+
+            const records = allRecords.slice(0, 45); // limit to top 45 for clean node rendering
+
+            let photos = [...analysis.availableFiles];
+            if (filter === 'unused') {
+                const usedNames = new Set(analysis.matched.map(m => m.file ? m.file.name : ''));
+                photos = photos.filter(p => !usedNames.has(p.name));
+            }
+            if (query) {
+                photos = photos.filter(p => p.name.toLowerCase().includes(query));
+            }
+            photos = photos.slice(0, 45);
+
+            // 2. Measure dimensions
+            const wrap = document.getElementById('audit-graph-canvas-wrap');
+            const containerWidth = wrap ? wrap.clientWidth - 32 : 900;
+            const svgWidth = Math.max(850, containerWidth);
+
+            const nodeRowHeight = 64;
+            const contentHeight = Math.max(records.length, photos.length) * nodeRowHeight + 120;
+            const svgHeight = Math.max(600, contentHeight);
+
+            auditGraphSvg.setAttribute('width', '100%');
             auditGraphSvg.setAttribute('height', svgHeight);
             auditGraphSvg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
 
-            let svgHtml = `<g transform="translate(20, 40)">`;
+            const leftX = 220; // Center X of left student node
+            const rightX = svgWidth - 220; // Center X of right photo node
+            const socketLeftX = leftX + 130;
+            const socketRightX = rightX - 130;
 
-            const leftX = 180;
-            const rightX = svgWidth - 220;
+            let svgHtml = `
+            <defs>
+                <linearGradient id="grad-green" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.85"/>
+                    <stop offset="100%" stop-color="#059669" stop-opacity="0.95"/>
+                </linearGradient>
+                <linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#0284c7" stop-opacity="0.8"/>
+                    <stop offset="100%" stop-color="#0369a1" stop-opacity="0.9"/>
+                </linearGradient>
+                <filter id="node-shadow" x="-10%" y="-10%" width="120%" height="120%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.08"/>
+                </filter>
+            </defs>
+            <g transform="translate(0, 40)">`;
 
-            // Draw connecting lines
+            const getPhotoUrl = (file) => {
+                if (!file) return '';
+                try { return URL.createObjectURL(file); } catch (_) { return ''; }
+            };
+
+            // 3. Draw Connecting Curved Wires (Bezier Paths)
             records.forEach((rec, idx) => {
-                const y1 = idx * rowHeight + 20;
-                let y2 = y1;
-                let strokeColor = '#ef4444';
-                let strokeDash = '4 4';
+                const y1 = idx * nodeRowHeight + 24;
 
                 if (rec.file) {
                     const pIdx = photos.findIndex(p => p.name === rec.file.name);
-                    if (pIdx !== -1) y2 = pIdx * rowHeight + 20;
-                    strokeColor = '#10b981';
-                    strokeDash = 'none';
+                    if (pIdx !== -1) {
+                        const y2 = pIdx * nodeRowHeight + 24;
+                        const controlOffset = Math.abs(socketRightX - socketLeftX) * 0.45;
+                        const pathD = `M ${socketLeftX} ${y1} C ${socketLeftX + controlOffset} ${y1}, ${socketRightX - controlOffset} ${y2}, ${socketRightX} ${y2}`;
+                        svgHtml += `<path d="${pathD}" fill="none" stroke="url(#grad-green)" stroke-width="2.5" opacity="0.85" />`;
+                    }
+                } else if (rec.suggestedFile) {
+                    const pIdx = photos.findIndex(p => p.name === rec.suggestedFile.name);
+                    if (pIdx !== -1) {
+                        const y2 = pIdx * nodeRowHeight + 24;
+                        const controlOffset = Math.abs(socketRightX - socketLeftX) * 0.45;
+                        const pathD = `M ${socketLeftX} ${y1} C ${socketLeftX + controlOffset} ${y1}, ${socketRightX - controlOffset} ${y2}, ${socketRightX} ${y2}`;
+                        svgHtml += `<path d="${pathD}" fill="none" stroke="url(#grad-blue)" stroke-width="2" stroke-dasharray="5 4" opacity="0.75" />`;
+                    }
                 }
-
-                svgHtml += `<line x1="${leftX + 120}" y1="${y1}" x2="${rightX - 120}" y2="${y2}" stroke="${strokeColor}" stroke-width="2" stroke-dasharray="${strokeDash}" opacity="0.8" />`;
             });
 
-            // Draw Student Nodes (Left)
+            // 4. Draw Left Student Nodes (Cards with Avatar & Status)
             records.forEach((rec, idx) => {
-                const y = idx * rowHeight + 20;
-                const statusColor = rec.file ? '#10b981' : '#ef4444';
+                const y = idx * nodeRowHeight + 24;
+                const isMatched = Boolean(rec.file);
+                const isSuggested = Boolean(!rec.file && rec.suggestedFile);
+
+                let borderColor = '#ef4444';
+                let badgeBg = '#fee2e2';
+                let badgeText = '#991b1b';
+                let badgeLabel = 'Missing Photo';
+
+                if (isMatched) {
+                    borderColor = '#10b981';
+                    badgeBg = '#d1fae5';
+                    badgeText = '#065f46';
+                    badgeLabel = rec.matchType === 'custom' ? 'Manual Link' : 'Connected';
+                } else if (isSuggested) {
+                    borderColor = '#0284c7';
+                    badgeBg = '#e0f2fe';
+                    badgeText = '#075985';
+                    badgeLabel = 'Suggested Match';
+                }
+
+                const studentInitials = (rec.studentName || 'S').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
                 svgHtml += `
-                    <g transform="translate(${leftX}, ${y})">
-                        <rect x="-140" y="-16" width="260" height="32" rx="16" fill="#ffffff" stroke="${statusColor}" stroke-width="2" />
-                        <text x="-120" y="4" font-size="11" font-weight="bold" fill="#0f172a">#${rec.index + 1} ${rec.studentName.substring(0, 18)}</text>
-                        <circle cx="120" cy="0" r="6" fill="${statusColor}" />
+                    <g transform="translate(${leftX}, ${y})" filter="url(#node-shadow)">
+                        <!-- Node Base Card -->
+                        <rect x="-130" y="-22" width="260" height="44" rx="12" fill="#ffffff" stroke="${borderColor}" stroke-width="1.5" />
+
+                        <!-- Avatar Circle -->
+                        <circle cx="-106" cy="0" r="14" fill="${borderColor}" opacity="0.15" />
+                        <text x="-106" y="4" text-anchor="middle" font-size="10" font-weight="bold" fill="${borderColor}">${studentInitials}</text>
+
+                        <!-- Student Name & Key -->
+                        <text x="-84" y="-3" font-size="11" font-weight="bold" fill="#0f172a">#${rec.index + 1} ${(rec.studentName || '').substring(0, 16)}</text>
+                        <text x="-84" y="11" font-size="9" font-family="monospace" fill="#64748b">Key: "${(rec.photoKey || '').substring(0, 14)}"</text>
+
+                        <!-- Status Badge -->
+                        <rect x="35" y="-10" width="85" height="20" rx="10" fill="${badgeBg}" />
+                        <text x="77" y="3" text-anchor="middle" font-size="9" font-weight="bold" fill="${badgeText}">${badgeLabel}</text>
+
+                        <!-- Output Socket Circle -->
+                        <circle cx="130" cy="0" r="5" fill="${borderColor}" stroke="#ffffff" stroke-width="1.5" />
                     </g>
                 `;
             });
 
-            // Draw Photo Nodes (Right)
+            // 5. Draw Right Photo File Nodes (Cards with Image Thumbnail)
             photos.forEach((photo, idx) => {
-                const y = idx * rowHeight + 20;
+                const y = idx * nodeRowHeight + 24;
+                const photoUrl = getPhotoUrl(photo);
+                const isUsed = analysis.matched.some(m => m.file && m.file.name === photo.name);
+                const statusColor = isUsed ? '#10b981' : '#f59e0b';
+
                 svgHtml += `
-                    <g transform="translate(${rightX}, ${y})">
-                        <rect x="-120" y="-16" width="260" height="32" rx="16" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" />
-                        <circle cx="-120" cy="0" r="6" fill="#64748b" />
-                        <text x="-105" y="4" font-size="11" font-weight="bold" fill="#334155">${photo.name.substring(0, 22)}</text>
+                    <g transform="translate(${rightX}, ${y})" filter="url(#node-shadow)">
+                        <!-- Input Socket Circle -->
+                        <circle cx="-130" cy="0" r="5" fill="${statusColor}" stroke="#ffffff" stroke-width="1.5" />
+
+                        <!-- Node Base Card -->
+                        <rect x="-130" y="-22" width="260" height="44" rx="12" fill="#ffffff" stroke="${isUsed ? '#cbd5e1' : '#fcd34d'}" stroke-width="1.5" />
+
+                        <!-- Thumbnail Container & Image -->
+                        <clipPath id="thumb-clip-${idx}">
+                            <rect x="-124" y="-16" width="32" height="32" rx="6" />
+                        </clipPath>
+                        <rect x="-124" y="-16" width="32" height="32" rx="6" fill="#f1f5f9" />
+                        ${photoUrl ? `<image href="${photoUrl}" x="-124" y="-16" width="32" height="32" preserveAspectRatio="xMidYMid slice" clip-path="url(#thumb-clip-${idx})" />` : ''}
+
+                        <!-- File Name & Info -->
+                        <text x="-84" y="-2" font-size="10" font-weight="bold" fill="#1e293b">${photo.name.substring(0, 20)}</text>
+                        <text x="-84" y="11" font-size="9" fill="#64748b">${(photo.size / 1024).toFixed(1)} KB • ${isUsed ? 'Assigned' : 'Unused'}</text>
                     </g>
                 `;
             });
