@@ -837,10 +837,13 @@
                         <select id="layout-select" class="flex-1 p-1.5 bg-surface border border-ink-300 rounded-lg text-xs">
                             <option value="">Select saved layout…</option>
                         </select>
-                        <button id="delete-layout-btn" class="px-2.5 py-1.5 bg-surface text-danger border border-danger/30 rounded-full text-xs hover:bg-danger-soft flex items-center justify-center transition-colors shadow-sm">
+                        <button id="delete-layout-btn" class="px-2.5 py-1.5 bg-surface text-danger border border-danger/30 rounded-full text-xs hover:bg-danger-soft flex items-center justify-center transition-colors shadow-sm" title="Delete layout">
                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
                         </button>
                     </div>
+                    <button id="clear-bgs-btn" class="w-full py-1 text-[11px] font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-full transition-all shadow-sm">
+                        Clear Heavy BGs from Storage
+                    </button>
                 </div>
             </div>
 
@@ -3144,7 +3147,7 @@
                 toast(`Successfully converted ${conversions.length} images! CSV file downloaded.`, 'success');
             };
 
-            // --- Layout Management ---
+            // --- Layout Management & Storage Optimization ---
             const getSavedLayouts = () => {
                 try {
                     return JSON.parse(localStorage.getItem('idCardLayouts') || '{}');
@@ -3154,35 +3157,68 @@
                 }
             };
 
-            const saveLayout = () => {
+            const compressBgDataUrl = async (src) => {
+                if (!src || !src.startsWith('data:image') || src.length < 40000 || src.includes('image/svg+xml')) return src;
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let w = img.width, h = img.height;
+                        if (w > 1200) { h = Math.round((h * 1200) / w); w = 1200; }
+                        canvas.width = w; canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', 0.75));
+                    };
+                    img.onerror = () => resolve(src);
+                    img.src = src;
+                });
+            };
+
+            const saveLayout = async () => {
                 const layoutName = layoutNameInput.value.trim();
                 if (!layoutName) { toast('Please enter a name for your layout!', 'warn'); return; }
+
+                toast('Saving layout...', 'info', 1500);
+
+                const frontBgComp = await compressBgDataUrl(bgImages.front.src);
+                const backBgComp  = await compressBgDataUrl(bgImages.back.src);
 
                 const layoutData = {
                     name: layoutName, orientation,
                     placeholders: { front: placeholders.front, back: placeholders.back },
-                    backgrounds: { front: bgImages.front.src, back: bgImages.back.src },
+                    backgrounds: { front: frontBgComp, back: backBgComp },
                     dateCreated: new Date().toISOString()
                 };
 
                 const savedLayouts = getSavedLayouts();
                 savedLayouts[layoutName] = layoutData;
 
-                const jsonStr = JSON.stringify(savedLayouts);
                 try {
-                    localStorage.setItem('idCardLayouts', jsonStr);
+                    localStorage.setItem('idCardLayouts', JSON.stringify(savedLayouts));
                 } catch (e) {
-                    // Fallback if base64 backgrounds exceed 5MB quota
+                    // Fallback 1: Compress background data in existing layouts
                     try {
-                        const fallbackLayouts = getSavedLayouts();
-                        const fallbackData = { ...layoutData };
-                        delete fallbackData.backgrounds;
-                        fallbackLayouts[layoutName] = fallbackData;
-                        localStorage.setItem('idCardLayouts', JSON.stringify(fallbackLayouts));
-                        toast(`Layout "${layoutName}" saved (layout fields saved, background skipped due to storage limit).`, 'warn', 6000);
+                        for (const k in savedLayouts) {
+                            if (k !== layoutName && savedLayouts[k].backgrounds) {
+                                delete savedLayouts[k].backgrounds;
+                            }
+                        }
+                        localStorage.setItem('idCardLayouts', JSON.stringify(savedLayouts));
+                        toast(`Storage full — cleared heavy backgrounds from older layouts to save "${layoutName}".`, 'warn', 6000);
                     } catch (err2) {
-                        toast('Storage full — please export and delete old layouts.', 'error', 6000);
-                        return;
+                        // Fallback 2: Save layout fields without background
+                        try {
+                            const fallbackData = { ...layoutData };
+                            delete fallbackData.backgrounds;
+                            const fallbackLayouts = getSavedLayouts();
+                            fallbackLayouts[layoutName] = fallbackData;
+                            localStorage.setItem('idCardLayouts', JSON.stringify(fallbackLayouts));
+                            toast(`Layout "${layoutName}" saved (fields saved, background skipped).`, 'warn', 6000);
+                        } catch (err3) {
+                            toast('Storage full — click "Clear Heavy BGs from Storage" to free space.', 'error', 6000);
+                            return;
+                        }
                     }
                 }
 
@@ -3207,6 +3243,23 @@
                 renderPlaceholders();
                 drawAllCanvases();
                 toast(`Layout "${layoutName}" loaded!`, 'success');
+            };
+
+            const clearSavedLayoutBackgrounds = () => {
+                const saved = getSavedLayouts();
+                let count = 0;
+                for (const k in saved) {
+                    if (saved[k].backgrounds) {
+                        delete saved[k].backgrounds;
+                        count++;
+                    }
+                }
+                if (count === 0) {
+                    toast('No background images stored in saved layouts.', 'info');
+                    return;
+                }
+                localStorage.setItem('idCardLayouts', JSON.stringify(saved));
+                toast(`Cleared heavy background images from ${count} saved layout(s). All field positions & layouts remain intact!`, 'success', 5000);
             };
 
             const updateLayoutSelect = () => {
@@ -3244,6 +3297,13 @@
                 updateLayoutSelect();
                 if (layoutNameInput) layoutNameInput.value = '';
                 toast(`Layout "${sel}" deleted.`, 'info');
+            });
+
+            const clearBgsBtn = document.getElementById('clear-bgs-btn');
+            if (clearBgsBtn) clearBgsBtn.addEventListener('click', () => {
+                if (confirm('Strip heavy background images from saved layouts in browser storage? (All field positions, texts, & layout names will be preserved!)')) {
+                    clearSavedLayoutBackgrounds();
+                }
             });
 
             if (layoutSelect) {
