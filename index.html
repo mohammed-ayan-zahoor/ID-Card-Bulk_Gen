@@ -741,11 +741,17 @@
                 </div>
                 <div class="space-y-2">
                     <div>
-                        <label class="block text-xs font-medium text-ink-700 mb-0.5">Front Background</label>
+                        <div class="flex items-center justify-between mb-0.5">
+                            <label class="block text-xs font-medium text-ink-700">Front Background</label>
+                            <button id="reset-front-bg-btn" class="text-[10px] font-semibold text-ink-500 hover:text-ink-900 underline">Clear BG</button>
+                        </div>
                         <input type="file" id="bg-image-front-input" accept="image/jpeg,image/png" class="file-input-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-ink-700 mb-0.5">Back Background</label>
+                        <div class="flex items-center justify-between mb-0.5">
+                            <label class="block text-xs font-medium text-ink-700">Back Background</label>
+                            <button id="reset-back-bg-btn" class="text-[10px] font-semibold text-ink-500 hover:text-ink-900 underline">Clear BG</button>
+                        </div>
                         <input type="file" id="bg-image-back-input" accept="image/jpeg,image/png" class="file-input-sm">
                     </div>
                 </div>
@@ -837,6 +843,9 @@
                         <select id="layout-select" class="flex-1 p-1.5 bg-surface border border-ink-300 rounded-lg text-xs">
                             <option value="">Select saved layout…</option>
                         </select>
+                        <button id="clear-selected-bg-btn" class="px-2.5 py-1.5 bg-surface text-amber-800 border border-amber-300 rounded-full text-xs hover:bg-amber-50 flex items-center justify-center transition-colors shadow-sm" title="Strip background from selected layout only">
+                            Strip BG
+                        </button>
                         <button id="delete-layout-btn" class="px-2.5 py-1.5 bg-surface text-danger border border-danger/30 rounded-full text-xs hover:bg-danger-soft flex items-center justify-center transition-colors shadow-sm" title="Delete layout">
                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
                         </button>
@@ -2654,6 +2663,27 @@
             setupBgImageInput(bgImageFrontInput, 'front');
             setupBgImageInput(bgImageBackInput, 'back');
 
+            const resetFrontBgBtn = document.getElementById('reset-front-bg-btn');
+            const resetBackBgBtn  = document.getElementById('reset-back-bg-btn');
+            if (resetFrontBgBtn) {
+                resetFrontBgBtn.addEventListener('click', () => {
+                    userCustomBg['front'] = false;
+                    if (bgImageFrontInput) bgImageFrontInput.value = '';
+                    bgImages.front.src = getDefaultBg('front', orientation);
+                    drawAllCanvases();
+                    toast('Front background cleared from canvas.', 'info');
+                });
+            }
+            if (resetBackBgBtn) {
+                resetBackBgBtn.addEventListener('click', () => {
+                    userCustomBg['back'] = false;
+                    if (bgImageBackInput) bgImageBackInput.value = '';
+                    bgImages.back.src = getDefaultBg('back', orientation);
+                    drawAllCanvases();
+                    toast('Back background cleared from canvas.', 'info');
+                });
+            }
+
             // Photo folder input handler
             photoFolderInput.addEventListener('change', (e) => {
                 const files = Array.from(e.target.files);
@@ -3299,10 +3329,33 @@
                 toast(`Layout "${sel}" deleted.`, 'info');
             });
 
+            const clearSelectedLayoutBg = (layoutName) => {
+                const sel = layoutName || (layoutSelect ? layoutSelect.value : '');
+                if (!sel) { toast('Please select a layout from the dropdown to clear its background!', 'warn'); return; }
+                const saved = getSavedLayouts();
+                if (!saved[sel]) { toast('Selected layout not found!', 'warn'); return; }
+                if (!saved[sel].backgrounds) {
+                    toast(`Layout "${sel}" has no stored background images to clear.`, 'info');
+                    return;
+                }
+                delete saved[sel].backgrounds;
+                localStorage.setItem('idCardLayouts', JSON.stringify(saved));
+                toast(`Cleared background image from layout "${sel}". All field positions remain intact!`, 'success', 5000);
+            };
+
             const clearBgsBtn = document.getElementById('clear-bgs-btn');
             if (clearBgsBtn) clearBgsBtn.addEventListener('click', () => {
                 if (confirm('Strip heavy background images from saved layouts in browser storage? (All field positions, texts, & layout names will be preserved!)')) {
                     clearSavedLayoutBackgrounds();
+                }
+            });
+
+            const clearSelectedBgBtn = document.getElementById('clear-selected-bg-btn');
+            if (clearSelectedBgBtn) clearSelectedBgBtn.addEventListener('click', () => {
+                const sel = layoutSelect.value;
+                if (!sel) { toast('Please select a layout from the dropdown first!', 'warn'); return; }
+                if (confirm(`Strip background image from layout "${sel}" only? (Layout fields will be preserved)`)) {
+                    clearSelectedLayoutBg(sel);
                 }
             });
 
