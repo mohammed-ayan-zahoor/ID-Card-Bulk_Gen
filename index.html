@@ -2850,13 +2850,40 @@
                         const arrayBuffer = event.target.result;
                         const filenameLower = file.name.toLowerCase();
 
+                        // Helper to format values (converts raw Excel date serial numbers like 44500 or Date objects to formatted dates)
+                        const formatCellValue = (val) => {
+                            if (val === null || val === undefined) return '';
+                            if (val instanceof Date) {
+                                if (isNaN(val.getTime())) return '';
+                                const yyyy = val.getFullYear();
+                                const mm = String(val.getMonth() + 1).padStart(2, '0');
+                                const dd = String(val.getDate()).padStart(2, '0');
+                                return `${dd}/${mm}/${yyyy}`;
+                            }
+                            const num = typeof val === 'number' ? val : (typeof val === 'string' && /^\d{5}(\.\d+)?$/.test(val.trim()) ? parseFloat(val.trim()) : null);
+                            if (num !== null && num > 10000 && num < 90000) {
+                                try {
+                                    const dateObj = new Date(Math.round((num - 25569) * 86400 * 1000));
+                                    if (!isNaN(dateObj.getTime())) {
+                                        const yyyy = dateObj.getFullYear();
+                                        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                        const dd = String(dateObj.getDate()).padStart(2, '0');
+                                        if (yyyy >= 1900 && yyyy <= 2100) {
+                                            return `${dd}/${mm}/${yyyy}`;
+                                        }
+                                    }
+                                } catch(e) {}
+                            }
+                            return String(val).trim();
+                        };
+
                         if (filenameLower.endsWith('.csv')) {
                             try {
                                 const dataArr = new Uint8Array(arrayBuffer);
-                                const workbook = XLSX.read(dataArr, { type: 'array' });
+                                const workbook = XLSX.read(dataArr, { type: 'array', cellDates: true, cellNF: true, cellText: true });
                                 if (workbook && workbook.SheetNames && workbook.SheetNames.length > 0) {
                                     const sheetName = workbook.SheetNames[0];
-                                    parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+                                    parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false, defval: '' });
                                 }
                             } catch (csvErr) {
                                 // Manual fallback for raw text CSV files
@@ -2888,15 +2915,15 @@
                             }
                         } else {
                             const dataArr = new Uint8Array(arrayBuffer);
-                            const workbook = XLSX.read(dataArr, { type: 'array' });
+                            const workbook = XLSX.read(dataArr, { type: 'array', cellDates: true, cellNF: true, cellText: true });
                             if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
                                 throw new Error("No worksheets found in file.");
                             }
                             const sheetName = workbook.SheetNames[0];
-                            parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+                            parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false, defval: '' });
                         }
 
-                        // Filter valid headers and clean data rows (strips Excel __EMPTY junk columns)
+                        // Filter valid headers and clean data rows (strips Excel __EMPTY junk columns & converts date serials)
                         if (parsedData.length > 0) {
                             const rawHeaders = Object.keys(parsedData[0] || {});
                             const validHeaders = rawHeaders.filter(k => k && typeof k === 'string' && !k.startsWith('__EMPTY') && !k.toLowerCase().includes('empty-field') && k.trim() !== '');
@@ -2904,7 +2931,7 @@
                             parsedData = parsedData.map(row => {
                                 const cleanRow = {};
                                 validHeaders.forEach(h => {
-                                    cleanRow[h] = row[h] !== undefined && row[h] !== null ? String(row[h]).trim() : '';
+                                    cleanRow[h] = formatCellValue(row[h]);
                                 });
                                 return cleanRow;
                             }).filter(row => Object.values(row).some(v => v !== ''));
