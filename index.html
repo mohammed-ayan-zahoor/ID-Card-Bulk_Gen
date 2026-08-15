@@ -1441,6 +1441,8 @@
 
             const drawCardOnContext = async (targetCtx, side, width, height, rowData) => {
                 targetCtx.clearRect(0, 0, width, height);
+                targetCtx.imageSmoothingEnabled = true;
+                targetCtx.imageSmoothingQuality = 'high';
                 const bg = bgImages[side];
                 if (bg && bg.complete) {
                     targetCtx.drawImage(bg, 0, 0, width, height);
@@ -3149,28 +3151,37 @@
                     const frontRowY = 20;
                     const backRowY = 115.6; // Top margin: 20mm, Middle gap: 10mm, Bottom margin: 8.8mm
 
-                    // Canvas dimensions for original card design
-                    const designW = isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT; // 856 or 540
-                    const designH = isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH; // 540 or 856
+                    // High-Resolution 300+ DPI Print Scaling Factor
+                    const PDF_SCALE = 3.0; // 300+ DPI Commercial Print Quality
 
-                    // Canvas dimensions for output vertical card image (540x856 matches standard vertical card ratio)
-                    const outW = HORIZONTAL_HEIGHT; // 540
-                    const outH = HORIZONTAL_WIDTH;  // 856
+                    // Canvas dimensions for original card design at 300 DPI
+                    const designW = (isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT) * PDF_SCALE; // 2568 or 1620 px
+                    const designH = (isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH) * PDF_SCALE; // 1620 or 2568 px
+
+                    // Canvas dimensions for output vertical card image (1620x2568 px at 300 DPI)
+                    const outW = HORIZONTAL_HEIGHT * PDF_SCALE; // 1620 px
+                    const outH = HORIZONTAL_WIDTH * PDF_SCALE;  // 2568 px
 
                     const tempCanvas = document.createElement('canvas');
                     tempCanvas.width = designW;
                     tempCanvas.height = designH;
                     const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.imageSmoothingEnabled = true;
+                    tempCtx.imageSmoothingQuality = 'high';
 
                     const outCanvas = document.createElement('canvas');
                     outCanvas.width = outW;
                     outCanvas.height = outH;
                     const outCtx = outCanvas.getContext('2d');
+                    outCtx.imageSmoothingEnabled = true;
+                    outCtx.imageSmoothingQuality = 'high';
 
                     const rotatedCanvas = document.createElement('canvas');
                     rotatedCanvas.width = outW;
                     rotatedCanvas.height = outH;
                     const rotatedCtx = rotatedCanvas.getContext('2d');
+                    rotatedCtx.imageSmoothingEnabled = true;
+                    rotatedCtx.imageSmoothingQuality = 'high';
 
                     // Helper to draw design and rotate 90° if horizontal to produce vertical card image
                     const drawVerticalCard = async (side, cardData) => {
@@ -3207,7 +3218,7 @@
                             const cardX = row1StartX + j * (cardWidthMM + cardSpacing);
 
                             await drawVerticalCard('front', cardData);
-                            pdf.addImage(outCanvas.toDataURL('image/png'), 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM);
+                            pdf.addImage(outCanvas.toDataURL('image/jpeg', 0.98), 'JPEG', cardX, frontRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
 
                             if (!frontOnly) {
                                 await drawVerticalCard('back', cardData);
@@ -3220,7 +3231,7 @@
                                 rotatedCtx.translate(-outW / 2, -outH / 2);
                                 rotatedCtx.drawImage(outCanvas, 0, 0);
                                 rotatedCtx.restore();
-                                pdf.addImage(rotatedCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+                                pdf.addImage(rotatedCanvas.toDataURL('image/jpeg', 0.98), 'JPEG', cardX, backRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
                             }
                         }
 
@@ -3234,7 +3245,7 @@
                                 const cardX = row2StartX + j * (cardWidthMM + cardSpacing);
 
                                 await drawVerticalCard('front', cardData);
-                                pdf.addImage(outCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM);
+                                pdf.addImage(outCanvas.toDataURL('image/jpeg', 0.98), 'JPEG', cardX, backRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
                             }
                         }
                     }
