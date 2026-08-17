@@ -1443,6 +1443,10 @@
                 targetCtx.clearRect(0, 0, width, height);
                 targetCtx.imageSmoothingEnabled = true;
                 targetCtx.imageSmoothingQuality = 'high';
+
+                const baseWidth = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const scale = width / baseWidth;
+
                 const bg = bgImages[side];
                 if (bg && bg.complete) {
                     targetCtx.drawImage(bg, 0, 0, width, height);
@@ -1461,9 +1465,11 @@
                             ensureGoogleFontLoaded(fontFamily);
                             const fontWeight = p.fontWeight || 'normal';
                             const fontStyle = p.fontStyle === 'italic' ? 'italic ' : '';
-                            targetCtx.font = `${fontStyle}${fontWeight} ${p.fontSize}px "${fontFamily}", sans-serif`;
+                            const effectiveFontSize = (p.fontSize || 14) * scale;
+                            const effectiveLineHeight = (p.lineHeight || 18) * scale;
+                            targetCtx.font = `${fontStyle}${fontWeight} ${effectiveFontSize}px "${fontFamily}", sans-serif`;
                             if ('letterSpacing' in targetCtx) {
-                                targetCtx.letterSpacing = p.letterSpacing ? `${p.letterSpacing}px` : '0px';
+                                targetCtx.letterSpacing = p.letterSpacing ? `${p.letterSpacing * scale}px` : '0px';
                             }
                             targetCtx.textAlign = p.align;
                             targetCtx.textBaseline = 'top';
@@ -1476,7 +1482,7 @@
                                 textX = x + (p.width * width);
                             }
 
-                            wrapText(targetCtx, value, textX, y, maxWidth, p.lineHeight);
+                            wrapText(targetCtx, value, textX, y, maxWidth, effectiveLineHeight);
                         } else if (p.type === 'qr') {
                             const pWidth = p.width * width;
                             const pHeight = p.height * height;
@@ -1593,7 +1599,7 @@
 
                             // Show the photo number that couldn't be found
                             targetCtx.fillStyle = '#ef4444';
-                            targetCtx.font = 'bold 14px Inter';
+                            targetCtx.font = `bold ${Math.round(14 * scale)}px Inter`;
                             targetCtx.textAlign = 'center';
                             targetCtx.textBaseline = 'middle';
 
@@ -1602,7 +1608,7 @@
                             const errorText = isPhotoNumber ? `Photo\n${value}\nNot Found` : 'Image\nError';
 
                             const lines = errorText.split('\n');
-                            const lineHeight = 16;
+                            const lineHeight = Math.round(16 * scale);
                             const startY = y + pHeight / 2 - (lines.length - 1) * lineHeight / 2;
 
                             lines.forEach((line, index) => {
@@ -1615,9 +1621,11 @@
                         ensureGoogleFontLoaded(fontFamily);
                         const fontWeight = p.fontWeight || 'normal';
                         const fontStyle = p.fontStyle === 'italic' ? 'italic ' : '';
-                        targetCtx.font = `${fontStyle}${fontWeight} ${p.fontSize}px "${fontFamily}", sans-serif`;
+                        const effectiveFontSize = (p.fontSize || 14) * scale;
+                        const effectiveLineHeight = (p.lineHeight || 18) * scale;
+                        targetCtx.font = `${fontStyle}${fontWeight} ${effectiveFontSize}px "${fontFamily}", sans-serif`;
                         if ('letterSpacing' in targetCtx) {
-                            targetCtx.letterSpacing = p.letterSpacing ? `${p.letterSpacing}px` : '0px';
+                            targetCtx.letterSpacing = p.letterSpacing ? `${p.letterSpacing * scale}px` : '0px';
                         }
                         targetCtx.textAlign = p.align;
                         targetCtx.textBaseline = 'top';
@@ -1631,7 +1639,7 @@
                             textX = x + (p.width * width);
                         }
 
-                        wrapText(targetCtx, value, textX, y, maxWidth, p.lineHeight);
+                        wrapText(targetCtx, value, textX, y, maxWidth, effectiveLineHeight);
                     }
                 }
             };
