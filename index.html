@@ -1440,7 +1440,8 @@
             };
 
             const drawCardOnContext = async (targetCtx, side, width, height, rowData) => {
-                targetCtx.clearRect(0, 0, width, height);
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.fillRect(0, 0, width, height);
                 targetCtx.imageSmoothingEnabled = true;
                 targetCtx.imageSmoothingQuality = 'high';
 
@@ -3237,10 +3238,12 @@
 
                     // Helper to draw design and rotate 90° if horizontal to produce vertical card image
                     const drawVerticalCard = async (side, cardData) => {
-                        tempCtx.clearRect(0, 0, designW, designH);
+                        tempCtx.fillStyle = '#ffffff';
+                        tempCtx.fillRect(0, 0, designW, designH);
                         await drawCardOnContext(tempCtx, side, designW, designH, cardData);
 
-                        outCtx.clearRect(0, 0, outW, outH);
+                        outCtx.fillStyle = '#ffffff';
+                        outCtx.fillRect(0, 0, outW, outH);
                         if (isHorizontal) {
                             // Rotate horizontal design 90° counter-clockwise so it stands vertically on PDF
                             outCtx.save();
@@ -3270,11 +3273,12 @@
                             const cardX = row1StartX + j * (cardWidthMM + cardSpacing);
 
                             await drawVerticalCard('front', cardData);
-                            pdf.addImage(outCanvas.toDataURL('image/jpeg', 0.98), 'JPEG', cardX, frontRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
+                            pdf.addImage(outCanvas.toDataURL('image/png'), 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
 
                             if (!frontOnly) {
                                 await drawVerticalCard('back', cardData);
-                                rotatedCtx.clearRect(0, 0, outW, outH);
+                                rotatedCtx.fillStyle = '#ffffff';
+                                rotatedCtx.fillRect(0, 0, outW, outH);
                                 rotatedCtx.save();
                                 rotatedCtx.translate(outW / 2, outH / 2);
                                 if (!isHorizontal) {
@@ -3283,7 +3287,7 @@
                                 rotatedCtx.translate(-outW / 2, -outH / 2);
                                 rotatedCtx.drawImage(outCanvas, 0, 0);
                                 rotatedCtx.restore();
-                                pdf.addImage(rotatedCanvas.toDataURL('image/jpeg', 0.98), 'JPEG', cardX, backRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
+                                pdf.addImage(rotatedCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
                             }
                         }
 
@@ -3297,7 +3301,7 @@
                                 const cardX = row2StartX + j * (cardWidthMM + cardSpacing);
 
                                 await drawVerticalCard('front', cardData);
-                                pdf.addImage(outCanvas.toDataURL('image/jpeg', 0.98), 'JPEG', cardX, backRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
+                                pdf.addImage(outCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
                             }
                         }
                     }
