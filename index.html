@@ -3204,16 +3204,16 @@
                     const frontRowY = 20;
                     const backRowY = 115.6; // Top margin: 20mm, Middle gap: 10mm, Bottom margin: 8.8mm
 
-                    // High-Resolution 300+ DPI Print Scaling Factor
-                    const PDF_SCALE = 3.0; // 300+ DPI Commercial Print Quality
+                    // High-Resolution 300+ DPI Print Scaling Factor (~508 DPI for 54mm card)
+                    const PDF_SCALE = 2.0;
 
-                    // Canvas dimensions for original card design at 300 DPI
-                    const designW = (isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT) * PDF_SCALE; // 2568 or 1620 px
-                    const designH = (isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH) * PDF_SCALE; // 1620 or 2568 px
+                    // Canvas dimensions for original card design
+                    const designW = (isHorizontal ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT) * PDF_SCALE;
+                    const designH = (isHorizontal ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH) * PDF_SCALE;
 
-                    // Canvas dimensions for output vertical card image (1620x2568 px at 300 DPI)
-                    const outW = HORIZONTAL_HEIGHT * PDF_SCALE; // 1620 px
-                    const outH = HORIZONTAL_WIDTH * PDF_SCALE;  // 2568 px
+                    // Canvas dimensions for output vertical card image (1080x1712 px)
+                    const outW = HORIZONTAL_HEIGHT * PDF_SCALE;
+                    const outH = HORIZONTAL_WIDTH * PDF_SCALE;
 
                     const tempCanvas = document.createElement('canvas');
                     tempCanvas.width = designW;
@@ -3259,56 +3259,83 @@
                     const cardsPerPage = frontOnly ? cardsPerRow * 2 : cardsPerRow;
                     const totalPages = Math.ceil(data.length / cardsPerPage);
 
-                    for (let i = 0; i < data.length; i += cardsPerPage) {
-                        if (i > 0) pdf.addPage();
-                        const pageNum = Math.floor(i / cardsPerPage) + 1;
-                        showProgress(Math.round((pageNum / totalPages) * 100), `Page ${pageNum} of ${totalPages}`);
-                        loadingText.textContent = `Generating PDF... page ${pageNum} / ${totalPages}`;
+                    // Batching configuration: maximum 25 A4 pages per PDF file to prevent browser memory overflow
+                    const MAX_PAGES_PER_PDF = 25;
+                    const totalBatches = Math.ceil(totalPages / MAX_PAGES_PER_PDF);
 
-                        // ROW 1 (Fronts)
-                        const row1Size = Math.min(cardsPerRow, data.length - i);
-                        const row1StartX = cardSpacing + (cardsPerRow - row1Size) * (cardWidthMM + cardSpacing);
-                        for (let j = 0; j < row1Size; j++) {
-                            const cardData = data[i + j];
-                            const cardX = row1StartX + j * (cardWidthMM + cardSpacing);
+                    for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+                        const startPage = batchIdx * MAX_PAGES_PER_PDF;
+                        const endPage = Math.min(totalPages, (batchIdx + 1) * MAX_PAGES_PER_PDF);
+                        const startRecord = startPage * cardsPerPage;
+                        const endRecord = Math.min(data.length, endPage * cardsPerPage);
 
-                            await drawVerticalCard('front', cardData);
-                            pdf.addImage(outCanvas.toDataURL('image/png'), 'PNG', cardX, frontRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
+                        const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+                        let isFirstPageInBatch = true;
 
-                            if (!frontOnly) {
-                                await drawVerticalCard('back', cardData);
-                                rotatedCtx.fillStyle = '#ffffff';
-                                rotatedCtx.fillRect(0, 0, outW, outH);
-                                rotatedCtx.save();
-                                rotatedCtx.translate(outW / 2, outH / 2);
-                                if (!isHorizontal) {
-                                    rotatedCtx.rotate(Math.PI);
+                        for (let i = startRecord; i < endRecord; i += cardsPerPage) {
+                            if (!isFirstPageInBatch) pdf.addPage();
+                            isFirstPageInBatch = false;
+
+                            const pageNum = Math.floor(i / cardsPerPage) + 1;
+                            showProgress(Math.round((pageNum / totalPages) * 100), `Page ${pageNum} of ${totalPages}`);
+                            loadingText.textContent = totalBatches > 1
+                                ? `Generating PDF (Part ${batchIdx + 1} of ${totalBatches})... page ${pageNum} / ${totalPages}`
+                                : `Generating PDF... page ${pageNum} / ${totalPages}`;
+
+                            // ROW 1 (Fronts)
+                            const row1Size = Math.min(cardsPerRow, data.length - i);
+                            const row1StartX = cardSpacing + (cardsPerRow - row1Size) * (cardWidthMM + cardSpacing);
+                            for (let j = 0; j < row1Size; j++) {
+                                const cardData = data[i + j];
+                                const cardX = row1StartX + j * (cardWidthMM + cardSpacing);
+
+                                await drawVerticalCard('front', cardData);
+                                pdf.addImage(outCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', cardX, frontRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
+
+                                if (!frontOnly) {
+                                    await drawVerticalCard('back', cardData);
+                                    rotatedCtx.fillStyle = '#ffffff';
+                                    rotatedCtx.fillRect(0, 0, outW, outH);
+                                    rotatedCtx.save();
+                                    rotatedCtx.translate(outW / 2, outH / 2);
+                                    if (!isHorizontal) {
+                                        rotatedCtx.rotate(Math.PI);
+                                    }
+                                    rotatedCtx.translate(-outW / 2, -outH / 2);
+                                    rotatedCtx.drawImage(outCanvas, 0, 0);
+                                    rotatedCtx.restore();
+                                    pdf.addImage(rotatedCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', cardX, backRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
                                 }
-                                rotatedCtx.translate(-outW / 2, -outH / 2);
-                                rotatedCtx.drawImage(outCanvas, 0, 0);
-                                rotatedCtx.restore();
-                                pdf.addImage(rotatedCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
+                            }
+
+                            if (frontOnly) {
+                                // ROW 2 (Next 5 Fronts)
+                                const row2Start = i + cardsPerRow;
+                                const row2Size = Math.min(cardsPerRow, Math.max(0, data.length - row2Start));
+                                const row2StartX = cardSpacing + (cardsPerRow - row2Size) * (cardWidthMM + cardSpacing);
+                                for (let j = 0; j < row2Size; j++) {
+                                    const cardData = data[row2Start + j];
+                                    const cardX = row2StartX + j * (cardWidthMM + cardSpacing);
+
+                                    await drawVerticalCard('front', cardData);
+                                    pdf.addImage(outCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', cardX, backRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
+                                }
                             }
                         }
 
-                        if (frontOnly) {
-                            // ROW 2 (Next 5 Fronts)
-                            const row2Start = i + cardsPerRow;
-                            const row2Size = Math.min(cardsPerRow, Math.max(0, data.length - row2Start));
-                            const row2StartX = cardSpacing + (cardsPerRow - row2Size) * (cardWidthMM + cardSpacing);
-                            for (let j = 0; j < row2Size; j++) {
-                                const cardData = data[row2Start + j];
-                                const cardX = row2StartX + j * (cardWidthMM + cardSpacing);
+                        let filename = frontOnly ? 'ID_Cards_FrontOnly_10_Per_Sheet' : 'ID_Cards_Double_Sided_5_Per_Sheet';
+                        if (totalBatches > 1) {
+                            filename += `_Part${batchIdx + 1}_Pages${startPage + 1}-${endPage}`;
+                        }
+                        filename += '.pdf';
+                        pdf.save(filename);
 
-                                await drawVerticalCard('front', cardData);
-                                pdf.addImage(outCanvas.toDataURL('image/png'), 'PNG', cardX, backRowY, cardWidthMM, cardHeightMM, undefined, 'FAST');
-                            }
+                        if (batchIdx < totalBatches - 1) {
+                            await new Promise(r => setTimeout(r, 600));
                         }
                     }
 
-                    const filename = frontOnly ? 'ID_Cards_FrontOnly_10_Per_Sheet.pdf' : 'ID_Cards_Double_Sided_5_Per_Sheet.pdf';
-                    pdf.save(filename);
-                    toast('PDF generated successfully!', 'success');
+                    toast(totalBatches > 1 ? `Generated ${totalBatches} PDF parts successfully!` : 'PDF generated successfully!', 'success');
                 } catch (error) {
                     if (errorText) errorText.textContent = `Error generating PDF: ${error.message}`;
                     if (errorModal) errorModal.classList.remove('hidden');
