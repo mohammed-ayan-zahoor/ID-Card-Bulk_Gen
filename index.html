@@ -1587,29 +1587,30 @@
                                 targetCtx.drawImage(img, x, y, pWidth, pHeight);
                             }
                         } catch (error) {
-                            console.error(`Could not load image: ${value}`, error);
+                            console.error(`Could not load image for record:`, value, error);
 
-                            // Enhanced error display for photo numbers
                             targetCtx.fillStyle = '#fee2e2';
                             targetCtx.fillRect(x, y, pWidth, pHeight);
 
-                            // Add border
                             targetCtx.strokeStyle = '#ef4444';
                             targetCtx.lineWidth = 2;
                             targetCtx.strokeRect(x, y, pWidth, pHeight);
 
-                            // Show the photo number that couldn't be found
                             targetCtx.fillStyle = '#ef4444';
-                            targetCtx.font = `bold ${Math.round(14 * scale)}px Inter`;
+                            targetCtx.font = `bold ${Math.round(12 * scale)}px Inter`;
                             targetCtx.textAlign = 'center';
                             targetCtx.textBaseline = 'middle';
 
-                            // Check if it looks like a photo number
-                            const isPhotoNumber = /^\d+$/.test(String(value).trim());
-                            const errorText = isPhotoNumber ? `Photo\n${value}\nNot Found` : 'Image\nError';
+                            let errorText = '';
+                            if (!photoFolderLoaded || photoFiles.size === 0) {
+                                errorText = 'Upload Photos\nIn Step 2';
+                            } else {
+                                const cleanVal = String(value || '').replace(/\.0+$/, '').trim();
+                                errorText = cleanVal ? `Photo\n"${cleanVal}"\nNot in Folder` : 'No Photo\nSpecified';
+                            }
 
                             const lines = errorText.split('\n');
-                            const lineHeight = Math.round(16 * scale);
+                            const lineHeight = Math.round(14 * scale);
                             const startY = y + pHeight / 2 - (lines.length - 1) * lineHeight / 2;
 
                             lines.forEach((line, index) => {
@@ -1668,7 +1669,7 @@
                 context.fillText(line, x, currentY);
             };
             const loadImage = async (src, columnKey, rowData = null) => {
-                const srcStr = String(src || '').trim();
+                let srcStr = String(src || '').trim();
 
                 // 0. Check manual custom photo bindings for current record
                 if (rowData && typeof data !== 'undefined' && data && typeof customPhotoBindings !== 'undefined') {
@@ -1689,10 +1690,8 @@
                     }
                 }
 
-                if (!srcStr) throw new Error('Empty image source');
-
                 // 1. Check sign/extra folder if a column name is set and matches
-                if (signColumnName && columnKey === signColumnName && signFiles.size > 0) {
+                if (signColumnName && columnKey === signColumnName && signFiles.size > 0 && srcStr) {
                     const file = getFileByKey(signFiles, srcStr);
                     if (file) {
                         const dataURL = await createPhotoDataURL(file);
@@ -1707,7 +1706,23 @@
 
                 // 2. Check photo folder if loaded
                 if (photoFolderLoaded && photoFiles.size > 0) {
-                    const photoFile = getPhotoByNumber(srcStr);
+                    let photoFile = srcStr ? getPhotoByNumber(srcStr) : null;
+
+                    // If not found and rowData exists, attempt smart fallback column scanning
+                    if (!photoFile && rowData) {
+                        const candidateHeaders = ['photo', 'photo_no', 'photo no', 'photono', 'photo_num', 'photo num', 'image', 'pic', 'roll_no', 'roll no', 'rollno', 'student_id', 'student id', 'adm_no', 'admission_no', 'id'];
+                        for (const [k, v] of Object.entries(rowData)) {
+                            const cleanK = String(k).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                            if (candidateHeaders.some(ch => ch.replace(/[^a-z0-9]/g, '') === cleanK)) {
+                                const candidateVal = String(v || '').trim();
+                                if (candidateVal) {
+                                    photoFile = getPhotoByNumber(candidateVal);
+                                    if (photoFile) break;
+                                }
+                            }
+                        }
+                    }
+
                     if (photoFile) {
                         try {
                             const dataURL = await createPhotoDataURL(photoFile);
@@ -1720,6 +1735,8 @@
                         } catch (_) { /* fall through to URL load */ }
                     }
                 }
+
+                if (!srcStr) throw new Error('Empty image source');
 
                 // 3. Fallback: load as URL / data URI
                 return new Promise((resolve, reject) => {
@@ -1750,9 +1767,9 @@
                     const isImgExt = /\.(jpg|jpeg|png|webp|gif|bmp|tiff|svg)$/i.test(file.name);
                     if (!isImgType && !isImgExt) continue;
 
-                    const fullName = file.name;
+                    const fullName = file.name.trim();
                     const fullNameLower = fullName.toLowerCase();
-                    const nameWithoutExt = fullName.split('.').slice(0, -1).join('.') || fullName;
+                    const nameWithoutExt = fullName.replace(/\.[^/.]+$/, "").trim();
                     const nameWithoutExtLower = nameWithoutExt.toLowerCase();
 
                     targetMap.set(fullName, file);
@@ -1760,12 +1777,17 @@
                     targetMap.set(nameWithoutExt, file);
                     targetMap.set(nameWithoutExtLower, file);
 
+                    // Also index clean alphanumeric version (e.g. "photo_3234" -> "3234")
+                    const cleanAlphaNum = nameWithoutExtLower.replace(/[^a-z0-9]/g, '');
+                    if (cleanAlphaNum) targetMap.set(cleanAlphaNum, file);
+
                     const numMatch = nameWithoutExt.match(/\d+/);
                     if (numMatch) {
                         const numStr = numMatch[0];
                         targetMap.set(numStr, file);
                         const stripped = numStr.replace(/^0+/, '') || '0';
                         targetMap.set(stripped, file);
+                        targetMap.set(stripped + '.0', file); // Excel float support
                     }
                     count++;
                 }
@@ -1802,16 +1824,23 @@
 
             // Generic file lookup: checks signFiles (or photoFiles) in order of specificity
             const getFileByKey = (map, key) => {
-                if (!key || !map || map.size === 0) return null;
-                const s = String(key).trim();
+                if (key === undefined || key === null || !map || map.size === 0) return null;
+                let s = String(key).trim();
                 if (!s) return null;
+
+                // Strip Excel floating zero suffix (e.g. "3234.0" -> "3234")
+                s = s.replace(/\.0+$/, '').trim();
 
                 if (map.has(s)) return map.get(s);
                 if (map.has(s.toLowerCase())) return map.get(s.toLowerCase());
 
-                const noExt = s.replace(/\.[^/.]+$/, "");
+                const noExt = s.replace(/\.[^/.]+$/, "").trim();
                 if (map.has(noExt)) return map.get(noExt);
                 if (map.has(noExt.toLowerCase())) return map.get(noExt.toLowerCase());
+
+                // Alphanumeric clean key lookup
+                const cleanKey = s.toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (cleanKey && map.has(cleanKey)) return map.get(cleanKey);
 
                 const numMatch = s.match(/\d+/);
                 if (numMatch) {
@@ -1821,6 +1850,8 @@
                     if (map.has(stripped)) return map.get(stripped);
                     const padded = numStr.padStart(4, '0');
                     if (map.has(padded)) return map.get(padded);
+                    const padded6 = numStr.padStart(6, '0');
+                    if (map.has(padded6)) return map.get(padded6);
                 }
                 return null;
             };
