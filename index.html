@@ -1250,10 +1250,31 @@
                 const fontId = `gfont-${cleanName.replace(/\s+/g, '-').toLowerCase()}`;
                 if (document.getElementById(fontId)) return;
 
+                const formattedName = cleanName.replace(/\s+/g, '+');
                 const link = document.createElement('link');
                 link.id = fontId;
                 link.rel = 'stylesheet';
-                link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(cleanName)}:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap`;
+                link.href = `https://fonts.googleapis.com/css2?family=${formattedName}:wght@300;400;500;600;700;800;900&display=swap`;
+
+                link.onerror = () => {
+                    // Fallback for single-weight/script Google Fonts that do not support variable weights
+                    const fallbackLink = document.createElement('link');
+                    fallbackLink.id = fontId + '-fb';
+                    fallbackLink.rel = 'stylesheet';
+                    fallbackLink.href = `https://fonts.googleapis.com/css2?family=${formattedName}&display=swap`;
+                    fallbackLink.onload = () => {
+                        if (document.fonts && document.fonts.ready) {
+                            document.fonts.ready.then(() => {
+                                drawAllCanvases();
+                                renderPlaceholders();
+                            });
+                        } else {
+                            drawAllCanvases();
+                            renderPlaceholders();
+                        }
+                    };
+                    document.head.appendChild(fallbackLink);
+                };
 
                 link.onload = () => {
                     if (document.fonts && document.fonts.ready) {
@@ -2255,16 +2276,28 @@
                 if (p.type === 'text') {
                     content += `
                     <div>
-                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Font Family (Select or Type Any Google Font)</label>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider">Font Family</label>
+                            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+                                Google Fonts (1500+)
+                            </span>
+                        </div>
                         <select onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900 mb-1.5 font-medium">
-                            <optgroup label="Modern Sans-Serif">
+                            <optgroup label="🔥 Most Popular Google Fonts">
                                 <option value="Inter" ${(p.fontFamily || 'Inter') === 'Inter' ? 'selected' : ''}>Inter (Default)</option>
-                                <option value="Roboto" ${p.fontFamily === 'Roboto' ? 'selected' : ''}>Roboto</option>
                                 <option value="Poppins" ${p.fontFamily === 'Poppins' ? 'selected' : ''}>Poppins</option>
+                                <option value="Roboto" ${p.fontFamily === 'Roboto' ? 'selected' : ''}>Roboto</option>
                                 <option value="Montserrat" ${p.fontFamily === 'Montserrat' ? 'selected' : ''}>Montserrat</option>
                                 <option value="Open Sans" ${p.fontFamily === 'Open Sans' ? 'selected' : ''}>Open Sans</option>
-                                <option value="Lato" ${p.fontFamily === 'Lato' ? 'selected' : ''}>Lato</option>
                                 <option value="Oswald" ${p.fontFamily === 'Oswald' ? 'selected' : ''}>Oswald</option>
+                                <option value="Playfair Display" ${p.fontFamily === 'Playfair Display' ? 'selected' : ''}>Playfair Display</option>
+                                <option value="Bebas Neue" ${p.fontFamily === 'Bebas Neue' ? 'selected' : ''}>Bebas Neue</option>
+                                <option value="Cinzel" ${p.fontFamily === 'Cinzel' ? 'selected' : ''}>Cinzel</option>
+                                <option value="Caveat" ${p.fontFamily === 'Caveat' ? 'selected' : ''}>Caveat</option>
+                            </optgroup>
+                            <optgroup label="Modern Sans-Serif">
+                                <option value="Lato" ${p.fontFamily === 'Lato' ? 'selected' : ''}>Lato</option>
                                 <option value="Raleway" ${p.fontFamily === 'Raleway' ? 'selected' : ''}>Raleway</option>
                                 <option value="Nunito" ${p.fontFamily === 'Nunito' ? 'selected' : ''}>Nunito</option>
                                 <option value="Outfit" ${p.fontFamily === 'Outfit' ? 'selected' : ''}>Outfit</option>
@@ -2277,9 +2310,7 @@
                                 <option value="Jost" ${p.fontFamily === 'Jost' ? 'selected' : ''}>Jost</option>
                             </optgroup>
                             <optgroup label="Elegant Serif">
-                                <option value="Playfair Display" ${p.fontFamily === 'Playfair Display' ? 'selected' : ''}>Playfair Display</option>
                                 <option value="Merriweather" ${p.fontFamily === 'Merriweather' ? 'selected' : ''}>Merriweather</option>
-                                <option value="Cinzel" ${p.fontFamily === 'Cinzel' ? 'selected' : ''}>Cinzel</option>
                                 <option value="Cormorant Garamond" ${p.fontFamily === 'Cormorant Garamond' ? 'selected' : ''}>Cormorant Garamond</option>
                                 <option value="PT Serif" ${p.fontFamily === 'PT Serif' ? 'selected' : ''}>PT Serif</option>
                                 <option value="Lora" ${p.fontFamily === 'Lora' ? 'selected' : ''}>Lora</option>
@@ -2287,7 +2318,6 @@
                                 <option value="Times New Roman" ${p.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
                             </optgroup>
                             <optgroup label="Display & Bold Headers">
-                                <option value="Bebas Neue" ${p.fontFamily === 'Bebas Neue' ? 'selected' : ''}>Bebas Neue</option>
                                 <option value="Abril Fatface" ${p.fontFamily === 'Abril Fatface' ? 'selected' : ''}>Abril Fatface</option>
                                 <option value="Syne" ${p.fontFamily === 'Syne' ? 'selected' : ''}>Syne</option>
                                 <option value="Righteous" ${p.fontFamily === 'Righteous' ? 'selected' : ''}>Righteous</option>
@@ -2296,10 +2326,10 @@
                             </optgroup>
                             <optgroup label="Calligraphy & Script">
                                 <option value="Dancing Script" ${p.fontFamily === 'Dancing Script' ? 'selected' : ''}>Dancing Script</option>
-                                <option value="Caveat" ${p.fontFamily === 'Caveat' ? 'selected' : ''}>Caveat</option>
                                 <option value="Pacifico" ${p.fontFamily === 'Pacifico' ? 'selected' : ''}>Pacifico</option>
                                 <option value="Great Vibes" ${p.fontFamily === 'Great Vibes' ? 'selected' : ''}>Great Vibes</option>
                                 <option value="Sacramento" ${p.fontFamily === 'Sacramento' ? 'selected' : ''}>Sacramento</option>
+                                <option value="Satisfy" ${p.fontFamily === 'Satisfy' ? 'selected' : ''}>Satisfy</option>
                             </optgroup>
                             <optgroup label="Monospace & Code">
                                 <option value="Fira Code" ${p.fontFamily === 'Fira Code' ? 'selected' : ''}>Fira Code</option>
@@ -2308,7 +2338,18 @@
                                 <option value="Courier New" ${p.fontFamily === 'Courier New' ? 'selected' : ''}>Courier New</option>
                             </optgroup>
                         </select>
-                        <input type="text" list="gfonts-datalist" placeholder="Or type any font name (e.g., Josefin Sans)..." value="${p.fontFamily || ''}" onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" oninput="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900">
+                        <div class="relative mb-1.5">
+                            <input type="text" list="gfonts-datalist" placeholder="🔍 Type ANY Google Font (e.g. Josefin Sans)..." value="${p.fontFamily || ''}" onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" oninput="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900">
+                        </div>
+                        <div class="flex items-center gap-1 flex-wrap mb-1">
+                            <span class="text-[10px] text-ink-400 font-semibold">Quick:</span>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Poppins')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Poppins</button>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Montserrat')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Montserrat</button>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Bebas Neue')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Bebas Neue</button>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Playfair Display')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Playfair</button>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Cinzel')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Cinzel</button>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Caveat')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Caveat</button>
+                        </div>
                         <datalist id="gfonts-datalist">
                             <option value="Poppins"></option>
                             <option value="Inter"></option>
@@ -2328,6 +2369,27 @@
                             <option value="Urbanist"></option>
                             <option value="Satisfy"></option>
                             <option value="Great Vibes"></option>
+                            <option value="Abril Fatface"></option>
+                            <option value="Syne"></option>
+                            <option value="Righteous"></option>
+                            <option value="Comfortaa"></option>
+                            <option value="Anton"></option>
+                            <option value="Pacifico"></option>
+                            <option value="Sacramento"></option>
+                            <option value="JetBrains Mono"></option>
+                            <option value="Space Mono"></option>
+                            <option value="Courier New"></option>
+                            <option value="DM Sans"></option>
+                            <option value="Plus Jakarta Sans"></option>
+                            <option value="Quicksand"></option>
+                            <option value="Lexend"></option>
+                            <option value="Jost"></option>
+                            <option value="Merriweather"></option>
+                            <option value="Cormorant Garamond"></option>
+                            <option value="PT Serif"></option>
+                            <option value="Lora"></option>
+                            <option value="Georgia"></option>
+                            <option value="Times New Roman"></option>
                         </datalist>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
