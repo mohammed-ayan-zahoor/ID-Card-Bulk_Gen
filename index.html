@@ -309,7 +309,7 @@
         }
 
         /* Buttons & Form Controls (Strict Photoshop Density) */
-        button.btn-photoshop {
+        button.btn-photoshop, label.btn-photoshop {
             height: 24px;
             padding: 0 8px;
             font-size: 11px;
@@ -326,11 +326,11 @@
             white-space: nowrap;
             transition: all 0.1s ease;
         }
-        button.btn-photoshop:hover {
+        button.btn-photoshop:hover, label.btn-photoshop:hover {
             background-color: var(--bg-hover);
             color: #FFFFFF;
         }
-        button.btn-photoshop:active {
+        button.btn-photoshop:active, label.btn-photoshop:active {
             background-color: var(--bg-selected);
         }
         button.btn-photoshop.btn-primary {
@@ -954,7 +954,7 @@
                 <div class="flex items-center gap-1.5">
                     <span>Zoom:</span>
                     <select id="zoom-select" class="bg-field text-white border-line text-xs py-0 px-1 rounded h-5">
-                        <option value="fit" selected>Fit Window</option>
+                        <option value="fit">Fit Window</option>
                         <option value="actual">100% (Actual)</option>
                         <option value="0.3">30%</option>
                         <option value="0.5">50%</option>
@@ -1282,6 +1282,7 @@
             // --- Constants ---
             const HORIZONTAL_WIDTH = 856;
             const HORIZONTAL_HEIGHT = 540;
+            const PDF_SCALE = 2.0;
 
             const getDefaultBg = (side, orient) => {
                 const isHoriz = orient === 'horizontal';
@@ -1804,7 +1805,8 @@
             };
 
             // --- Photo Folder Management ---
-            const processPhotoFolder = (files) => {
+            let processPhotoFolder;
+            window.processPhotoFolder = processPhotoFolder = (files) => {
                 const validCount = processImageFolder(files, photoFiles);
                 photoFolderLoaded = validCount > 0;
                 if (photoFolderLoaded) {
@@ -1937,14 +1939,6 @@
                         placeholderWrapper.style.left = '0px';
                         placeholderWrapper.style.width = `${canvas.offsetWidth}px`;
                         placeholderWrapper.style.height = `${canvas.offsetHeight}px`;
-                    }
-                });
-            }px`;
-                        placeholderWrapper.style.left   = `${canvas.offsetLeft}px`;
-                        placeholderWrapper.style.width  = `${canvas.offsetWidth}px`;
-                        placeholderWrapper.style.height = `${canvas.offsetHeight}px`;
-                        placeholderWrapper.style.transform       = canvasStyle.transform;
-                        placeholderWrapper.style.transformOrigin = canvasStyle.transformOrigin;
                     }
                 });
             };
@@ -2872,15 +2866,11 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 if (orientationHorizontalBtn) orientationHorizontalBtn.className = `btn-photoshop px-2 text-xs font-medium transition-colors ${isHorizontal ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
                 if (orientationVerticalBtn) orientationVerticalBtn.className = `btn-photoshop px-2 text-xs font-medium transition-colors ${!isHorizontal ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
 
-                // Redraw canvases with new dimensions and maintain current zoom
-                const currentZoom = (zoomSelect && zoomSelect.value) ? zoomSelect.value : '0.7';
+                const zv = zoomSelect ? zoomSelect.value : '0.7';
+                const currentZoom = (zv === 'fit' || zv === 'actual') ? zv : (parseFloat(zv) || 0.7);
                 applyZoom(currentZoom);
                 drawAllCanvases();
                 renderPlaceholders();
-
-                // Reapply current zoom level
-                const currentZoom = (zoomSelect && zoomSelect.value === 'actual') ? 'actual' : (zoomSelect ? parseFloat(zoomSelect.value) : 0.7);
-                applyZoom(currentZoom);
             };
             // --- Zoom Management ---
             const applyZoom = (zoomLevel) => {
@@ -2890,7 +2880,9 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 const baseHeight = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
 
                 // Handle 'fit' or 'actual'
-                if (zoomLevel === 'actual' || zoomLevel === 'fit') {
+                if (zoomLevel === 'actual') {
+                    actualZoom = 1.0;
+                } else if (zoomLevel === 'fit') {
                     // Compute best fit against workspace stage dimensions
                     const stage = document.getElementById('workspace-stage');
                     const availW = (stage ? stage.clientWidth : 800) - 80;
@@ -2936,7 +2928,7 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 const statusDocDims = document.getElementById('status-doc-dims');
                 if (statusDocDims) {
                     const pct = Math.round(actualZoom * 100);
-                    statusDocDims.textContent = `CR-80: ${baseWidth} × ${baseHeight} px @ ${pct}% (PDF scale: ${PDF_SCALE}x)`;
+                    statusDocDims.textContent = `CR-80: ${baseWidth} × ${baseHeight} px @ ${pct}% (Export scale: ${PDF_SCALE}x)`;
                 }
 
                 setTimeout(() => {
@@ -3213,7 +3205,8 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
             // Zoom control
             if (zoomSelect) {
                 zoomSelect.addEventListener('change', (e) => {
-                    const zoomLevel = e.target.value === 'actual' ? 'actual' : parseFloat(e.target.value);
+                    const val = e.target.value;
+                    const zoomLevel = (val === 'fit' || val === 'actual') ? val : (parseFloat(val) || 0.7);
                     applyZoom(zoomLevel);
                 });
             }
@@ -4872,15 +4865,17 @@ if (generatePdfBtn) {
         }
 
         // Hook into data upload and photo folder loading to update badge automatically
-        const origProcessPhotoFolder = processPhotoFolder;
-        processPhotoFolder = (files) => {
-            origProcessPhotoFolder(files);
-            updateAuditBadge();
-        };
+        if (typeof window.processPhotoFolder === 'function') {
+            const origProcessPhotoFolder = window.processPhotoFolder;
+            window.processPhotoFolder = (files) => {
+                origProcessPhotoFolder(files);
+                updateAuditBadge();
+            };
+        }
 
-        const origProcessDataFile = processDataFile;
-        if (typeof processDataFile !== 'undefined') {
-            processDataFile = (file) => {
+        if (typeof window.processDataFile === 'function') {
+            const origProcessDataFile = window.processDataFile;
+            window.processDataFile = (file) => {
                 origProcessDataFile(file);
                 updateAuditBadge();
             };
