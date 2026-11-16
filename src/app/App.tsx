@@ -83,6 +83,8 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
 
   useEffect(() => {
     if (route.page !== 'editor') { setProject(null); return; }
+    const cached = projects.find((item) => item.id === route.projectId);
+    if (cached) { setProject(cached); setWorkspaceError(null); return; }
     let active = true;
     setProject(null);
     setWorkspaceError(null);
@@ -90,7 +92,7 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
       if (active) setProject(items.find((item) => item.id === route.projectId) || null);
     }).catch((error) => { if (active) setWorkspaceError(error instanceof Error ? error.message : 'Could not open this project.'); });
     return () => { active = false; };
-  }, [route, repository]);
+  }, [route, repository, projects]);
 
   const goHome = useCallback((section: Section = 'recent') => navigate(section === 'recent' ? '/' : `/?view=${section}`), []);
   const openProject = useCallback((item: ProjectRecord) => navigate(`/projects/${encodeURIComponent(item.id)}`), []);
@@ -145,6 +147,11 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
     await repository.delete(item.id); setLayouts((items) => items.filter((entry) => entry.id !== item.id));
   }, [cloudDb, repository]);
 
+  const saveLayout = useCallback(async (item: LayoutRecord) => {
+    await repository.saveLayout(item);
+    setLayouts((current) => [item, ...current.filter((entry) => entry.id !== item.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+  }, [repository]);
+
   const visibleProjects = useMemo(() => projects.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())).sort((a, b) => sortBy === 'name' ? a.name.localeCompare(b.name) : b.updatedAt.localeCompare(a.updatedAt)), [projects, query, sortBy]);
   const visibleLayouts = useMemo(() => layouts.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())), [layouts, query]);
 
@@ -155,7 +162,7 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
   if (route.page === 'editor') {
     if (!project && loaded && workspaceError) return <main className="not-found"><Brand /><p>{workspaceError}</p><button className="button-secondary" onClick={() => void refresh()}>Try again</button><button className="button-secondary" onClick={() => goHome('projects')}>Back to projects</button></main>;
     if (!project && loaded) return <main className="not-found"><Brand /><p>This project could not be found in this workspace.</p><button className="button-secondary" onClick={() => goHome('projects')}>Back to projects</button></main>;
-    return project ? <EditorScreen key={`${auth?.userId || 'local'}:${project.id}`} project={project} onBack={goHome} onSave={saveProject} /> : <div className="loading-screen"><span className="spinner" />Opening your project…</div>;
+    return project ? <EditorScreen key={`${auth?.userId || 'local'}:${project.id}`} project={project} onBack={goHome} onSave={saveProject} onSaveLayout={saveLayout} /> : <div className="loading-screen"><span className="spinner" />Opening your project…</div>;
   }
 
   const section = route.section;
@@ -270,7 +277,7 @@ function ProjectCard({ project, onOpen, onRename, onDuplicate, onDelete }: { pro
 }
 
 function LayoutCard({ layout, onUse }: { layout: LayoutRecord; onUse: () => void }) {
-  return <button className="layout-card" onClick={onUse}><CardPreview orientation={layout.orientation} background={layout.backgrounds?.front} placeholders={layout.placeholders.front} variant="layout" /><span className="file-card-title">{layout.name}</span><span className="file-card-meta">Saved layout · {label(layout.orientation)}</span><span className="layout-use-label">Use layout <span aria-hidden="true">↗</span></span></button>;
+  return <button className="layout-card" onClick={onUse}><CardPreview orientation={layout.orientation} background={layout.backgrounds?.front} placeholders={layout.placeholders.front} thumbnail={layout.thumbnail} variant="layout" /><span className="file-card-title">{layout.name}</span><span className="file-card-meta">Saved layout · {label(layout.orientation)}</span><span className="layout-use-label">Use layout <span aria-hidden="true">↗</span></span></button>;
 }
 
 function CreateDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (orientation: Orientation) => void }) {
@@ -282,7 +289,7 @@ function CreateDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (o
   </section></div>;
 }
 
-function EditorScreen({ project, onBack, onSave }: { project: ProjectRecord; onBack: (section?: Section) => void; onSave: (project: ProjectRecord) => Promise<void> }) {
+function EditorScreen({ project, onBack, onSave, onSaveLayout }: { project: ProjectRecord; onBack: (section?: Section) => void; onSave: (project: ProjectRecord) => Promise<void>; onSaveLayout: (layout: LayoutRecord) => Promise<void> }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const projectRef = useRef(project);
   const signatureRef = useRef('');
@@ -329,6 +336,20 @@ function EditorScreen({ project, onBack, onSave }: { project: ProjectRecord; onB
     document.addEventListener('visibilitychange', saveOnHide);
     return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', saveOnHide); };
   }, [capture]);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow) return;
+      const payload = event.data as { type?: string; layout?: LayoutRecord } | null;
+      if (payload?.type !== 'quantech:layout-saved' || !payload.layout) return;
+      void onSaveLayout(payload.layout).catch((error) => {
+        console.error('Layout sync failed:', error);
+        (frameRef.current?.contentWindow as EditorBridge | null)?.setSaveStatus?.('Layout save failed');
+      });
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [onSaveLayout]);
 
   return <div className="editor-host-shell"><header className="editor-host-bar"><button className="back-home-button" onClick={() => { void capture(true).finally(() => onBack('recent')); }}><Glyph name="back" size={17} /><span>Workspace</span></button></header><iframe ref={frameRef} className="editor-frame" src="/editor.html" title="ID card editor" onLoad={onFrameLoad}/></div>;
 }

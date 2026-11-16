@@ -4289,6 +4289,23 @@ if (generatePdfBtn) {
                     }
                 }
 
+                // Keep the React workspace library in sync. The editor's legacy
+                // save path stores layouts locally; signed-in workspaces also need
+                // the same record written to their active repository (Supabase).
+                const createdAt = layoutData.dateCreated;
+                const layoutId = `legacy-layout-${layoutName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                window.parent.postMessage({
+                    type: 'quantech:layout-saved',
+                    layout: {
+                        ...layoutData,
+                        id: layoutId,
+                        schemaVersion: 1,
+                        kind: 'layout',
+                        createdAt,
+                        updatedAt: createdAt
+                    }
+                }, window.location.origin);
+
                 updateLayoutSelect();
                 if (layoutSelect) layoutSelect.value = layoutName;
                 toast(`Layout "${layoutName}" saved!`, 'success');
