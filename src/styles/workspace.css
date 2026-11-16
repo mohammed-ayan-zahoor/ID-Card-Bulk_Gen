@@ -213,6 +213,21 @@ h1, h2, h3, p { margin-top: 0; }
 .workspace-error { display:flex; max-width:650px; flex-direction:column; align-items:flex-start; gap:8px; padding:18px; border:1px solid #6d3b3b; border-radius:4px; background:#3d2929; color:#f0d0d0; font-size:12px; }
 .workspace-error span { color:#d4aaaa; }
 
+/* Clerk sign-in gate and clear, icon-free library empty states. */
+.sign-in-screen { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; padding:32px 20px; background:var(--pasteboard); }
+.sign-in-heading { display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; }
+.sign-in-heading .brand-lockup { justify-content:center; }
+.sign-in-heading h1 { margin:8px 0 0; color:#efefef; font-size:22px; font-weight:500; letter-spacing:-.35px; }
+.sign-in-heading p { margin:0; color:var(--ink-dim); font-size:12px; }
+.sign-in-screen .cl-rootBox { width:min(100%, 400px); }
+.sign-in-screen .cl-card { box-shadow:none; }
+.empty-state { min-height:132px; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:0; padding:22px 24px; border:1px solid #414141; border-radius:4px; background:#292929; text-align:left; }
+.empty-state-mark { display:none !important; }
+.empty-state h3 { margin:0 0 6px; color:#e1e1e1; font-size:13px; font-weight:600; }
+.empty-state p { max-width:420px; margin:0 0 14px; color:#9a9a9a; font-size:11px; line-height:1.6; }
+.empty-state p:last-child { margin-bottom:0; }
+.empty-state .button-secondary { min-height:32px; height:auto; font-size:11px; }
+
 @media (max-width:700px) {
   .home-topbar { grid-template-columns:1fr auto; }
   .workspace-account { grid-column:1 / -1; grid-row:2; justify-content:flex-start; }

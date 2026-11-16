@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SignIn } from '@clerk/react';
 import { importLegacyLayouts, migrateLegacyData, workspaceDb } from '../data/workspaceDb';
 import { createCloudWorkspaceDb } from '../data/cloudWorkspaceDb';
 import { emptyDocument, makeId } from '../data/types';
@@ -149,6 +150,8 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
 
   if (auth?.clerkConfigured && !auth.loaded) return <div className="loading-screen"><span className="spinner" />Checking your account…</div>;
 
+  if (auth?.clerkConfigured && !auth.signedIn) return <main className="sign-in-screen"><div className="sign-in-heading"><Brand /><h1>Sign in to Quantech ID Studio</h1><p>Your projects and layouts are saved to your account.</p></div><SignIn routing="hash" /></main>;
+
   if (route.page === 'editor') {
     if (!project && loaded && workspaceError) return <main className="not-found"><Brand /><p>{workspaceError}</p><button className="button-secondary" onClick={() => void refresh()}>Try again</button><button className="button-secondary" onClick={() => goHome('projects')}>Back to projects</button></main>;
     if (!project && loaded) return <main className="not-found"><Brand /><p>This project could not be found in this workspace.</p><button className="button-secondary" onClick={() => goHome('projects')}>Back to projects</button></main>;
@@ -166,7 +169,7 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
             <div className="content-heading"><h1>{section === 'recent' ? 'Recent' : section === 'projects' ? 'Projects' : 'Layouts'}</h1><div className="library-controls"><label className="search-field"><Glyph name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search files" aria-label="Search files" /></label><select aria-label="Sort files" value={sortBy} onChange={(event) => setSortBy(event.target.value as 'edited' | 'name')}><option value="edited">Recently edited</option><option value="name">Name</option></select><div className="view-toggle" aria-label="File view"><button aria-label="Grid view" aria-pressed={fileView === 'grid'} onClick={() => setFileView('grid')}>Grid</button><button aria-label="List view" aria-pressed={fileView === 'list'} onClick={() => setFileView('list')}>List</button></div></div></div>
         {!loaded ? <div className="loading-inline"><span className="spinner" />Loading {cloudDb ? 'cloud' : 'local'} files…</div> : workspaceError ? <div className="workspace-error" role="alert"><strong>Could not load this workspace</strong><span>{workspaceError}</span><button className="button-secondary" onClick={() => void refresh()}>Try again</button></div> : <>
           {(section === 'recent' || section === 'projects') && <section className="home-section"><SectionHeading title={section === 'recent' ? 'Recent projects' : 'All projects'} detail={visibleProjects.length ? `${visibleProjects.length} ${visibleProjects.length === 1 ? 'project' : 'projects'}` : 'Projects you edit will appear here'} action={section === 'recent' && projects.length > 4 ? <button className="text-button" onClick={() => goHome('projects')}>View all →</button> : undefined} />
-            {visibleProjects.length ? <div className={`file-grid recent-grid ${fileView === 'list' ? 'list-view' : ''}`}>{visibleProjects.slice(0, section === 'recent' ? 8 : undefined).map((item) => <ProjectCard key={item.id} project={item} onOpen={() => openProject(item)} onRename={() => void renameProject(item)} onDuplicate={() => void duplicateProject(item)} onDelete={() => void deleteProject(item)} />)}</div> : <EmptyState title={query ? 'No matching projects' : 'No projects yet'} text={query ? 'Try a different search.' : 'Create a card and it will be saved here automatically.'} action={!query ? <button className="button-secondary" onClick={() => setShowCreate(true)}><Glyph name="plus" />Create your first card</button> : undefined} />}
+            {visibleProjects.length ? <div className={`file-grid recent-grid ${fileView === 'list' ? 'list-view' : ''}`}>{visibleProjects.slice(0, section === 'recent' ? 8 : undefined).map((item) => <ProjectCard key={item.id} project={item} onOpen={() => openProject(item)} onRename={() => void renameProject(item)} onDuplicate={() => void duplicateProject(item)} onDelete={() => void deleteProject(item)} />)}</div> : <EmptyState title={query ? 'No matching projects' : 'No projects yet'} text={query ? 'Try a different search.' : 'Create a card and it will be saved here automatically.'} action={!query ? <button className="button-secondary" onClick={() => setShowCreate(true)}>Create your first card</button> : undefined} />}
           </section>}
           {(section === 'recent' || section === 'layouts') && <section className="home-section"><SectionHeading title={section === 'recent' ? 'Your layouts' : 'Saved layouts'} detail={visibleLayouts.length ? `${visibleLayouts.length} reusable ${visibleLayouts.length === 1 ? 'layout' : 'layouts'}` : 'Save a design as a layout from the editor'} />
             {visibleLayouts.length ? <div className="file-grid">{visibleLayouts.map((item) => <div key={item.id} className="layout-card-wrap"><LayoutCard layout={item} onUse={() => void createProject(item.orientation, item)} /><div className="layout-card-actions"><button onClick={() => void renameLayout(item)}>Rename</button><button className="danger-action" onClick={() => void deleteLayout(item)}>Delete</button></div></div>)}</div> : <EmptyState title={query ? 'No matching layouts' : 'Your saved layouts will live here'} text={query ? 'Try a different search.' : 'Save a layout in the editor and it will appear here as a reusable preview.'} />}
@@ -203,7 +206,7 @@ function SectionHeading({ title, detail, action }: { title: string; detail: stri
 }
 
 function EmptyState({ title, text, action }: { title: string; text: string; action?: React.ReactNode }) {
-  return <div className="empty-state"><span className="empty-state-mark"><Glyph name="layouts" size={20} /></span><h3>{title}</h3><p>{text}</p>{action}</div>;
+  return <div className="empty-state"><h3>{title}</h3><p>{text}</p>{action}</div>;
 }
 
 function CardPreview({ orientation, background, placeholders = [], variant = 'project' }: {
