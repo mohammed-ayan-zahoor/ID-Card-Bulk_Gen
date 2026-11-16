@@ -209,18 +209,21 @@ function EmptyState({ title, text, action }: { title: string; text: string; acti
   return <div className="empty-state"><h3>{title}</h3><p>{text}</p>{action}</div>;
 }
 
-function CardPreview({ orientation, background, placeholders = [], variant = 'project' }: {
+function CardPreview({ orientation, background, placeholders = [], thumbnail, variant = 'project' }: {
   orientation: Orientation;
   background?: string;
   placeholders?: CardDocument['placeholders']['front'];
+  thumbnail?: string | null;
   variant?: 'project' | 'layout';
 }) {
   const ratio = orientation === 'horizontal' ? 'preview-wide' : 'preview-tall';
   const hasPreviewContent = placeholders.some((field) => field.type !== 'text' || Boolean(field.staticText && !/^\s*\{\{.*\}\}\s*$/.test(field.staticText)) || Boolean(field.key && !/^(new text|text|field)$/i.test(field.key)));
-  const empty = !hasPreviewContent;
+  // Background artwork alone is a valid preview. Treating it as empty hid uploaded
+  // front artwork behind the dashed placeholder on the workspace project card.
+  const empty = !thumbnail && !background && !hasPreviewContent;
   const src = makeCardPreviewSvg(orientation, background, placeholders);
   return <div className={`card-preview ${ratio} ${variant}${empty ? ' is-empty' : ''}`} aria-label={`${label(orientation)} card preview`}>
-    {empty ? <div className={`empty-card-art ${orientation === 'vertical' ? 'vertical' : ''}`}><span /></div> : <img className="preview-image" src={src} alt="" />}
+    {empty ? <div className={`empty-card-art ${orientation === 'vertical' ? 'vertical' : ''}`}><span /></div> : <img className="preview-image" src={thumbnail || src} alt="" />}
     <span className="preview-orientation">{label(orientation)} · CR-80</span>
   </div>;
 }
@@ -259,7 +262,7 @@ function makeCardPreviewSvg(orientation: Orientation, background: string | undef
 function ProjectCard({ project, onOpen, onRename, onDuplicate, onDelete }: { project: ProjectRecord; onOpen: () => void; onRename: () => void; onDuplicate: () => void; onDelete: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return <article className="file-card"><button className="file-card-open" onClick={onOpen} aria-label={`Open ${project.name}`}>
-    <span className="file-card__stage"><CardPreview orientation={project.orientation} background={project.backgrounds.front} placeholders={project.placeholders.front} /></span>
+    <span className="file-card__stage"><CardPreview orientation={project.orientation} background={project.backgrounds.front} placeholders={project.placeholders.front} thumbnail={project.thumbnail} /></span>
     <span className="file-card__footer"><span className="file-card__icon"><Glyph name={project.orientation} size={16} /></span><span className="file-card__copy"><span className="file-card-title">{project.name}</span><span className="file-card-edited">{editedLabel(project.updatedAt)}</span></span><span className="file-card-list-meta">{label(project.orientation)} · CR-80</span></span>
   </button><div className="file-card-menu-wrap"><button className="icon-button file-card-menu" aria-label={`More actions for ${project.name}`} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><Glyph name="more" /></button>
     {menuOpen && <div className="context-menu" role="menu"><button role="menuitem" onClick={() => { setMenuOpen(false); onRename(); }}>Rename</button><button role="menuitem" onClick={() => { setMenuOpen(false); onDuplicate(); }}>Make a copy</button><button role="menuitem" className="danger-action" onClick={() => { setMenuOpen(false); onDelete(); }}>Delete project</button></div>}
