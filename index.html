@@ -147,10 +147,119 @@
             margin: 4px 0;
         }
 
-        /* Center Work Area & Pasteboard */
+        /* Stage Layout: Full-Bleed Grid (20px minmax(0,1fr) cols, 32px 20px minmax(0,1fr) rows) */
         #workspace-stage {
             grid-column: 2 / 3;
             background-color: var(--bg-pasteboard);
+            overflow: hidden;
+            position: relative;
+            display: grid;
+            grid-template-columns: 20px minmax(0, 1fr);
+            grid-template-rows: 32px 20px minmax(0, 1fr);
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #workspace-stage.rulers-hidden {
+            grid-template-columns: 0px minmax(0, 1fr) !important;
+            grid-template-rows: 32px 0px minmax(0, 1fr) !important;
+        }
+        #workspace-stage.rulers-hidden #ruler-corner,
+        #workspace-stage.rulers-hidden #ruler-top-container,
+        #workspace-stage.rulers-hidden #ruler-left-container {
+            display: none !important;
+        }
+        #doc-tab-strip {
+            grid-column: 1 / -1;
+            grid-row: 1 / 2;
+            height: 32px;
+            background-color: var(--bg-chrome);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            flex-shrink: 0;
+            z-index: 15;
+            box-sizing: border-box;
+        }
+        .doc-tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-primary);
+            background: var(--bg-panel);
+            padding: 6px 12px;
+            border-right: 1px solid var(--border-subtle);
+            border-left: 1px solid var(--border-subtle);
+            border-top: none;
+            height: 32px;
+            box-sizing: border-box;
+        }
+        #ruler-corner {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+            width: 20px;
+            height: 20px;
+            background-color: #2B2B2B;
+            border-right: 1px solid #383838;
+            border-bottom: 1px solid #383838;
+            font-size: 9px;
+            font-family: monospace;
+            font-weight: 600;
+            color: #8A8A8A;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            z-index: 12;
+            box-sizing: border-box;
+        }
+        #ruler-corner:hover {
+            color: #FFFFFF;
+            background-color: #383838;
+        }
+        #ruler-top-container {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            height: 20px;
+            width: 100%;
+            overflow: hidden;
+            background-color: #2B2B2B;
+            border-bottom: 1px solid #383838;
+            position: relative;
+            z-index: 11;
+            box-sizing: border-box;
+        }
+        #ruler-top {
+            display: block;
+            width: 100%;
+            height: 20px;
+        }
+        #ruler-left-container {
+            grid-column: 1 / 2;
+            grid-row: 3 / 4;
+            width: 20px;
+            height: 100%;
+            overflow: hidden;
+            background-color: #2B2B2B;
+            border-right: 1px solid #383838;
+            position: relative;
+            z-index: 11;
+            box-sizing: border-box;
+        }
+        #ruler-left {
+            display: block;
+            width: 20px;
+            height: 100%;
+        }
+        #stage-scroll-viewport {
+            grid-column: 2 / 3;
+            grid-row: 3 / 4;
             overflow: auto;
             position: relative;
             display: flex;
@@ -158,6 +267,21 @@
             align-items: center;
             justify-content: flex-start;
             padding: 24px;
+            background-color: var(--bg-pasteboard);
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Non-printing Card Mask & Safe Margin */
+        .card-mask-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
         }
 
         /* Canvas Area: Unboxed Pasteboard Stage */
@@ -198,7 +322,7 @@
             display: inline-block;
         }
         .canvas-wrapper.active {
-            outline: 1px solid var(--accent-primary);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.65);
         }
 
         .artboard-header {
@@ -598,108 +722,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
 
-        /* Stage Layout & Adobe-Style Rulers Chrome */
-        #workspace-stage {
-            grid-column: 2 / 3;
-            background-color: var(--bg-pasteboard);
-            overflow: hidden;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            padding: 0;
-        }
-        #doc-tab-strip {
-            height: 32px;
-            background-color: var(--bg-chrome);
-            border-bottom: 1px solid var(--border-subtle);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 12px;
-            flex-shrink: 0;
-            z-index: 15;
-        }
-        .doc-tab {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11px;
-            font-weight: 500;
-            color: var(--text-primary);
-            background: var(--bg-panel);
-            padding: 6px 12px;
-            border-right: 1px solid var(--border-subtle);
-            border-left: 1px solid var(--border-subtle);
-            border-top: 2px solid var(--accent-primary);
-            height: 32px;
-            box-sizing: border-box;
-        }
-        #stage-ruler-grid {
-            flex: 1;
-            display: grid;
-            grid-template-columns: 20px 1fr;
-            grid-template-rows: 20px 1fr;
-            overflow: hidden;
-            position: relative;
-            background-color: var(--bg-pasteboard);
-        }
-        #ruler-corner {
-            width: 20px;
-            height: 20px;
-            background-color: #2B2B2B;
-            border-right: 1px solid #383838;
-            border-bottom: 1px solid #383838;
-            font-size: 9px;
-            font-family: monospace;
-            font-weight: 600;
-            color: #8A8A8A;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            user-select: none;
-            z-index: 12;
-        }
-        #ruler-corner:hover {
-            color: #FFFFFF;
-            background-color: #383838;
-        }
-        #ruler-top-container {
-            height: 20px;
-            overflow: hidden;
-            background-color: #2B2B2B;
-            border-bottom: 1px solid #383838;
-            position: relative;
-            z-index: 11;
-        }
-        #ruler-top {
-            display: block;
-            width: 100%;
-            height: 20px;
-        }
-        #ruler-left-container {
-            width: 20px;
-            overflow: hidden;
-            background-color: #2B2B2B;
-            border-right: 1px solid #383838;
-            position: relative;
-            z-index: 11;
-        }
-        #ruler-left {
-            display: block;
-            width: 20px;
-            height: 100%;
-        }
-        #stage-scroll-viewport {
-            overflow: auto;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 24px;
-            background-color: var(--bg-pasteboard);
-        }
+        /* (Consolidated into full-bleed stage grid) */
         .field-toolbar.visible { display: flex; }
         .ftb {
             height: 22px;
@@ -853,16 +876,15 @@
 
         <!-- ── Contextual Options Bar (40px) ── -->
         <div id="workspace-optionsbar">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2.5 overflow-x-auto scrollbar-none">
                 <!-- Card Setup / Orientation Segmented Control -->
-                <div id="orientation-seg-group" class="seg">
+                <div id="orientation-seg-group" class="seg shrink-0">
                     <button id="orientation-horizontal-btn" aria-pressed="true" title="Horizontal CR-80 (856 × 540)">Horizontal</button>
                     <button id="orientation-vertical-btn" aria-pressed="false" title="Vertical CR-80 (540 × 856)">Vertical</button>
                 </div>
-                <div class="h-4 w-[1px] bg-line"></div>
 
                 <!-- Preview Record Navigation -->
-                <div class="flex items-center gap-1">
+                <div class="flex items-center gap-1 shrink-0">
                     <button id="preview-btn" class="btn-photoshop" disabled title="Toggle live data preview">Preview Data</button>
                     <div id="preview-nav" class="hidden flex items-center gap-1 bg-field border border-line px-1 rounded">
                         <button id="preview-prev-btn" class="btn-photoshop px-1.5" title="Previous Record">◀</button>
@@ -872,18 +894,112 @@
                     </div>
                 </div>
 
-                <div class="h-4 w-[1px] bg-line"></div>
-
                 <!-- Live Edit Mode Toggle -->
-                <label class="flex items-center gap-1.5 cursor-pointer text-xs text-ink-dim hover:text-white transition-colors">
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs text-ink-dim hover:text-white transition-colors shrink-0">
                     <input type="checkbox" id="allow-edit-preview-checkbox" class="accent-accent cursor-pointer">
                     <span>Edit in Preview</span>
                 </label>
+
+                <!-- Contextual Field Options (Shown when a field is selected) -->
+                <div id="optionsbar-field-controls" class="hidden flex items-center gap-2 shrink-0">
+                    <div class="h-4 w-[1px] bg-line"></div>
+
+                    <!-- Text Controls -->
+                    <div id="opt-text-controls" class="flex items-center gap-1.5">
+                        <select id="opt-font-family" class="h-6 text-xs bg-field text-white border border-line rounded px-1.5 max-w-[110px]" title="Font Family"></select>
+                        <div class="flex items-center bg-field border border-line rounded h-6 px-1">
+                            <button id="opt-font-dec" class="text-xs px-1 text-ink-dim hover:text-white" title="Decrease font size">−</button>
+                            <span id="opt-font-size" class="text-xs font-mono px-1 text-white min-w-[20px] text-center">14</span>
+                            <button id="opt-font-inc" class="text-xs px-1 text-ink-dim hover:text-white" title="Increase font size">+</button>
+                        </div>
+                        <div class="seg">
+                            <button id="opt-btn-bold" title="Bold" class="p-1">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>
+                            </button>
+                            <button id="opt-btn-italic" title="Italic" class="p-1">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
+                            </button>
+                        </div>
+                        <div class="seg">
+                            <button id="opt-align-left" title="Align Left" class="p-1">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+                            </button>
+                            <button id="opt-align-center" title="Align Center" class="p-1">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>
+                            </button>
+                            <button id="opt-align-right" title="Align Right" class="p-1">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <button id="opt-color-btn" class="w-6 h-6 flex items-center justify-center bg-field border border-line rounded p-0 cursor-pointer relative" title="Text Color">
+                            <div id="opt-color-swatch" class="w-4 h-4 border border-[#3A3A3A] rounded-xs" style="background: #000000;"></div>
+                            <input type="color" id="opt-color-input" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                        </button>
+                    </div>
+
+                    <!-- Photo Controls -->
+                    <div id="opt-photo-controls" class="hidden flex items-center gap-1.5">
+                        <div class="seg">
+                            <button id="opt-shape-square" title="Square Shape" class="p-1">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="0"/></svg>
+                            </button>
+                            <button id="opt-shape-rounded" title="Rounded Shape" class="p-1">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/></svg>
+                            </button>
+                            <button id="opt-shape-circle" title="Circle Shape" class="p-1">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- QR Controls -->
+                    <div id="opt-qr-controls" class="hidden flex items-center gap-1.5">
+                        <button id="opt-qr-color-btn" class="w-6 h-6 flex items-center justify-center bg-field border border-line rounded p-0 cursor-pointer relative" title="QR Code Color">
+                            <div id="opt-qr-color-swatch" class="w-4 h-4 border border-[#3A3A3A] rounded-xs" style="background: #000000;"></div>
+                            <input type="color" id="opt-qr-color-input" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                        </button>
+                    </div>
+
+                    <div class="h-4 w-[1px] bg-line"></div>
+
+                    <!-- 6 Align-to-Card Buttons -->
+                    <div class="flex items-center gap-0.5">
+                        <button id="opt-card-align-left" class="p-1 text-ink-dim hover:text-white" title="Align to Card Left">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="2" x2="3" y2="22"/><rect x="3" y="6" width="12" height="12" rx="1"/></svg>
+                        </button>
+                        <button id="opt-card-align-center" class="p-1 text-ink-dim hover:text-white" title="Align to Card Center (H)">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                        </button>
+                        <button id="opt-card-align-right" class="p-1 text-ink-dim hover:text-white" title="Align to Card Right">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="2" x2="21" y2="22"/><rect x="9" y="6" width="12" height="12" rx="1"/></svg>
+                        </button>
+                        <button id="opt-card-align-top" class="p-1 text-ink-dim hover:text-white" title="Align to Card Top">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="3" x2="22" y2="3"/><rect x="6" y="3" width="12" height="12" rx="1"/></svg>
+                        </button>
+                        <button id="opt-card-align-middle" class="p-1 text-ink-dim hover:text-white" title="Align to Card Middle (V)">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="12" x2="22" y2="12"/><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                        </button>
+                        <button id="opt-card-align-bottom" class="p-1 text-ink-dim hover:text-white" title="Align to Card Bottom">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="21" x2="22" y2="21"/><rect x="6" y="9" width="12" height="12" rx="1"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="h-4 w-[1px] bg-line"></div>
+
+                    <!-- Duplicate & Delete -->
+                    <div class="flex items-center gap-1">
+                        <button id="opt-btn-dup" class="p-1 text-ink-dim hover:text-white" title="Duplicate Field (Cmd+D)">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="13" height="13" rx="1"/><path d="M5 16H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1"/></svg>
+                        </button>
+                        <button id="opt-btn-del" class="p-1 text-ink-dim hover:text-red-400" title="Delete Field (Del)">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Options Bar Right: Single Primary Export... Button -->
-            <div class="flex items-center gap-2">
-                <!-- Hidden anchors for JS listeners -->
+            <div class="flex items-center gap-2 shrink-0">
                 <button id="open-export-modal-btn" class="btn-photoshop btn-primary font-medium" disabled title="Export cards to PDF or ZIP">Export…</button>
             </div>
         </div>
@@ -918,60 +1034,63 @@
 
         <!-- ── Center Work Area / Pasteboard Stage ── -->
         <main id="workspace-stage">
-            <!-- 32px Document Tab Strip -->
+            <!-- Row 1: Document Tab Strip across full width -->
             <div id="doc-tab-strip">
-                <div class="flex items-center gap-2">
-                    <div class="doc-tab">
-                        <span class="w-2 h-2 rounded-full bg-accent"></span>
-                        <span id="doc-tab-title">Untitled.card @ 70% (Front/Back, CR-80)</span>
-                    </div>
+                <div class="doc-tab">
+                    <span id="doc-tab-title" class="text-xs text-white">Untitled.card @ 70% (Horizontal, CR-80)</span>
                 </div>
-                <!-- Document View Tabs: Front / Back / Both -->
+                <!-- Document View Tabs: Both / Front / Back at right -->
                 <div id="view-tabs-seg" class="seg">
-                    <button id="view-tab-both" aria-pressed="true" onclick="switchCanvasView('both')">Both Artboards</button>
-                    <button id="view-tab-front" aria-pressed="false" onclick="switchCanvasView('front')">Front Only</button>
-                    <button id="view-tab-back" aria-pressed="false" onclick="switchCanvasView('back')">Back Only</button>
+                    <button id="view-tab-both" aria-pressed="true" onclick="switchCanvasView('both')">Both</button>
+                    <button id="view-tab-front" aria-pressed="false" onclick="switchCanvasView('front')">Front</button>
+                    <button id="view-tab-back" aria-pressed="false" onclick="switchCanvasView('back')">Back</button>
                 </div>
             </div>
 
-            <!-- Adobe-Style Rulers & Scroll Viewport -->
-            <div id="stage-ruler-grid">
-                <div id="ruler-corner" title="Cycle units (mm / px / in)">mm</div>
-                <div id="ruler-top-container">
-                    <canvas id="ruler-top" height="20"></canvas>
-                </div>
-                <div id="ruler-left-container">
-                    <canvas id="ruler-left" width="20"></canvas>
-                </div>
-                <div id="stage-scroll-viewport">
-                    <div id="canvas-area" data-orientation="horizontal">
-                        <!-- Front Artboard -->
-                        <div class="flex flex-col items-start">
-                            <div class="artboard-header w-full">
-                                <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-accent"></span> Front Artboard</span>
-                                <span id="front-dims-label" class="font-mono text-ink-off">856 × 540</span>
-                            </div>
-                            <div id="front-canvas-wrapper" class="canvas-wrapper active">
-                                <canvas id="front-canvas" width="856" height="540"></canvas>
-                                <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
-                                    <div id="front-field-toolbar" class="field-toolbar"></div>
-                                    <svg id="front-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-                                </div>
+            <!-- Row 2, Col 1: 20x20 Corner Box -->
+            <div id="ruler-corner" title="Cycle units (mm / px / in)">mm</div>
+
+            <!-- Row 2, Col 2: Top Ruler spanning to dock edge -->
+            <div id="ruler-top-container">
+                <canvas id="ruler-top" height="20"></canvas>
+            </div>
+
+            <!-- Row 3, Col 1: Left Ruler flush against tool rail -->
+            <div id="ruler-left-container">
+                <canvas id="ruler-left" width="20"></canvas>
+            </div>
+
+            <!-- Row 3, Col 2: Scroll Viewport centering artboards -->
+            <div id="stage-scroll-viewport">
+                <div id="canvas-area" data-orientation="horizontal">
+                    <!-- Front Artboard -->
+                    <div class="flex flex-col items-start">
+                        <div class="artboard-header w-full">
+                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-accent"></span> Front Artboard</span>
+                            <span id="front-dims-label" class="font-mono text-ink-off">85.6 × 54.0 mm</span>
+                        </div>
+                        <div id="front-canvas-wrapper" class="canvas-wrapper active">
+                            <canvas id="front-canvas" width="856" height="540"></canvas>
+                            <!-- Non-printing card mask & safe margin layer -->
+                            <svg id="front-card-mask-svg" class="card-mask-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 540"></svg>
+                            <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
+                                <svg id="front-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Back Artboard -->
-                        <div class="flex flex-col items-start">
-                            <div class="artboard-header w-full">
-                                <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-ink-off"></span> Back Artboard</span>
-                                <span id="back-dims-label" class="font-mono text-ink-off">856 × 540</span>
-                            </div>
-                            <div id="back-canvas-wrapper" class="canvas-wrapper">
-                                <canvas id="back-canvas" width="856" height="540"></canvas>
-                                <div id="back-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
-                                    <div id="back-field-toolbar" class="field-toolbar"></div>
-                                    <svg id="back-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-                                </div>
+                    <!-- Back Artboard -->
+                    <div class="flex flex-col items-start">
+                        <div class="artboard-header w-full">
+                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-ink-off"></span> Back Artboard</span>
+                            <span id="back-dims-label" class="font-mono text-ink-off">85.6 × 54.0 mm</span>
+                        </div>
+                        <div id="back-canvas-wrapper" class="canvas-wrapper">
+                            <canvas id="back-canvas" width="856" height="540"></canvas>
+                            <!-- Non-printing card mask & safe margin layer -->
+                            <svg id="back-card-mask-svg" class="card-mask-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 540"></svg>
+                            <div id="back-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
+                                <svg id="back-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
                             </div>
                         </div>
                     </div>
@@ -1168,7 +1287,7 @@
         <!-- ── Status Bar (24px) ── -->
         <footer id="workspace-statusbar">
             <div class="flex items-center gap-3">
-                <span id="status-doc-dims">CR-80: 856 × 540 px @ 70% (Export scale: 2.0x)</span>
+                <span id="status-doc-dims">CR-80 85.6 × 54.0 mm · 70% · export 2×</span>
                 <span class="text-ink-off">|</span>
                 <span id="status-selection-info">No selection</span>
             </div>
@@ -1593,29 +1712,18 @@
             const HORIZONTAL_HEIGHT = 540;
             const PDF_SCALE = 2.0;
 
-            const getDefaultBg = (side, orient) => {
+            // --- Templates System (Default is flat #FFFFFF) ---
+            const getClassicNavyBg = (side, orient) => {
                 const isHoriz = orient === 'horizontal';
                 let svg = '';
                 if (side === 'front') {
                     if (isHoriz) {
                         svg = `<svg width="856" height="540" viewBox="0 0 856 540" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <defs>
-                            <linearGradient id="bgGrad" x1="0" y1="0" x2="856" y2="540" gradientUnits="userSpaceOnUse">
-                              <stop offset="0%" stop-color="#FFFFFF"/>
-                              <stop offset="100%" stop-color="#F1F5F9"/>
-                            </linearGradient>
-                            <linearGradient id="headerGrad" x1="0" y1="0" x2="856" y2="150" gradientUnits="userSpaceOnUse">
-                              <stop offset="0%" stop-color="#0F172A"/>
-                              <stop offset="100%" stop-color="#1E293B"/>
-                            </linearGradient>
-                            <linearGradient id="accentGrad" x1="0" y1="0" x2="856" y2="0" gradientUnits="userSpaceOnUse">
-                              <stop offset="0%" stop-color="#5B4CF0"/>
-                              <stop offset="50%" stop-color="#8B5CF6"/>
-                              <stop offset="100%" stop-color="#EC4899"/>
-                            </linearGradient>
-                            <pattern id="dotPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                              <circle cx="3" cy="3" r="1.2" fill="#FFFFFF" fill-opacity="0.12"/>
-                            </pattern>
+                            <linearGradient id="bgGrad" x1="0" y1="0" x2="856" y2="540" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#F1F5F9"/></linearGradient>
+                            <linearGradient id="headerGrad" x1="0" y1="0" x2="856" y2="150" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#0F172A"/><stop offset="100%" stop-color="#1E293B"/></linearGradient>
+                            <linearGradient id="accentGrad" x1="0" y1="0" x2="856" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5B4CF0"/><stop offset="50%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#EC4899"/></linearGradient>
+                            <pattern id="dotPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="1.2" fill="#FFFFFF" fill-opacity="0.12"/></pattern>
                           </defs>
                           <rect width="856" height="540" rx="16" fill="url(#bgGrad)"/>
                           <path d="M0 0 H856 V140 C 600 165, 300 120, 0 140 Z" fill="url(#headerGrad)"/>
@@ -1629,22 +1737,10 @@
                     } else {
                         svg = `<svg width="540" height="856" viewBox="0 0 540 856" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <defs>
-                            <linearGradient id="vBgGrad" x1="0" y1="0" x2="540" y2="856" gradientUnits="userSpaceOnUse">
-                              <stop offset="0%" stop-color="#FFFFFF"/>
-                              <stop offset="100%" stop-color="#F1F5F9"/>
-                            </linearGradient>
-                            <linearGradient id="vHeaderGrad" x1="0" y1="0" x2="540" y2="240" gradientUnits="userSpaceOnUse">
-                              <stop offset="0%" stop-color="#0F172A"/>
-                              <stop offset="100%" stop-color="#1E293B"/>
-                            </linearGradient>
-                            <linearGradient id="vAccentGrad" x1="0" y1="0" x2="540" y2="0" gradientUnits="userSpaceOnUse">
-                              <stop offset="0%" stop-color="#5B4CF0"/>
-                              <stop offset="50%" stop-color="#8B5CF6"/>
-                              <stop offset="100%" stop-color="#EC4899"/>
-                            </linearGradient>
-                            <pattern id="vDotPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                              <circle cx="3" cy="3" r="1.2" fill="#FFFFFF" fill-opacity="0.12"/>
-                            </pattern>
+                            <linearGradient id="vBgGrad" x1="0" y1="0" x2="540" y2="856" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#F1F5F9"/></linearGradient>
+                            <linearGradient id="vHeaderGrad" x1="0" y1="0" x2="540" y2="240" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#0F172A"/><stop offset="100%" stop-color="#1E293B"/></linearGradient>
+                            <linearGradient id="vAccentGrad" x1="0" y1="0" x2="540" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5B4CF0"/><stop offset="50%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#EC4899"/></linearGradient>
+                            <pattern id="vDotPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="1.2" fill="#FFFFFF" fill-opacity="0.12"/></pattern>
                           </defs>
                           <rect width="540" height="856" rx="16" fill="url(#vBgGrad)"/>
                           <path d="M0 0 H540 V220 C 360 240, 180 200, 0 220 Z" fill="url(#vHeaderGrad)"/>
@@ -1660,17 +1756,9 @@
                     if (isHoriz) {
                         svg = `<svg width="856" height="540" viewBox="0 0 856 540" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <defs>
-                            <linearGradient id="bBgGrad" x1="0" y1="0" x2="856" y2="540" gradientUnits="userSpaceOnUse">
-                              <stop offset="0%" stop-color="#F8FAFC"/>
-                              <stop offset="100%" stop-color="#F1F5F9"/>
-                            </linearGradient>
-                            <linearGradient id="bAccentGrad" x1="0" y1="0" x2="856" y2="0" gradientUnits="userSpaceOnUse">
-                              <stop offset="0%" stop-color="#5B4CF0"/>
-                              <stop offset="100%" stop-color="#8B5CF6"/>
-                            </linearGradient>
-                            <pattern id="bGrid" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-                              <path d="M 16 0 L 0 0 0 16" fill="none" stroke="#E2E8F0" stroke-width="0.8"/>
-                            </pattern>
+                            <linearGradient id="bBgGrad" x1="0" y1="0" x2="856" y2="540" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#F8FAFC"/><stop offset="100%" stop-color="#F1F5F9"/></linearGradient>
+                            <linearGradient id="bAccentGrad" x1="0" y1="0" x2="856" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5B4CF0"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient>
+                            <pattern id="bGrid" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M 16 0 L 0 0 0 16" fill="none" stroke="#E2E8F0" stroke-width="0.8"/></pattern>
                           </defs>
                           <rect width="856" height="540" rx="16" fill="url(#bBgGrad)"/>
                           <rect width="856" height="540" fill="url(#bGrid)"/>
@@ -1682,17 +1770,9 @@
                     } else {
                         svg = `<svg width="540" height="856" viewBox="0 0 540 856" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <defs>
-                            <linearGradient id="vbBgGrad" x1="0" y1="0" x2="540" y2="856" gradientUnits="userSpaceOnUse">
-                              <stop offset="0%" stop-color="#F8FAFC"/>
-                              <stop offset="100%" stop-color="#F1F5F9"/>
-                            </linearGradient>
-                            <linearGradient id="vbAccentGrad" x1="0" y1="0" x2="540" y2="0" gradientUnits="userSpaceOnUse">
-                              <stop offset="0%" stop-color="#5B4CF0"/>
-                              <stop offset="100%" stop-color="#8B5CF6"/>
-                            </linearGradient>
-                            <pattern id="vbGrid" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-                              <path d="M 16 0 L 0 0 0 16" fill="none" stroke="#E2E8F0" stroke-width="0.8"/>
-                            </pattern>
+                            <linearGradient id="vbBgGrad" x1="0" y1="0" x2="540" y2="856" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#F8FAFC"/><stop offset="100%" stop-color="#F1F5F9"/></linearGradient>
+                            <linearGradient id="vbAccentGrad" x1="0" y1="0" x2="540" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5B4CF0"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient>
+                            <pattern id="vbGrid" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M 16 0 L 0 0 0 16" fill="none" stroke="#E2E8F0" stroke-width="0.8"/></pattern>
                           </defs>
                           <rect width="540" height="856" rx="16" fill="url(#vbBgGrad)"/>
                           <rect width="540" height="856" fill="url(#vbGrid)"/>
@@ -1705,6 +1785,115 @@
                 }
                 return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
             };
+
+            const getBlankBg = (side, orient) => {
+                const w = orient === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const h = orient === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                const svg = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="${w}" height="${h}" fill="#FFFFFF"/></svg>`;
+                return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+            };
+
+            const TEMPLATES = {
+                blank: { id: 'blank', name: 'Blank Card', getBg: getBlankBg },
+                classicNavy: { id: 'classicNavy', name: 'Classic Navy', getBg: getClassicNavyBg }
+            };
+            let currentTemplateId = 'blank';
+
+            const getDefaultBg = (side, orient) => {
+                const tmpl = TEMPLATES[currentTemplateId] || TEMPLATES.blank;
+                return tmpl.getBg(side, orient);
+            };
+
+            // Start screen / Document state serialization
+            function getDocumentState(docName = 'Untitled') {
+                return {
+                    id: 'doc_' + Date.now(),
+                    name: docName,
+                    orientation: orientation,
+                    backgrounds: { front: bgImages.front.src, back: bgImages.back.src },
+                    placeholders: JSON.parse(JSON.stringify(placeholders)),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    templateId: currentTemplateId
+                };
+            }
+            window.getDocumentState = getDocumentState;
+
+            async function generateDocThumbnail() {
+                try {
+                    const thumbCanvas = document.createElement('canvas');
+                    const thumbW = 240;
+                    const aspect = orientation === 'horizontal' ? (540 / 856) : (856 / 540);
+                    const thumbH = Math.round(thumbW * aspect);
+                    thumbCanvas.width = thumbW;
+                    thumbCanvas.height = thumbH;
+                    const ctx = thumbCanvas.getContext('2d');
+                    await drawCardOnContext(ctx, 'front', thumbW, thumbH, null);
+                    return thumbCanvas.toDataURL('image/jpeg', 0.85);
+                } catch (e) {
+                    return null;
+                }
+            }
+            window.generateDocThumbnail = generateDocThumbnail;
+
+            async function saveDocument(name = 'Untitled') {
+                const doc = getDocumentState(name);
+                doc.thumbnail = await generateDocThumbnail();
+                const savedDocs = JSON.parse(localStorage.getItem('quantech_saved_docs') || '[]');
+                const idx = savedDocs.findIndex(d => d.name === name);
+                if (idx >= 0) savedDocs[idx] = doc;
+                else savedDocs.push(doc);
+                localStorage.setItem('quantech_saved_docs', JSON.stringify(savedDocs));
+                return doc;
+            }
+            window.saveDocument = saveDocument;
+
+            function openDocument(idOrName) {
+                const savedDocs = JSON.parse(localStorage.getItem('quantech_saved_docs') || '[]');
+                const doc = savedDocs.find(d => d.id === idOrName || d.name === idOrName);
+                if (!doc) {
+                    const savedLayouts = JSON.parse(localStorage.getItem('card_generator_layouts') || '{}');
+                    if (savedLayouts[idOrName]) {
+                        loadLayout(idOrName);
+                        return;
+                    }
+                    console.warn('Document not found:', idOrName);
+                    return;
+                }
+                orientation = doc.orientation || 'horizontal';
+                setOrientation(orientation);
+                if (doc.backgrounds?.front) bgImages.front.src = doc.backgrounds.front;
+                if (doc.backgrounds?.back) bgImages.back.src = doc.backgrounds.back;
+                placeholders = doc.placeholders ? JSON.parse(JSON.stringify(doc.placeholders)) : { front: [], back: [] };
+                activePlaceholderId = null;
+                renderPlaceholders();
+                drawAllCanvases();
+                if (typeof renderLayerList === 'function') renderLayerList();
+                if (typeof updateSelectionStatus === 'function') updateSelectionStatus();
+                if (typeof window.drawRulers === 'function') window.drawRulers();
+                updateAllUnitReadouts();
+            }
+            window.openDocument = openDocument;
+
+            function newDocument(templateId = 'blank', newOrient = 'horizontal') {
+                currentTemplateId = templateId;
+                orientation = newOrient;
+                placeholders = { front: [], back: [] };
+                activePlaceholderId = null;
+                userCustomBg = { front: false, back: false };
+                const tmpl = TEMPLATES[templateId] || TEMPLATES.blank;
+                bgImages.front.src = tmpl.getBg('front', orientation);
+                bgImages.back.src  = tmpl.getBg('back', orientation);
+                setOrientation(newOrient);
+                renderPlaceholders();
+                drawAllCanvases();
+                if (typeof renderLayerList === 'function') renderLayerList();
+                if (typeof updateSelectionStatus === 'function') updateSelectionStatus();
+                if (typeof window.drawRulers === 'function') window.drawRulers();
+                updateCardMaskSvg();
+                updateAllUnitReadouts();
+            }
+            window.newDocument = newDocument;
             // --- Canvas Drawing ---
             const getRowValue = (rowData, key) => {
                 if (!rowData || key === undefined || key === null) return '';
@@ -1758,6 +1947,211 @@
                 }
             };
 
+
+            // --- Non-printing Card Mask & Safe Margin Overlay ---
+            let cardMaskVisible = true;
+            function updateCardMaskSvg() {
+                const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const h = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                const r = 31.8; // 3.18mm radius = 31.8px at 10px/mm
+                const m = 30;   // 3mm margin = 30px
+
+                // Even-odd path cutting out rounded rectangle from outer bounding box
+                const pathD = `M 0 0 H ${w} V ${h} H 0 Z M ${r} 0 H ${w - r} A ${r} ${r} 0 0 1 ${w} ${r} V ${h - r} A ${r} ${r} 0 0 1 ${w - r} ${h} H ${r} A ${r} ${r} 0 0 1 0 ${h - r} V ${r} A ${r} ${r} 0 0 1 ${r} 0 Z`;
+                const content = `
+                    <path d="${pathD}" fill="#2B2B2B" fill-rule="evenodd" />
+                    <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${r}" ry="${r}" fill="none" stroke="#222222" stroke-width="1" />
+                    <rect x="${m}" y="${m}" width="${w - 2 * m}" height="${h - 2 * m}" rx="10" ry="10" fill="none" stroke="rgba(91, 76, 240, 0.4)" stroke-dasharray="4 4" stroke-width="1" />
+                `;
+
+                ['front-card-mask-svg', 'back-card-mask-svg'].forEach(id => {
+                    const svg = document.getElementById(id);
+                    if (svg) {
+                        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                        svg.innerHTML = content;
+                        svg.classList.toggle('hidden', !cardMaskVisible);
+                    }
+                });
+            }
+            window.updateCardMaskSvg = updateCardMaskSvg;
+            window.toggleCardMask = () => {
+                cardMaskVisible = !cardMaskVisible;
+                updateCardMaskSvg();
+            };
+
+            // --- Helper: Update All Dimension Readouts across Workspace ---
+            function updateAllUnitReadouts() {
+                const isHoriz = (orientation === 'horizontal');
+                let dimW_str, dimH_str, unitLabel;
+                if (activeRulerUnit === 'mm') {
+                    dimW_str = isHoriz ? '85.6' : '54.0';
+                    dimH_str = isHoriz ? '54.0' : '85.6';
+                    unitLabel = 'mm';
+                } else if (activeRulerUnit === 'in') {
+                    dimW_str = isHoriz ? '3.37' : '2.13';
+                    dimH_str = isHoriz ? '2.13' : '3.37';
+                    unitLabel = 'in';
+                } else {
+                    dimW_str = isHoriz ? '856' : '540';
+                    dimH_str = isHoriz ? '540' : '856';
+                    unitLabel = 'px';
+                }
+
+                const dimText = `${dimW_str} × ${dimH_str} ${unitLabel}`;
+                const frontLabel = document.getElementById('front-dims-label');
+                const backLabel = document.getElementById('back-dims-label');
+                if (frontLabel) frontLabel.textContent = dimText;
+                if (backLabel) backLabel.textContent = dimText;
+
+                const docSettingsDims = document.getElementById('doc-settings-dims');
+                if (docSettingsDims) docSettingsDims.textContent = dimText;
+
+                const docTitleReadout = document.getElementById('doc-title-readout');
+                if (docTitleReadout) docTitleReadout.textContent = `Untitled.card (${dimText})`;
+
+                const statusDocDims = document.getElementById('status-doc-dims');
+                if (statusDocDims) {
+                    const zv = zoomSelect ? zoomSelect.value : '0.7';
+                    const currentZoom = (zv === 'fit' || zv === 'actual') ? 0.7 : (parseFloat(zv) || 0.7);
+                    const pct = Math.round(currentZoom * 100);
+                    statusDocDims.textContent = `CR-80 ${dimW_str} × ${dimH_str} ${unitLabel} · ${pct}% · export ${PDF_SCALE}×`;
+                }
+
+                const docTabTitle = document.getElementById('doc-tab-title');
+                if (docTabTitle) {
+                    const zv = zoomSelect ? zoomSelect.value : '0.7';
+                    const currentZoom = (zv === 'fit' || zv === 'actual') ? 0.7 : (parseFloat(zv) || 0.7);
+                    const pct = Math.round(currentZoom * 100);
+                    docTabTitle.textContent = `Untitled.card @ ${pct}% (${isHoriz ? 'Horizontal' : 'Vertical'}, CR-80)`;
+                }
+            }
+            window.updateAllUnitReadouts = updateAllUnitReadouts;
+            const getWrappedLines = (context, text, maxWidth) => {
+                if (!text) return [''];
+                const words = String(text).split(' ');
+                const lines = [];
+                let currentLine = '';
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = currentLine ? (currentLine + ' ' + words[n]) : words[n];
+                    const testWidth = context.measureText(testLine).width;
+                    if (testWidth > maxWidth && currentLine) {
+                        lines.push(currentLine);
+                        currentLine = words[n];
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                if (currentLine) lines.push(currentLine);
+                return lines.length ? lines : [''];
+            };
+
+            const drawTextOnCard = (targetCtx, p, textValue, textColor, width, height, scale) => {
+                const x = p.x * width;
+                const y = p.y * height;
+                const pWidth = p.width * width;
+                const pHeight = p.height * height;
+
+                targetCtx.fillStyle = textColor || p.color || '#000000';
+                const fontFamily = p.fontFamily || 'Inter';
+                ensureGoogleFontLoaded(fontFamily);
+                let wVal = 'normal';
+                if (p.fontWeight === 'bold' || String(p.fontWeight) === '700') wVal = 'bold';
+                else if (p.fontWeight && p.fontWeight !== 'normal' && p.fontWeight !== '400') wVal = String(p.fontWeight);
+                const fontStyle = p.fontStyle === 'italic' ? 'italic ' : '';
+                const effectiveFontSize = (p.fontSize || 14) * scale;
+                const effectiveLineHeight = (p.lineHeight || 18) * scale;
+                targetCtx.font = `${fontStyle}${wVal} ${effectiveFontSize}px "${fontFamily}", sans-serif`;
+                if ('letterSpacing' in targetCtx) {
+                    targetCtx.letterSpacing = p.letterSpacing ? `${p.letterSpacing * scale}px` : '0px';
+                }
+                targetCtx.textAlign = p.align || 'left';
+                targetCtx.textBaseline = 'alphabetic';
+
+                const lines = getWrappedLines(targetCtx, textValue, pWidth);
+                const totalTextHeight = lines.length * effectiveLineHeight;
+
+                // Auto-height model (default true)
+                if (p.autoHeight !== false) {
+                    p.autoHeight = true;
+                    p.height = totalTextHeight / height;
+                }
+
+                targetCtx.save();
+                if (p.autoHeight === false) {
+                    targetCtx.beginPath();
+                    targetCtx.rect(x, y, pWidth, pHeight);
+                    targetCtx.clip();
+                }
+
+                // Vertical alignment for fixed height mode
+                const vAlign = p.vAlign || 'top';
+                let startY = y;
+                if (p.autoHeight === false) {
+                    if (vAlign === 'middle') {
+                        startY = y + Math.max(0, (pHeight - totalTextHeight) / 2);
+                    } else if (vAlign === 'bottom') {
+                        startY = y + Math.max(0, pHeight - totalTextHeight);
+                    }
+                }
+
+                // Hugging glyphs with no ghost offset
+                const metrics = targetCtx.measureText(lines[0] || 'M');
+                const ascent = metrics.actualBoundingBoxAscent || (effectiveFontSize * 0.75);
+                const firstLineBaseline = startY + Math.max(0, (effectiveLineHeight - effectiveFontSize) / 2) + ascent;
+
+                let textX = x;
+                if (p.align === 'center') textX = x + pWidth / 2;
+                else if (p.align === 'right') textX = x + pWidth;
+
+                lines.forEach((line, idx) => {
+                    const lineY = firstLineBaseline + idx * effectiveLineHeight;
+                    targetCtx.fillText(line, textX, lineY);
+                });
+
+                targetCtx.restore();
+            };
+
+            const drawPlaceholderBox = (targetCtx, p, labelText, width, height, scale) => {
+                const x = Math.round(p.x * width) + 0.5;
+                const y = Math.round(p.y * height) + 0.5;
+                const w = Math.round(p.width * width);
+                const h = Math.round(p.height * height);
+
+                targetCtx.save();
+                targetCtx.strokeStyle = '#9A9A9A';
+                targetCtx.lineWidth = 1;
+                targetCtx.setLineDash([4, 4]);
+
+                // Dashed outline
+                targetCtx.strokeRect(x, y, w, h);
+
+                // Two diagonals
+                targetCtx.beginPath();
+                targetCtx.moveTo(x, y);
+                targetCtx.lineTo(x + w, y + h);
+                targetCtx.moveTo(x + w, y);
+                targetCtx.lineTo(x, y + h);
+                targetCtx.stroke();
+
+                // Small centered label
+                targetCtx.setLineDash([]);
+                targetCtx.font = `${Math.round(11 * scale)}px Inter, sans-serif`;
+                targetCtx.textAlign = 'center';
+                targetCtx.textBaseline = 'middle';
+
+                const text = `{{${labelText}}}`;
+                const metrics = targetCtx.measureText(text);
+                const pillW = metrics.width + 12;
+                const pillH = Math.round(18 * scale);
+                targetCtx.fillStyle = '#FFFFFF';
+                targetCtx.fillRect(x + (w - pillW) / 2, y + (h - pillH) / 2, pillW, pillH);
+                targetCtx.strokeRect(x + (w - pillW) / 2, y + (h - pillH) / 2, pillW, pillH);
+
+                targetCtx.fillStyle = '#71717A';
+                targetCtx.fillText(text, x + w / 2, y + h / 2);
+                targetCtx.restore();
+            };
+
             const drawCardOnContext = async (targetCtx, side, width, height, rowData) => {
                 targetCtx.fillStyle = '#ffffff';
                 targetCtx.fillRect(0, 0, width, height);
@@ -1768,60 +2162,42 @@
                 const scale = width / baseWidth;
 
                 const bg = bgImages[side];
-                if (bg && bg.complete) {
+                if (bg && bg.complete && bg.naturalWidth > 0) {
                     targetCtx.drawImage(bg, 0, 0, width, height);
                 }
 
-                // Always render static text and static QR placeholders, even without data
-                for (const p of placeholders[side]) {
-                    if (p.staticText) {
-                        const value = p.staticText;
-                        const x = p.x * width;
-                        const y = p.y * height;
-
-                        if (p.type === 'text') {
-                            targetCtx.fillStyle = p.color;
-                            const fontFamily = p.fontFamily || 'Inter';
-                            ensureGoogleFontLoaded(fontFamily);
-                            const fontWeight = p.fontWeight || 'normal';
-                            const fontStyle = p.fontStyle === 'italic' ? 'italic ' : '';
-                            const effectiveFontSize = (p.fontSize || 14) * scale;
-                            const effectiveLineHeight = (p.lineHeight || 18) * scale;
-                            targetCtx.font = `${fontStyle}${fontWeight} ${effectiveFontSize}px "${fontFamily}", sans-serif`;
-                            if ('letterSpacing' in targetCtx) {
-                                targetCtx.letterSpacing = p.letterSpacing ? `${p.letterSpacing * scale}px` : '0px';
+                // If no rowData is provided -> Edit mode with no record loaded
+                if (!rowData) {
+                    for (const p of placeholders[side]) {
+                        if (p.staticText) {
+                            if (p.type === 'text') {
+                                drawTextOnCard(targetCtx, p, p.staticText, p.color, width, height, scale);
+                            } else if (p.type === 'qr') {
+                                drawQrCodeOnContext(targetCtx, p.staticText, p.x * width, p.y * height, p.width * width, p.height * height, p.qrColor);
                             }
-                            targetCtx.textAlign = p.align;
-                            targetCtx.textBaseline = 'top';
-                            const maxWidth = p.width * width;
-
-                            let textX = x;
-                            if (p.align === 'center') {
-                                textX = x + (p.width * width) / 2;
-                            } else if (p.align === 'right') {
-                                textX = x + (p.width * width);
+                        } else {
+                            if (p.type === 'text') {
+                                // Draw {{Field}} token on canvas in #9A9A9A
+                                drawTextOnCard(targetCtx, p, `{{${p.key}}}`, '#9A9A9A', width, height, scale);
+                            } else if (p.type === 'photo') {
+                                drawPlaceholderBox(targetCtx, p, p.key, width, height, scale);
+                            } else if (p.type === 'qr') {
+                                drawPlaceholderBox(targetCtx, p, p.key, width, height, scale);
                             }
-
-                            wrapText(targetCtx, value, textX, y, maxWidth, effectiveLineHeight);
-                        } else if (p.type === 'qr') {
-                            const pWidth = p.width * width;
-                            const pHeight = p.height * height;
-                            drawQrCodeOnContext(targetCtx, value, x, y, pWidth, pHeight, p.qrColor);
                         }
                     }
+                    return;
                 }
 
-                if (!rowData) return;
+                // Data mode / Export mode: draw actual records
                 for (const p of placeholders[side]) {
                     const isStaticText = (p.key === 'title' && p.staticText) || (p.key === 'label' && p.staticText) || p.staticText;
                     let value = isStaticText ? p.staticText : getRowValue(rowData, p.key);
 
-                    // Format all date/DOB fields strictly to DD/MM/YYYY (Day-First format)
+                    // Format dates strictly to DD/MM/YYYY
                     if (!isStaticText && value !== undefined && value !== null && (p.key.toLowerCase().includes('dob') || p.key.toLowerCase().includes('date') || p.key.toLowerCase().includes('birth'))) {
                         try {
                             const strVal = String(value).trim();
-
-                            // 1. Excel serial number (e.g. 44927)
                             const numVal = Number(strVal);
                             if (!isNaN(numVal) && numVal >= 10000 && numVal <= 50000 && /^\d+(\.\d+)?$/.test(strVal)) {
                                 const excelEpoch = new Date(1899, 11, 30);
@@ -1833,9 +2209,7 @@
                                     const y = jsDate.getFullYear();
                                     value = `${d}/${m}/${y}`;
                                 }
-                            }
-                            // 2. Day-first string dates (e.g. "4-9-2015", "4/9/2015", "04-09-2015") -> format to DD/MM/YYYY
-                            else {
+                            } else {
                                 const dayFirstMatch = strVal.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
                                 if (dayFirstMatch) {
                                     const d = String(parseInt(dayFirstMatch[1], 10)).padStart(2, '0');
@@ -1860,19 +2234,15 @@
                     if (!value) continue;
                     const x = p.x * width;
                     const y = p.y * height;
+                    const pWidth = p.width * width;
+                    const pHeight = p.height * height;
 
                     if (p.type === 'qr') {
-                        const pWidth = p.width * width;
-                        const pHeight = p.height * height;
                         drawQrCodeOnContext(targetCtx, value, x, y, pWidth, pHeight, p.qrColor);
                     } else if (p.type === 'photo') {
-                        const pWidth = p.width * width;
-                        const pHeight = p.height * height;
                         try {
                             const img = await loadImage(value, p.key, rowData);
-                            // Add rounded corners or circular mask
                             if (p.shape === 'circle') {
-                                // For circular photos
                                 targetCtx.save();
                                 targetCtx.beginPath();
                                 const centerX = x + pWidth / 2;
@@ -1884,7 +2254,6 @@
                                 targetCtx.drawImage(img, x, y, pWidth, pHeight);
                                 targetCtx.restore();
                             } else if (p.shape === 'rounded') {
-                                // For rounded rectangle photos
                                 targetCtx.save();
                                 targetCtx.beginPath();
                                 const radius = Math.min(20, pWidth / 4, pHeight / 4);
@@ -1902,19 +2271,14 @@
                                 targetCtx.drawImage(img, x, y, pWidth, pHeight);
                                 targetCtx.restore();
                             } else {
-                                // Default square/rectangle
                                 targetCtx.drawImage(img, x, y, pWidth, pHeight);
                             }
                         } catch (error) {
-                            console.error(`Could not load image for record:`, value, error);
-
                             targetCtx.fillStyle = '#fee2e2';
                             targetCtx.fillRect(x, y, pWidth, pHeight);
-
                             targetCtx.strokeStyle = '#ef4444';
                             targetCtx.lineWidth = 2;
                             targetCtx.strokeRect(x, y, pWidth, pHeight);
-
                             targetCtx.fillStyle = '#ef4444';
                             targetCtx.font = `bold ${Math.round(12 * scale)}px Inter`;
                             targetCtx.textAlign = 'center';
@@ -1927,40 +2291,15 @@
                                 const cleanVal = String(value || '').replace(/\.0+$/, '').trim();
                                 errorText = cleanVal ? `Photo\n"${cleanVal}"\nNot in Folder` : 'No Photo\nSpecified';
                             }
-
-                            const lines = errorText.split('\n');
-                            const lineHeight = Math.round(14 * scale);
-                            const startY = y + pHeight / 2 - (lines.length - 1) * lineHeight / 2;
-
-                            lines.forEach((line, index) => {
-                                targetCtx.fillText(line, x + pWidth / 2, startY + index * lineHeight);
+                            const errLines = errorText.split('\n');
+                            const lh = Math.round(14 * scale);
+                            const startY = y + pHeight / 2 - (errLines.length - 1) * lh / 2;
+                            errLines.forEach((l, index) => {
+                                targetCtx.fillText(l, x + pWidth / 2, startY + index * lh);
                             });
                         }
                     } else {
-                        targetCtx.fillStyle = p.color;
-                        const fontFamily = p.fontFamily || 'Inter';
-                        ensureGoogleFontLoaded(fontFamily);
-                        const fontWeight = p.fontWeight || 'normal';
-                        const fontStyle = p.fontStyle === 'italic' ? 'italic ' : '';
-                        const effectiveFontSize = (p.fontSize || 14) * scale;
-                        const effectiveLineHeight = (p.lineHeight || 18) * scale;
-                        targetCtx.font = `${fontStyle}${fontWeight} ${effectiveFontSize}px "${fontFamily}", sans-serif`;
-                        if ('letterSpacing' in targetCtx) {
-                            targetCtx.letterSpacing = p.letterSpacing ? `${p.letterSpacing * scale}px` : '0px';
-                        }
-                        targetCtx.textAlign = p.align;
-                        targetCtx.textBaseline = 'top';
-                        const maxWidth = p.width * width;
-
-                        // Calculate x position based on alignment
-                        let textX = x;
-                        if (p.align === 'center') {
-                            textX = x + (p.width * width) / 2;
-                        } else if (p.align === 'right') {
-                            textX = x + (p.width * width);
-                        }
-
-                        wrapText(targetCtx, value, textX, y, maxWidth, effectiveLineHeight);
+                        drawTextOnCard(targetCtx, p, value, p.color, width, height, scale);
                     }
                 }
             };
@@ -1971,6 +2310,7 @@
                 drawCardOnContext(frontCtx, 'front', w, h, currentData);
                 drawCardOnContext(backCtx, 'back', w, h, currentData);
             };
+            window.drawAllCanvases = drawAllCanvases;
             const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
                 const words = text.split(' ');
                 let line = '';
@@ -2277,15 +2617,10 @@
                 setActivePlaceholder(newPlaceholder.id);
             };
             const renderPlaceholders = () => {
-                // First sync the wrapper positioning
                 syncPlaceholderWrappers();
-
-                const cW = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
-                const cH = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
 
                 const renderSide = (side) => {
                     const wrapper = side === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
-                    // Remove only placeholder elements, leaving the toolbar and guide-svg intact in the DOM
                     wrapper.querySelectorAll('.placeholder').forEach(el => el.remove());
 
                     placeholders[side].forEach(p => {
@@ -2294,57 +2629,11 @@
                         const isActive = (p.id === activePlaceholderId);
                         el.className = `placeholder ${p.type}-placeholder ${isActive ? 'active' : ''}`;
 
-                        // Percentage coordinates
                         el.style.left = `${p.x * 100}%`;
                         el.style.top = `${p.y * 100}%`;
                         el.style.width = `${p.width * 100}%`;
+                        el.style.height = `${p.height * 100}%`;
                         el.style.position = 'absolute';
-
-                        // Calculate height to match drawn bounds exactly
-                        let computedH = p.height || 0.1;
-                        if (p.type === 'text') {
-                            const val = p.staticText ? p.staticText : `{{${p.key}}}`;
-                            const words = val.split(' ');
-                            const maxWidthPx = (p.width || 0.3) * cW;
-                            const fontSize = p.fontSize || 14;
-                            const lineHeight = p.lineHeight || 18;
-                            const avgCharWidth = fontSize * 0.55;
-                            let lineLength = 0;
-                            let lineCount = 1;
-                            words.forEach(word => {
-                                const wordLen = (word.length + 1) * avgCharWidth;
-                                if (lineLength + wordLen > maxWidthPx && lineLength > 0) {
-                                    lineCount++;
-                                    lineLength = wordLen;
-                                } else {
-                                    lineLength += wordLen;
-                                }
-                            });
-                            const textHeightPx = Math.max(lineHeight, lineCount * lineHeight);
-                            const textHeightNorm = textHeightPx / cH;
-                            computedH = Math.max(p.height || 0, textHeightNorm);
-                        }
-                        el.style.height = `${computedH * 100}%`;
-
-                        if (p.type === 'text') {
-                            if (p.fontFamily) {
-                                ensureGoogleFontLoaded(p.fontFamily);
-                                el.style.fontFamily = `"${p.fontFamily}", sans-serif`;
-                            }
-                            if (p.fontWeight) el.style.fontWeight = p.fontWeight;
-                            if (p.fontStyle) el.style.fontStyle = p.fontStyle;
-                            if (p.letterSpacing) el.style.letterSpacing = `${p.letterSpacing}px`;
-                        }
-
-                        const displayText = p.staticText ? p.staticText : `{{${p.key}}}`;
-                        if (p.type === 'qr') {
-                            const label = p.staticText ? `QR • Static` : `QR • ${p.key}`;
-                            el.innerHTML = `<div class="qr-placeholder-preview"><span class="ph-label">${label}</span></div>`;
-                        } else if (p.type === 'photo') {
-                            el.innerHTML = `<span class="ph-label">🖼️ ${displayText}</span>`;
-                        } else {
-                            el.innerHTML = `<span class="ph-label">T  ${displayText}</span>`;
-                        }
 
                         // 8 resize handles (.rh)
                         const DIRS = ['nw','n','ne','e','se','s','sw','w'];
@@ -2370,7 +2659,6 @@
                 if (typeof renderLayerList === 'function') renderLayerList();
                 if (typeof updateSelectionStatus === 'function') updateSelectionStatus();
             };
-
             const setActiveSide = (side) => {
                 activeSide = side;
                 frontCanvasWrapper.classList.toggle('active', side === 'front');
@@ -2395,7 +2683,7 @@
                 adjustPanelOrder(id);
                 if (id) renderEditPanel();
                 renderPlaceholders();
-                updateFieldToolbar();
+                if (typeof updateOptionsBarFieldControls === 'function') updateOptionsBarFieldControls();
                 updateSelectionStatus();
                 if (typeof window.drawRulers === 'function') window.drawRulers();
             };
@@ -2443,85 +2731,9 @@
                 drawAllCanvases();
             };
 
-            // --- Floating Field Toolbar ---
-            const frontFieldToolbar = document.getElementById('front-field-toolbar');
-            const backFieldToolbar  = document.getElementById('back-field-toolbar');
-            if (frontFieldToolbar) frontFieldToolbar.addEventListener('mousedown', e => e.stopPropagation());
-            if (backFieldToolbar) backFieldToolbar.addEventListener('mousedown', e => e.stopPropagation());
-
+            // Floating toolbar removed; contextual controls are in options bar
             const updateFieldToolbar = () => {
-                const toolbar = activeSide === 'front' ? frontFieldToolbar : backFieldToolbar;
-                const other   = activeSide === 'front' ? backFieldToolbar  : frontFieldToolbar;
-                other.classList.remove('visible');
-
-                if (!activePlaceholderId || isDragging || isResizing) {
-                    toolbar.classList.remove('visible');
-                    return;
-                }
-                const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
-                if (!p) { toolbar.classList.remove('visible'); return; }
-
-                // Position above the element, flip below if it would leave the artboard top edge
-                toolbar.style.left = `${p.x * 100}%`;
-                if (p.y < 0.12) {
-                    toolbar.style.top = `${(p.y + (p.height || 0.1)) * 100}%`;
-                    toolbar.style.transform = 'translateY(8px)';
-                } else {
-                    toolbar.style.top  = `${p.y * 100}%`;
-                    toolbar.style.transform = 'translateY(calc(-100% - 8px))';
-                }
-
-                let html = '';
-
-                if (p.type === 'text') {
-                    const sz = p.fontSize || 15;
-                    const bold = (p.fontWeight === 'bold');
-                    const col  = p.color || '#000000';
-                    const al   = p.align  || 'left';
-                    html += `
-                    <button class="ftb ${bold ? 'active' : ''}" title="Bold"
-                        onclick="updatePlaceholderProp('${p.id}','fontWeight','${bold ? 'normal' : 'bold'}')"
-                        >B</button>
-                    <div class="ft-sep"></div>
-                    <button class="ftb" title="Decrease font size"
-                        onclick="updatePlaceholderProp('${p.id}','fontSize',${sz - 1})">−</button>
-                    <span style="color:rgba(255,255,255,0.9);font-size:12px;font-weight:600;min-width:24px;text-align:center">${sz}</span>
-                    <button class="ftb" title="Increase font size"
-                        onclick="updatePlaceholderProp('${p.id}','fontSize',${sz + 1})">+</button>
-                    <div class="ft-sep"></div>
-                    <button class="ftb ${al==='left'?'active':''}"   title="Align left"    onclick="updatePlaceholderProp('${p.id}','align','left')">&#8676;</button>
-                    <button class="ftb ${al==='center'?'active':''}" title="Align center"  onclick="updatePlaceholderProp('${p.id}','align','center')">&#8596;</button>
-                    <button class="ftb ${al==='right'?'active':''}"  title="Align right"   onclick="updatePlaceholderProp('${p.id}','align','right')">&#8677;</button>
-                    <div class="ft-sep"></div>
-                    <button class="ftb ftb-color" title="Text color">
-                        <div class="swatch" style="background:${col}"></div>
-                        <input type="color" value="${col}" oninput="updatePlaceholderProp('${p.id}','color',this.value);document.querySelector('#${activeSide === 'front' ? 'front' : 'back'}-field-toolbar .swatch').style.background=this.value">
-                    </button>`;
-                } else if (p.type === 'photo') {
-                    const sh = p.shape || 'square';
-                    html += `
-                    <button class="ftb ${sh==='square'?'active':''}"  onclick="updatePlaceholderProp('${p.id}','shape','square')" title="Square">▣</button>
-                    <button class="ftb ${sh==='rounded'?'active':''}" onclick="updatePlaceholderProp('${p.id}','shape','rounded')" title="Rounded">▢</button>
-                    <button class="ftb ${sh==='circle'?'active':''}"  onclick="updatePlaceholderProp('${p.id}','shape','circle')" title="Circle">◯</button>`;
-                } else if (p.type === 'qr') {
-                    const qrCol = p.qrColor || '#000000';
-                    html += `
-                    <span style="color:rgba(255,255,255,0.5);font-size:10px;padding:0 4px">QR</span>
-                    <button class="ftb ftb-color" title="QR color">
-                        <div class="swatch" style="background:${qrCol}"></div>
-                        <input type="color" value="${qrCol}" oninput="updatePlaceholderProp('${p.id}','qrColor',this.value)">
-                    </button>`;
-                }
-
-                // Delete button calling centralized deleteField
-                html += `<div class="ft-sep"></div>
-                    <button class="ftb danger" title="Delete field (Del)"
-                        onclick="deleteField('${activeSide}','${p.id}')">
-                        &#x2715;
-                    </button>`;
-
-                toolbar.innerHTML = html;
-                toolbar.classList.add('visible');
+                if (typeof updateOptionsBarFieldControls === 'function') updateOptionsBarFieldControls();
             };
             window.updateFieldToolbar = updateFieldToolbar;
 
@@ -2555,6 +2767,7 @@
                     <div class="geom-cell">
                         <label>H</label>
                         <input type="number" id="geom-h" value="${Math.round(p.height * cH)}" min="10"
+                            ${p.type === 'text' && p.autoHeight !== false ? 'disabled title="Auto-computed height. Drag N/S handle to fix."' : ''}
                             oninput="updatePlaceholderGeometry('${p.id}', 'height', this.value)">
                     </div>
                 </div>
@@ -2574,10 +2787,7 @@
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <label class="block text-[11px] font-medium text-ink-dim">Font Family</label>
-                            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
-                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
-                                Google Fonts (1500+)
-                            </span>
+                            <a href="https://fonts.google.com" target="_blank" class="text-[11px] text-accent hover:underline">Google Fonts (1500+) ↗</a>
                         </div>
                         <select onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900 mb-1.5 font-medium">
                             <optgroup label="🔥 Most Popular Google Fonts">
@@ -2634,17 +2844,15 @@
                                 <option value="Courier New" ${p.fontFamily === 'Courier New' ? 'selected' : ''}>Courier New</option>
                             </optgroup>
                         </select>
-                        <div class="relative mb-1.5">
-                            <input type="text" list="gfonts-datalist" placeholder="🔍 Type ANY Google Font (e.g. Josefin Sans)..." value="${p.fontFamily || ''}" onchange="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" oninput="updatePlaceholderProp('${p.id}', 'fontFamily', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900">
-                        </div>
+
                         <div class="flex items-center gap-1 flex-wrap mb-1">
-                            <span class="text-[10px] text-ink-400 font-semibold">Quick:</span>
-                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Poppins')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Poppins</button>
-                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Montserrat')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Montserrat</button>
-                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Bebas Neue')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Bebas Neue</button>
-                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Playfair Display')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Playfair</button>
-                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Cinzel')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Cinzel</button>
-                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Caveat')" class="px-1.5 py-0.5 text-[10px] rounded bg-ink-100 hover:bg-accent hover:text-white transition-colors">Caveat</button>
+                            <span class="text-[10px] text-ink-dim font-medium">Quick:</span>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Poppins')" class="btn-photoshop px-1.5 py-0.5 text-[10px] rounded-[3px] text-ink-dim hover:text-white">Poppins</button>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Montserrat')" class="btn-photoshop px-1.5 py-0.5 text-[10px] rounded-[3px] text-ink-dim hover:text-white">Montserrat</button>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Bebas Neue')" class="btn-photoshop px-1.5 py-0.5 text-[10px] rounded-[3px] text-ink-dim hover:text-white">Bebas Neue</button>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Playfair Display')" class="btn-photoshop px-1.5 py-0.5 text-[10px] rounded-[3px] text-ink-dim hover:text-white">Playfair</button>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Cinzel')" class="btn-photoshop px-1.5 py-0.5 text-[10px] rounded-[3px] text-ink-dim hover:text-white">Cinzel</button>
+                            <button type="button" onclick="updatePlaceholderProp('${p.id}', 'fontFamily', 'Caveat')" class="btn-photoshop px-1.5 py-0.5 text-[10px] rounded-[3px] text-ink-dim hover:text-white">Caveat</button>
                         </div>
                         <datalist id="gfonts-datalist">
                             <option value="Poppins"></option>
@@ -2733,12 +2941,19 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-[11px] font-medium text-ink-dim mb-1">Alignment</label>
-                        <div class="seg w-full">
+                        <label class="block text-[11px] font-medium text-ink-dim mb-1">Horizontal Alignment</label>
+                        <div class="seg w-full mb-2">
                             <button class="flex-1" aria-pressed="${p.align === 'left'}" onclick="updatePlaceholderProp('${p.id}', 'align', 'left')">Left</button>
                             <button class="flex-1" aria-pressed="${p.align === 'center'}" onclick="updatePlaceholderProp('${p.id}', 'align', 'center')">Center</button>
                             <button class="flex-1" aria-pressed="${p.align === 'right'}" onclick="updatePlaceholderProp('${p.id}', 'align', 'right')">Right</button>
                         </div>
+                        ${p.autoHeight === false ? `
+                        <label class="block text-[11px] font-medium text-ink-dim mb-1">Vertical Alignment (Fixed Box)</label>
+                        <div class="seg w-full">
+                            <button class="flex-1" aria-pressed="${(p.vAlign || 'top') === 'top'}" onclick="updatePlaceholderProp('${p.id}', 'vAlign', 'top')">Top</button>
+                            <button class="flex-1" aria-pressed="${p.vAlign === 'middle'}" onclick="updatePlaceholderProp('${p.id}', 'vAlign', 'middle')">Middle</button>
+                            <button class="flex-1" aria-pressed="${p.vAlign === 'bottom'}" onclick="updatePlaceholderProp('${p.id}', 'vAlign', 'bottom')">Bottom</button>
+                        </div>` : ''}
                     </div>`;
                 } else if (p.type === 'photo') {
                     p.shape = p.shape || 'square';
@@ -2780,7 +2995,10 @@
                 if (prop === 'x')     p.x     = Math.max(0, px) / cW;
                 if (prop === 'y')     p.y     = Math.max(0, px) / cH;
                 if (prop === 'width') p.width = Math.max(10, px) / cW;
-                if (prop === 'height')p.height= Math.max(10, px) / cH;
+                if (prop === 'height') {
+                    p.height = Math.max(10, px) / cH;
+                    if (p.type === 'text') p.autoHeight = false;
+                }
 
                 // Move/resize the DOM element directly — no full re-render so the input keeps focus
                 const el = document.getElementById(id);
@@ -2791,6 +3009,8 @@
                     el.style.height = `${p.height * 100}%`;
                 }
                 drawAllCanvases();
+                updateSelectionStatus();
+                if (typeof window.drawRulers === 'function') window.drawRulers();
             };
             window.updatePlaceholderProp = (id, prop, value) => {
                 const p = placeholders[activeSide].find(pl => pl.id === id);
@@ -2798,15 +3018,15 @@
                     const numValue = parseFloat(value);
                     p[prop] = isNaN(numValue) ? value : numValue;
                     renderPlaceholders();
-                    updateFieldToolbar();
+                    if (typeof updateOptionsBarFieldControls === 'function') updateOptionsBarFieldControls();
 
-                    // Sync the sidebar panel values if the user isn't currently typing in it
-                    if (document.activeElement?.closest('#edit-panel') === null) {
+                    // Sync the sidebar panel values if the user isn't currently typing in an input
+                    if (document.activeElement?.closest('#edit-panel') === null || prop === 'align' || prop === 'vAlign') {
                         renderEditPanel();
                     }
 
                     // Redraw canvas for visual property changes
-                    if (prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight' || prop === 'fontWeight' || prop === 'fontStyle' || prop === 'letterSpacing' || prop === 'shape' || prop === 'align') {
+                    if (prop === 'fontFamily' || prop === 'fontSize' || prop === 'color' || prop === 'lineHeight' || prop === 'fontWeight' || prop === 'fontStyle' || prop === 'letterSpacing' || prop === 'shape' || prop === 'align' || prop === 'vAlign') {
                         if (prop === 'fontFamily' && value) {
                             ensureGoogleFontLoaded(value);
                         }
@@ -2824,9 +3044,6 @@
                 if (!target) return;
 
                 isDragging = true;
-                if (frontFieldToolbar) frontFieldToolbar.classList.remove('visible');
-                if (backFieldToolbar) backFieldToolbar.classList.remove('visible');
-
                 if (activePlaceholderId !== target.id) setActivePlaceholder(target.id);
 
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
@@ -3040,10 +3257,6 @@
                     mouseY: (e.clientY - wrapper.getBoundingClientRect().top)  / scale,
                 };
 
-                // Hide toolbar while resizing
-                if (frontFieldToolbar) frontFieldToolbar.classList.remove('visible');
-                if (backFieldToolbar) backFieldToolbar.classList.remove('visible');
-
                 document.addEventListener('mousemove', onResizeMove);
                 document.addEventListener('mouseup', onResizeEnd);
             };
@@ -3068,9 +3281,9 @@
 
                 const dir = resizeDir;
                 if (dir.includes('e')) { w = Math.max(MIN, w + dx); }
-                if (dir.includes('s')) { h = Math.max(MIN, h + dy); }
+                if (dir.includes('s')) { h = Math.max(MIN, h + dy); if (pData.type === 'text') pData.autoHeight = false; }
                 if (dir.includes('w')) { const nw = Math.max(MIN, w - dx); x = x + w - nw; w = nw; }
-                if (dir.includes('n')) { const nh = Math.max(MIN, h - dy); y = y + h - nh; h = nh; }
+                if (dir.includes('n')) { const nh = Math.max(MIN, h - dy); y = y + h - nh; h = nh; if (pData.type === 'text') pData.autoHeight = false; }
 
                 pData.x = x / W;  pData.y = y / H;
                 pData.width = w / W; pData.height = h / H;
@@ -3123,6 +3336,17 @@
                 if (e.key === 'Delete' || e.key === 'Backspace') {
                     e.preventDefault();
                     deleteField(activeSide, activePlaceholderId);
+                    return;
+                }
+
+                // Cmd/Ctrl+R — toggle rulers visibility
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r') {
+                    e.preventDefault();
+                    const stage = document.getElementById('workspace-stage');
+                    if (stage) {
+                        stage.classList.toggle('rulers-hidden');
+                        if (typeof window.drawRulers === 'function') window.drawRulers();
+                    }
                     return;
                 }
 
@@ -3220,6 +3444,8 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 applyZoom(currentZoom);
                 drawAllCanvases();
                 renderPlaceholders();
+                if (typeof updateCardMaskSvg === 'function') updateCardMaskSvg();
+                if (typeof updateAllUnitReadouts === 'function') updateAllUnitReadouts();
                 if (typeof window.drawRulers === 'function') window.drawRulers();
             };
             // --- Zoom Management ---
@@ -3275,15 +3501,8 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 });
 
                 // Update status bar readout and document tab title
-                const statusDocDims = document.getElementById('status-doc-dims');
-                if (statusDocDims) {
-                    const pct = Math.round(actualZoom * 100);
-                    statusDocDims.textContent = `CR-80: ${baseWidth} × ${baseHeight} px @ ${pct}% (Export scale: ${PDF_SCALE}x)`;
-                }
-                const docTabTitle = document.getElementById('doc-tab-title');
-                if (docTabTitle) {
-                    const pct = Math.round(actualZoom * 100);
-                    docTabTitle.textContent = `Untitled.card @ ${pct}% (${orientation === 'horizontal' ? 'Horizontal' : 'Vertical'}, CR-80)`;
+                if (typeof updateAllUnitReadouts === 'function') {
+                    updateAllUnitReadouts();
                 }
 
                 setTimeout(() => {
@@ -4481,10 +4700,17 @@ if (generatePdfBtn) {
                 const artRect = activeWrapper.getBoundingClientRect();
 
                 const dpr = window.devicePixelRatio || 1;
-                const topW = viewRect.width;
+                const topContainer = document.getElementById('ruler-top-container');
+                const leftContainer = document.getElementById('ruler-left-container');
+                const topW = topContainer ? topContainer.clientWidth : viewRect.width;
                 const topH = 20;
                 const leftW = 20;
-                const leftH = viewRect.height;
+                const leftH = leftContainer ? leftContainer.clientHeight : viewRect.height;
+
+                topRulerCanvas.style.width = `${topW}px`;
+                topRulerCanvas.style.height = `${topH}px`;
+                leftRulerCanvas.style.width = `${leftW}px`;
+                leftRulerCanvas.style.height = `${leftH}px`;
 
                 if (topRulerCanvas.width !== Math.round(topW * dpr) || topRulerCanvas.height !== Math.round(topH * dpr)) {
                     topRulerCanvas.width = Math.round(topW * dpr);
@@ -4651,34 +4877,48 @@ if (generatePdfBtn) {
                     rulerCorner.textContent = activeRulerUnit;
                     drawRulers();
                     updateSelectionStatus();
+                    updateAllUnitReadouts();
                 });
             }
 
-            // Viewport scroll & pointer tracking
+            // Viewport scroll, pointer tracking & ResizeObserver
             if (stageViewport) {
+                // ResizeObserver ensures rulers always span the full viewport
+                if (window.ResizeObserver) {
+                    const ro = new ResizeObserver(() => {
+                        drawRulers();
+                    });
+                    ro.observe(stageViewport);
+                }
+
                 stageViewport.addEventListener('scroll', () => {
                     drawRulers();
                 });
 
                 stageViewport.addEventListener('mousemove', (e) => {
                     const viewRect = stageViewport.getBoundingClientRect();
-                    const cursorX = e.clientX - viewRect.left;
-                    const cursorY = e.clientY - viewRect.top;
-                    drawRulers(cursorX, cursorY);
+                    const activeWrapper = (activeSide === 'back' && document.getElementById('back-canvas-wrapper') && !document.getElementById('back-canvas-wrapper').parentElement.classList.contains('hidden'))
+                        ? document.getElementById('back-canvas-wrapper')
+                        : document.getElementById('front-canvas-wrapper');
 
-                    // Update cursor status readout
-                    const statusCoords = document.getElementById('status-cursor-coords');
-                    if (statusCoords) {
-                        const activeWrapper = (activeSide === 'back' && document.getElementById('back-canvas-wrapper')) ? document.getElementById('back-canvas-wrapper') : document.getElementById('front-canvas-wrapper');
-                        if (activeWrapper) {
-                            const rect = activeWrapper.getBoundingClientRect();
-                            const scale = getWrapperScale(activeWrapper);
-                            const canvasX = (e.clientX - rect.left) / scale;
-                            const canvasY = (e.clientY - rect.top) / scale;
-                            const xStr = toRulerUnit(canvasX, 'x');
-                            const yStr = toRulerUnit(canvasY, 'y');
-                            statusCoords.textContent = `X: ${xStr}  Y: ${yStr}`;
+                    if (activeWrapper) {
+                        const artRect = activeWrapper.getBoundingClientRect();
+                        const scale = getWrapperScale(activeWrapper);
+
+                        // One single pointer computation relative to active artboard
+                        const cardPxX = (e.clientX - artRect.left) / scale;
+                        const cardPxY = (e.clientY - artRect.top) / scale;
+
+                        const statusCoords = document.getElementById('status-cursor-coords');
+                        if (statusCoords) {
+                            statusCoords.textContent = `X: ${toRulerUnit(cardPxX, 'x')}  Y: ${toRulerUnit(cardPxY, 'y')}`;
                         }
+
+                        const cursorRulerX = e.clientX - viewRect.left;
+                        const cursorRulerY = e.clientY - viewRect.top;
+                        drawRulers(cursorRulerX, cursorRulerY);
+                    } else {
+                        drawRulers();
                     }
                 });
 
@@ -4692,6 +4932,174 @@ if (generatePdfBtn) {
                 drawRulers();
                 updateSelectionStatus();
             }, 100);
+
+            // --- Contextual Options Bar Synchronizer & Handlers ---
+            function updateOptionsBarFieldControls() {
+                const container = document.getElementById('optionsbar-field-controls');
+                if (!container) return;
+                if (!activePlaceholderId) {
+                    container.classList.add('hidden');
+                    return;
+                }
+                const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
+                if (!p) {
+                    container.classList.add('hidden');
+                    return;
+                }
+                container.classList.remove('hidden');
+
+                const textControls = document.getElementById('opt-text-controls');
+                const photoControls = document.getElementById('opt-photo-controls');
+                const qrControls = document.getElementById('opt-qr-controls');
+
+                if (textControls) textControls.classList.toggle('hidden', p.type !== 'text');
+                if (photoControls) photoControls.classList.toggle('hidden', p.type !== 'photo');
+                if (qrControls) qrControls.classList.toggle('hidden', p.type !== 'qr');
+
+                if (p.type === 'text') {
+                    const fontSel = document.getElementById('opt-font-family');
+                    if (fontSel) fontSel.value = p.fontFamily || 'Inter';
+                    const sizeSpan = document.getElementById('opt-font-size');
+                    if (sizeSpan) sizeSpan.textContent = p.fontSize || 14;
+                    const btnBold = document.getElementById('opt-btn-bold');
+                    if (btnBold) btnBold.setAttribute('aria-pressed', (p.fontWeight === 'bold' || String(p.fontWeight) === '700') ? 'true' : 'false');
+                    const btnItalic = document.getElementById('opt-btn-italic');
+                    if (btnItalic) btnItalic.setAttribute('aria-pressed', p.fontStyle === 'italic' ? 'true' : 'false');
+
+                    const align = p.align || 'left';
+                    ['left', 'center', 'right'].forEach(al => {
+                        const btn = document.getElementById('opt-align-' + al);
+                        if (btn) btn.setAttribute('aria-pressed', align === al ? 'true' : 'false');
+                    });
+
+                    const swatch = document.getElementById('opt-color-swatch');
+                    if (swatch) swatch.style.backgroundColor = p.color || '#000000';
+                    const colorInput = document.getElementById('opt-color-input');
+                    if (colorInput) colorInput.value = p.color || '#000000';
+                } else if (p.type === 'photo') {
+                    const shape = p.shape || 'square';
+                    ['square', 'rounded', 'circle'].forEach(sh => {
+                        const btn = document.getElementById('opt-shape-' + sh);
+                        if (btn) btn.setAttribute('aria-pressed', shape === sh ? 'true' : 'false');
+                    });
+                } else if (p.type === 'qr') {
+                    const qrSwatch = document.getElementById('opt-qr-color-swatch');
+                    if (qrSwatch) qrSwatch.style.backgroundColor = p.qrColor || '#000000';
+                    const qrInput = document.getElementById('opt-qr-color-input');
+                    if (qrInput) qrInput.value = p.qrColor || '#000000';
+                }
+            }
+            window.updateOptionsBarFieldControls = updateOptionsBarFieldControls;
+
+            function setupOptionsBarListeners() {
+                const optFontFamily = document.getElementById('opt-font-family');
+                if (optFontFamily) {
+                    const fonts = ['Inter', 'Poppins', 'Roboto', 'Montserrat', 'Open Sans', 'Lato', 'Raleway', 'Nunito', 'Playfair Display', 'Bebas Neue', 'Cinzel', 'Caveat', 'Fira Code', 'Space Grotesk'];
+                    optFontFamily.innerHTML = fonts.map(f => `<option value="${f}">${f}</option>`).join('');
+                    optFontFamily.addEventListener('change', (e) => {
+                        if (activePlaceholderId) updatePlaceholderProp(activePlaceholderId, 'fontFamily', e.target.value);
+                    });
+                }
+
+                const optFontDec = document.getElementById('opt-font-dec');
+                const optFontInc = document.getElementById('opt-font-inc');
+                if (optFontDec) optFontDec.addEventListener('click', () => {
+                    const p = activePlaceholderId ? placeholders[activeSide].find(pl => pl.id === activePlaceholderId) : null;
+                    if (p && p.type === 'text') updatePlaceholderProp(p.id, 'fontSize', Math.max(8, (p.fontSize || 14) - 1));
+                });
+                if (optFontInc) optFontInc.addEventListener('click', () => {
+                    const p = activePlaceholderId ? placeholders[activeSide].find(pl => pl.id === activePlaceholderId) : null;
+                    if (p && p.type === 'text') updatePlaceholderProp(p.id, 'fontSize', (p.fontSize || 14) + 1);
+                });
+
+                const optBold = document.getElementById('opt-btn-bold');
+                if (optBold) optBold.addEventListener('click', () => {
+                    const p = activePlaceholderId ? placeholders[activeSide].find(pl => pl.id === activePlaceholderId) : null;
+                    if (p) updatePlaceholderProp(p.id, 'fontWeight', (p.fontWeight === 'bold' || String(p.fontWeight) === '700') ? 'normal' : 'bold');
+                });
+
+                const optItalic = document.getElementById('opt-btn-italic');
+                if (optItalic) optItalic.addEventListener('click', () => {
+                    const p = activePlaceholderId ? placeholders[activeSide].find(pl => pl.id === activePlaceholderId) : null;
+                    if (p) updatePlaceholderProp(p.id, 'fontStyle', p.fontStyle === 'italic' ? 'normal' : 'italic');
+                });
+
+                ['left', 'center', 'right'].forEach(al => {
+                    const btn = document.getElementById('opt-align-' + al);
+                    if (btn) btn.addEventListener('click', () => {
+                        if (activePlaceholderId) updatePlaceholderProp(activePlaceholderId, 'align', al);
+                    });
+                });
+
+                const optColorInput = document.getElementById('opt-color-input');
+                if (optColorInput) optColorInput.addEventListener('input', (e) => {
+                    if (activePlaceholderId) updatePlaceholderProp(activePlaceholderId, 'color', e.target.value);
+                });
+
+                ['square', 'rounded', 'circle'].forEach(sh => {
+                    const btn = document.getElementById('opt-shape-' + sh);
+                    if (btn) btn.addEventListener('click', () => {
+                        if (activePlaceholderId) updatePlaceholderProp(activePlaceholderId, 'shape', sh);
+                    });
+                });
+
+                const optQrColorInput = document.getElementById('opt-qr-color-input');
+                if (optQrColorInput) optQrColorInput.addEventListener('input', (e) => {
+                    if (activePlaceholderId) updatePlaceholderProp(activePlaceholderId, 'qrColor', e.target.value);
+                });
+
+                // Align to Card Handlers
+                const alignCard = (type) => {
+                    const p = activePlaceholderId ? placeholders[activeSide].find(pl => pl.id === activePlaceholderId) : null;
+                    if (!p) return;
+                    if (type === 'left') p.x = 0;
+                    else if (type === 'center') p.x = Math.max(0, (1 - p.width) / 2);
+                    else if (type === 'right') p.x = Math.max(0, 1 - p.width);
+                    else if (type === 'top') p.y = 0;
+                    else if (type === 'middle') p.y = Math.max(0, (1 - p.height) / 2);
+                    else if (type === 'bottom') p.y = Math.max(0, 1 - p.height);
+
+                    renderPlaceholders();
+                    drawAllCanvases();
+                    syncGeomInputs();
+                    updateSelectionStatus();
+                    if (typeof window.drawRulers === 'function') window.drawRulers();
+                };
+
+                const cardAlignBtns = [
+                    ['opt-card-align-left', 'left'],
+                    ['opt-card-align-center', 'center'],
+                    ['opt-card-align-right', 'right'],
+                    ['opt-card-align-top', 'top'],
+                    ['opt-card-align-middle', 'middle'],
+                    ['opt-card-align-bottom', 'bottom'],
+                ];
+                cardAlignBtns.forEach(([id, type]) => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.addEventListener('click', () => alignCard(type));
+                });
+
+                const optBtnDup = document.getElementById('opt-btn-dup');
+                if (optBtnDup) optBtnDup.addEventListener('click', () => {
+                    const pData = activePlaceholderId ? placeholders[activeSide].find(pl => pl.id === activePlaceholderId) : null;
+                    if (!pData) return;
+                    const clone = JSON.parse(JSON.stringify(pData));
+                    clone.id = 'ph_' + Date.now();
+                    clone.x = Math.min(clone.x + 0.02, 0.9);
+                    clone.y = Math.min(clone.y + 0.02, 0.9);
+                    placeholders[activeSide].push(clone);
+                    setActivePlaceholder(clone.id);
+                    drawAllCanvases();
+                });
+
+                const optBtnDel = document.getElementById('opt-btn-del');
+                if (optBtnDel) optBtnDel.addEventListener('click', () => {
+                    if (activePlaceholderId) deleteField(activeSide, activePlaceholderId);
+                });
+            }
+            setupOptionsBarListeners();
+            updateCardMaskSvg();
+            updateAllUnitReadouts();
             initialSetup();
         });
     </script>
