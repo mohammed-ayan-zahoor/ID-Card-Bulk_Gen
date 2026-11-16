@@ -186,13 +186,16 @@
         .canvas-wrapper {
             flex-shrink: 0;
             background-color: #FFFFFF;
-            border: none;
-            border-radius: 0;
+            border: 0 !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
             outline: 1px solid #1A1A1A;
             position: relative;
-            box-sizing: content-box;
-            padding: 0;
+            box-sizing: border-box;
+            line-height: 0;
+            display: inline-block;
         }
         .canvas-wrapper.active {
             outline: 1px solid var(--accent-primary);
@@ -532,6 +535,78 @@
             width: 90%;
         }
 
+        
+        /* ── Step C: Custom Checkbox & Custom Select ── */
+        input[type="checkbox"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background-color: var(--bg-field);
+            border: 1px solid var(--border-control);
+            border-radius: 2px;
+            cursor: pointer;
+            display: inline-grid;
+            place-content: center;
+            margin: 0;
+            vertical-align: middle;
+            transition: all 0.1s ease;
+        }
+        input[type="checkbox"]:checked {
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+        input[type="checkbox"]:checked::before {
+            content: "";
+            width: 8px;
+            height: 5px;
+            border-left: 1.5px solid #FFFFFF;
+            border-bottom: 1.5px solid #FFFFFF;
+            transform: rotate(-45deg) translate(1px, -1px);
+        }
+
+        select {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: var(--bg-field) !important;
+            border: 1px solid var(--border-subtle) !important;
+            border-radius: 3px !important;
+            color: var(--text-primary) !important;
+            padding: 2px 18px 2px 6px !important;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="%239A9A9A" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>') !important;
+            background-repeat: no-repeat !important;
+            background-position: right 6px center !important;
+            cursor: pointer;
+        }
+
+        /* Primary Disabled State */
+        button.btn-photoshop.btn-primary:disabled {
+            background-color: var(--bg-hover) !important;
+            border-color: var(--border-control) !important;
+            color: var(--text-disabled) !important;
+            opacity: 1 !important;
+        }
+
+        /* ── Scrollbars: 8px, square thumb, --bg-selected on --bg-pasteboard ── */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--bg-selected) var(--bg-pasteboard);
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-pasteboard);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-selected);
+            border-radius: 0px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-control);
+        }
+
         /* Quiet Scrollbars */
         .col-scroll {
             overflow-y: auto;
@@ -558,9 +633,9 @@
         <!-- ── Title Bar (28px) ── -->
         <header id="workspace-titlebar">
             <div class="flex items-center gap-3">
-                <span class="font-semibold text-white tracking-wide text-xs">QUANTECH ID STUDIO</span>
+                <span class="font-medium text-white text-xs">Quantech ID Studio</span>
                 <span class="text-ink-off">|</span>
-                <span id="doc-title-readout" class="text-ink-dim">Untitled-1.card @ 100% (CR-80, CMYK/300)</span>
+                <span id="doc-title-readout" class="text-ink-dim">Untitled.card (CR-80)</span>
             </div>
             <div class="flex items-center gap-3">
                 <!-- License Status Badge (hidden on web main) -->
@@ -605,14 +680,10 @@
                 </label>
             </div>
 
-            <!-- Options Bar Right: Single Primary Export CTA -->
+            <!-- Options Bar Right: Single Primary Export... Button -->
             <div class="flex items-center gap-2">
-                <label class="flex items-center gap-1.5 cursor-pointer text-xs text-ink-dim mr-2 select-none">
-                    <input type="checkbox" id="front-only-checkbox" class="accent-accent">
-                    <span>Front only (10/page)</span>
-                </label>
-                <button id="generate-zip-btn" class="btn-photoshop" disabled title="Download cards as PNG ZIP archive">ZIP Export</button>
-                <button id="generate-pdf-btn" class="btn-photoshop btn-primary font-medium" disabled title="Export to print-ready A4 PDF">Export PDF (A4)...</button>
+                <!-- Hidden anchors for JS listeners -->
+                <button id="open-export-modal-btn" class="btn-photoshop btn-primary font-medium" disabled title="Export cards to PDF or ZIP">Export…</button>
             </div>
         </div>
 
@@ -638,14 +709,21 @@
 
             <div class="tool-divider"></div>
 
-            <button id="open-photo-audit-btn" class="tool-btn" title="Audit Photo Matches">
-                <svg class="w-4 h-4 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <button id="open-photo-audit-btn" class="tool-btn" title="Audit Photo Connections">
+                <svg class="w-4 h-4 text-ink-dim hover:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </button>
             <span id="photo-audit-badge" class="hidden text-[9px] font-mono px-1 bg-red-900/60 text-red-200 rounded">0</span>
         </nav>
 
         <!-- ── Center Work Area / Pasteboard Stage ── -->
         <main id="workspace-stage">
+
+            <!-- Document View Tabs: Front / Back / Both -->
+            <div class="flex items-center gap-1 bg-chrome border border-line rounded p-0.5 mb-4 self-center">
+                <button id="view-tab-both" class="btn-photoshop px-2 text-[11px] font-medium bg-selected text-white" onclick="switchCanvasView('both')">Both Artboards</button>
+                <button id="view-tab-front" class="btn-photoshop px-2 text-[11px] font-medium text-ink-dim hover:text-white" onclick="switchCanvasView('front')">Front Only</button>
+                <button id="view-tab-back" class="btn-photoshop px-2 text-[11px] font-medium text-ink-dim hover:text-white" onclick="switchCanvasView('back')">Back Only</button>
+            </div>
             <div id="canvas-area" data-orientation="horizontal">
                 <!-- Front Artboard -->
                 <div class="flex flex-col items-start">
@@ -690,29 +768,42 @@
                 <button class="dock-tab" onclick="switchDockTab('layouts')">Layouts</button>
             </div>
 
-            <!-- Tab 1: Properties (Active Field Inspector & Geometry) -->
+            <!-- Tab 1: Properties (Active Field Inspector or Document Settings) -->
             <div id="tab-content-properties" class="dock-tab-content">
-                <!-- Field Insertion Row -->
-                <div class="dock-section">
-                    <div class="dock-section-title">Field Creation</div>
-                    <div class="flex gap-1.5 mb-2">
-                        <input type="text" id="field-name-input" placeholder="Excel column (e.g. FullName)" class="flex-1">
-                    </div>
-                    <div id="ai-controls" class="mb-2">
-                        <button id="add-all-headers-btn" class="btn-photoshop w-full" disabled>Add All Excel Fields</button>
-                    </div>
-                    <div id="add-placeholder-controls" class="space-y-1.5">
-                        <div id="qr-field-container" class="border border-line rounded p-1.5 bg-field/50">
-                            <label class="block text-[10px] text-ink-dim mb-1">QR Data Source</label>
-                            <select id="qr-field-select" class="w-full text-xs" disabled>
-                                <option value="">Upload data first</option>
-                            </select>
+                <!-- Document Settings (Visible when no field selected) -->
+                <div id="doc-settings-panel" class="dock-section">
+                    <div class="dock-section-title">Document Settings</div>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="text-ink-dim">Format Standard</span>
+                            <span class="text-white font-mono">CR-80 (ISO/IEC 7810)</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="text-ink-dim">Dimensions</span>
+                            <span class="text-white font-mono" id="doc-settings-dims">856 × 540 px</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="text-ink-dim">Active Orientation</span>
+                            <span class="text-white" id="doc-settings-orient">Horizontal</span>
+                        </div>
+                        <div class="pt-2 border-t border-line">
+                            <span class="block text-[10px] text-ink-dim mb-1.5">Quick Background Artwork</span>
+                            <div class="flex gap-2">
+                                <label class="btn-photoshop flex-1 justify-center cursor-pointer text-center">
+                                    <span>Front BG</span>
+                                    <input type="file" id="doc-bg-front-proxy" accept="image/*" class="hidden" onchange="document.getElementById('bg-image-front-input').files = this.files; document.getElementById('bg-image-front-input').dispatchEvent(new Event('change'));">
+                                </label>
+                                <label class="btn-photoshop flex-1 justify-center cursor-pointer text-center">
+                                    <span>Back BG</span>
+                                    <input type="file" id="doc-bg-back-proxy" accept="image/*" class="hidden" onchange="document.getElementById('bg-image-back-input').files = this.files; document.getElementById('bg-image-back-input').dispatchEvent(new Event('change'));">
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Dynamic Edit Field Container -->
-                <div id="edit-panel" class="dock-section">
+                <!-- Dynamic Edit Field Container (Hidden when no field is selected) -->
+                <div id="edit-panel" class="dock-section hidden">
                     <div class="dock-section-title">Selected Field Properties</div>
                     <div id="edit-controls" class="space-y-2"></div>
                 </div>
@@ -723,12 +814,33 @@
                 <div id="left-sidebar" class="hidden"></div>
             </div>
 
-            <!-- Tab 2: Data (Excel / CSV Spreadsheet) -->
+            <!-- Tab 2: Data (Excel / CSV Spreadsheet & Field Creation) -->
             <div id="tab-content-data" class="dock-tab-content hidden">
                 <div id="step2" class="dock-section">
                     <div class="dock-section-title">Data Source (Excel / CSV)</div>
                     <p class="text-[11px] text-ink-dim mb-2">Upload student spreadsheet (.xlsx or .csv) to bind dynamic fields.</p>
                     <input type="file" id="data-file-input" accept=".xlsx,.csv" class="w-full text-xs text-ink-dim file:mr-2 file:py-1 file:px-2 file:rounded file:border file:border-control file:text-xs file:bg-field file:text-white file:cursor-pointer hover:file:bg-hover">
+                </div>
+
+                <!-- Field Creation Section moved into Data Tab -->
+                <div class="dock-section">
+                    <div class="dock-section-title">Place Field by Column</div>
+                    <div class="flex gap-1.5 mb-2">
+                        <input type="text" id="field-name-input" placeholder="Excel column (e.g. FullName)" class="flex-1">
+                    </div>
+                    <div id="ai-controls" class="mb-2">
+                        <button id="add-all-headers-btn" class="btn-photoshop w-full" disabled>Add All Excel Fields</button>
+                    </div>
+
+                    <!-- QR Data Source (Hairline-separated section, no heavy border) -->
+                    <div id="add-placeholder-controls" class="space-y-1.5 pt-2 border-t border-line">
+                        <div id="qr-field-container">
+                            <span class="block text-[10px] text-ink-dim mb-1">QR Code Data Column</span>
+                            <select id="qr-field-select" class="w-full text-xs" disabled>
+                                <option value="">Upload data first</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -834,7 +946,7 @@
         <!-- ── Status Bar (24px) ── -->
         <footer id="workspace-statusbar">
             <div class="flex items-center gap-3">
-                <span id="status-doc-dims">CR-80: 856 × 540 px (300 DPI)</span>
+                <span id="status-doc-dims">CR-80: 856 × 540 px @ 70% (Export scale: 2.0x)</span>
                 <span class="text-ink-off">|</span>
                 <span id="status-selection-info">No selection</span>
             </div>
@@ -842,7 +954,8 @@
                 <div class="flex items-center gap-1.5">
                     <span>Zoom:</span>
                     <select id="zoom-select" class="bg-field text-white border-line text-xs py-0 px-1 rounded h-5">
-                        <option value="actual">Auto Fit</option>
+                        <option value="fit" selected>Fit Window</option>
+                        <option value="actual">100% (Actual)</option>
                         <option value="0.3">30%</option>
                         <option value="0.5">50%</option>
                         <option value="0.7" selected>70%</option>
@@ -930,6 +1043,49 @@
                     <div class="pt-6 border-t border-ink-200/70 text-xs text-ink-500 flex items-center justify-between">
                         <span>Contact administrator for a license key</span>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <!-- ── Step C: Export Dialog Modal ── -->
+        <div id="export-modal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 400px; padding: 18px 20px;">
+                <div class="flex items-center justify-between pb-3 border-b border-line mb-3">
+                    <span class="text-xs font-semibold text-white">Export Cards</span>
+                    <button id="close-export-modal-btn" class="text-ink-dim hover:text-white text-xs">✕</button>
+                </div>
+
+                <div class="space-y-3 mb-4">
+                    <div>
+                        <label class="block text-[11px] text-ink-dim mb-1">Export Format</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 p-2 bg-field border border-line rounded cursor-pointer">
+                                <input type="radio" name="export-format-radio" value="pdf" checked class="accent-accent">
+                                <span class="text-xs text-white">A4 Print PDF</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 bg-field border border-line rounded cursor-pointer">
+                                <input type="radio" name="export-format-radio" value="zip" class="accent-accent">
+                                <span class="text-xs text-white">PNG Archive (ZIP)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="pdf-export-options" class="p-2.5 bg-field/60 border border-line rounded space-y-2">
+                        <span class="block text-[10px] font-semibold text-ink-dim uppercase tracking-wider">A4 Layout Settings</span>
+                        <label class="flex items-center gap-2 cursor-pointer text-xs text-ink-dim select-none">
+                            <input type="checkbox" id="front-only-checkbox">
+                            <span>Front only (10 cards / page)</span>
+                        </label>
+                        <p class="text-[10px] text-ink-off">Standard double-sided prints 5 front + 5 back aligned for duplex printing.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-line">
+                    <button id="cancel-export-btn" class="btn-photoshop px-3">Cancel</button>
+                    <!-- Actual triggers preserved for JS execution -->
+                    <button id="generate-pdf-btn" class="btn-photoshop btn-primary px-3">Export PDF</button>
+                    <button id="generate-zip-btn" class="btn-photoshop btn-primary px-3 hidden">Download ZIP</button>
                 </div>
             </div>
         </div>
@@ -1773,11 +1929,17 @@
             // --- Synchronization Function ---
             const syncPlaceholderWrappers = () => {
                 [frontCanvasWrapper, backCanvasWrapper].forEach((wrapper) => {
+                    if (!wrapper) return;
                     const canvas = wrapper.querySelector('canvas');
                     const placeholderWrapper = wrapper.querySelector('[id*="placeholder-wrapper"]');
                     if (canvas && placeholderWrapper) {
-                        const canvasStyle = window.getComputedStyle(canvas);
-                        placeholderWrapper.style.top    = `${canvas.offsetTop}px`;
+                        placeholderWrapper.style.top = '0px';
+                        placeholderWrapper.style.left = '0px';
+                        placeholderWrapper.style.width = `${canvas.offsetWidth}px`;
+                        placeholderWrapper.style.height = `${canvas.offsetHeight}px`;
+                    }
+                });
+            }px`;
                         placeholderWrapper.style.left   = `${canvas.offsetLeft}px`;
                         placeholderWrapper.style.width  = `${canvas.offsetWidth}px`;
                         placeholderWrapper.style.height = `${canvas.offsetHeight}px`;
@@ -1934,7 +2096,10 @@
 
             const setActivePlaceholder = (id) => {
                 activePlaceholderId = id;
-                editPanel.classList.toggle('hidden', !id);
+                if (editPanel) editPanel.classList.toggle('hidden', !id);
+                const docSettingsPanel = document.getElementById('doc-settings-panel');
+                if (docSettingsPanel) docSettingsPanel.classList.toggle('hidden', !!id);
+
                 adjustPanelOrder(id);
                 if (id) renderEditPanel();
                 renderPlaceholders();
@@ -2668,7 +2833,12 @@
                 // Update dimension label text
                 const frontDimsLabel = document.getElementById('front-dims-label');
                 const backDimsLabel = document.getElementById('back-dims-label');
-                if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
+                
+                const docSettingsDims = document.getElementById('doc-settings-dims');
+                const docSettingsOrient = document.getElementById('doc-settings-orient');
+                if (docSettingsDims) docSettingsDims.textContent = `${cW} × ${cH} px`;
+                if (docSettingsOrient) docSettingsOrient.textContent = isHorizontal ? 'Horizontal' : 'Vertical';
+if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 if (backDimsLabel)  backDimsLabel.textContent  = `${newW} × ${newH}`;
 
                 // Reset canvas dimensions and styles
@@ -2714,55 +2884,59 @@
             const applyZoom = (zoomLevel) => {
                 let actualZoom = zoomLevel;
 
-                // Calculate actual card size if "actual" is selected
-                if (zoomLevel === 'actual') {
-                    const canvasWidth = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
-                    const canvasHeight = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
-                    actualZoom = 0.6;
-                    console.log(`Actual size view: Canvas ${canvasWidth}x${canvasHeight}, Zoom: ${actualZoom}`);
+                const baseWidth = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const baseHeight = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+
+                // Handle 'fit' or 'actual'
+                if (zoomLevel === 'actual' || zoomLevel === 'fit') {
+                    // Compute best fit against workspace stage dimensions
+                    const stage = document.getElementById('workspace-stage');
+                    const availW = (stage ? stage.clientWidth : 800) - 80;
+                    const availH = (stage ? stage.clientHeight : 600) - 100;
+                    const fitW = availW / (orientation === 'horizontal' ? baseWidth : (baseWidth * 2 + 40));
+                    const fitH = availH / (orientation === 'horizontal' ? (baseHeight * 2 + 60) : baseHeight);
+                    actualZoom = Math.min(Math.max(Math.min(fitW, fitH), 0.25), 1.5);
+                    console.log(`Auto Fit zoom computed: ${actualZoom.toFixed(2)}`);
                 }
 
                 [frontCanvasWrapper, backCanvasWrapper].forEach(wrapper => {
+                    if (!wrapper) return;
                     const canvas = wrapper.querySelector('canvas');
                     const placeholderWrapper = wrapper.querySelector('[id*="placeholder-wrapper"]');
 
-                    // Adjust base dimensions
-                    const baseWidth = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
-                    const baseHeight = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                    const zoomedW = Math.round(baseWidth * actualZoom);
+                    const zoomedH = Math.round(baseHeight * actualZoom);
 
-                    const zoomedW = baseWidth * actualZoom;
-                    const zoomedH = baseHeight * actualZoom;
-
-                    // Apply layout width/height zoom directly to canvas element (no CSS transform)
-                    // This updates the element's actual layout box size in the DOM, preventing overflow leaks.
-                    canvas.style.width = `${zoomedW}px`;
-                    canvas.style.height = `${zoomedH}px`;
-                    canvas.style.transform = '';
-
-                    // Reset placeholder wrapper transform
-                    placeholderWrapper.style.transform = '';
-
-                    // Adjust wrapper layout dimensions to exactly fit the zoomed canvas + padding + title header
-                    // Wrapper padding is 1rem (16px) all around, so +32px width and +32px height
-                    wrapper.style.width = `${zoomedW + 32}px`;
-                    wrapper.style.height = `${zoomedH + 60 + 32}px`; // +60px for Front/Back header title
-
-                    // Remove any existing size notes
-                    const existingSizeNote = wrapper.querySelector('.size-note');
-                    if (existingSizeNote) {
-                        existingSizeNote.remove();
+                    // 1. Canvas element receives exact pixel dimensions
+                    if (canvas) {
+                        canvas.style.width = `${zoomedW}px`;
+                        canvas.style.height = `${zoomedH}px`;
+                        canvas.style.transform = '';
                     }
 
-                    // Add a note for actual size
-                    if (zoomLevel === 'actual') {
-                        const sizeNote = document.createElement('div');
-                        sizeNote.className = 'size-note text-xs text-green-600 font-semibold text-center mt-2';
-                        sizeNote.textContent = 'Optimized viewing size for card design';
-                        wrapper.appendChild(sizeNote);
+                    // 2. Wrapper receives the exact same box (no padding, no extra height/width)
+                    wrapper.style.width = `${zoomedW}px`;
+                    wrapper.style.height = `${zoomedH}px`;
+                    wrapper.style.padding = '0px';
+                    wrapper.style.margin = '0px';
+
+                    // 3. Placeholder wrapper overlay exactly matches canvas
+                    if (placeholderWrapper) {
+                        placeholderWrapper.style.top = '0px';
+                        placeholderWrapper.style.left = '0px';
+                        placeholderWrapper.style.width = `${zoomedW}px`;
+                        placeholderWrapper.style.height = `${zoomedH}px`;
+                        placeholderWrapper.style.transform = '';
                     }
                 });
 
-                // Always sync placeholder wrappers after zoom changes and re-render
+                // Update status bar readout
+                const statusDocDims = document.getElementById('status-doc-dims');
+                if (statusDocDims) {
+                    const pct = Math.round(actualZoom * 100);
+                    statusDocDims.textContent = `CR-80: ${baseWidth} × ${baseHeight} px @ ${pct}% (PDF scale: ${PDF_SCALE}x)`;
+                }
+
                 setTimeout(() => {
                     syncPlaceholderWrappers();
                     renderPlaceholders();
@@ -2932,6 +3106,7 @@
                             if (previewBtn) previewBtn.disabled = false;
                             if (generateZipBtn) generateZipBtn.disabled = false;
                             if (generatePdfBtn) generatePdfBtn.disabled = false;
+                    if (openExportModalBtn) openExportModalBtn.disabled = false;
                             updateAuditBadge();
                             toast(`${data.length} records loaded successfully!`, 'success');
                         } else {
@@ -3100,7 +3275,50 @@
             }
 
             // --- PDF Generation (Always vertical 54mm x 85.6mm cards on A4) ---
-            if (generatePdfBtn) {
+            
+            // --- Export Dialog Modal Controller ---
+            const exportModal = document.getElementById('export-modal');
+            const openExportModalBtn = document.getElementById('open-export-modal-btn');
+            const closeExportModalBtn = document.getElementById('close-export-modal-btn');
+            const cancelExportBtn = document.getElementById('cancel-export-btn');
+            const pdfExportOptions = document.getElementById('pdf-export-options');
+
+            if (openExportModalBtn) {
+                openExportModalBtn.addEventListener('click', () => {
+                    if (exportModal) exportModal.classList.remove('hidden');
+                });
+            }
+            if (closeExportModalBtn) {
+                closeExportModalBtn.addEventListener('click', () => {
+                    if (exportModal) exportModal.classList.add('hidden');
+                });
+            }
+            if (cancelExportBtn) {
+                cancelExportBtn.addEventListener('click', () => {
+                    if (exportModal) exportModal.classList.add('hidden');
+                });
+            }
+
+            // Radio button toggle between PDF and ZIP action buttons
+            const formatRadios = document.querySelectorAll('input[name="export-format-radio"]');
+            formatRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const isPdf = e.target.value === 'pdf';
+                    if (generatePdfBtn) generatePdfBtn.classList.toggle('hidden', !isPdf);
+                    if (generateZipBtn) generateZipBtn.classList.toggle('hidden', isPdf);
+                    if (pdfExportOptions) pdfExportOptions.classList.toggle('hidden', !isPdf);
+                });
+            });
+
+            // When data is loaded, enable openExportModalBtn alongside generatePdfBtn
+            const enableExportBtns = () => {
+                if (openExportModalBtn) openExportModalBtn.disabled = false;
+                if (generatePdfBtn) generatePdfBtn.disabled = false;
+                    if (openExportModalBtn) openExportModalBtn.disabled = false;
+                if (generateZipBtn) generateZipBtn.disabled = false;
+            };
+
+if (generatePdfBtn) {
                 generatePdfBtn.addEventListener('click', async () => {
                     if (data.length === 0) { toast('Please upload data and add fields before generating.', 'warn'); return; }
                     if (loadingModal) loadingModal.classList.remove('hidden');
@@ -4677,6 +4895,28 @@
             document.querySelectorAll('.dock-tab').forEach(btn => {
                 btn.classList.toggle('active', btn.textContent.toLowerCase() === tabName);
             });
+        }
+    </script>
+
+
+    <script>
+        function switchCanvasView(mode) {
+            const frontWrap = document.getElementById('front-canvas-wrapper');
+            const backWrap = document.getElementById('back-canvas-wrapper');
+            const btnBoth = document.getElementById('view-tab-both');
+            const btnFront = document.getElementById('view-tab-front');
+            const btnBack = document.getElementById('view-tab-back');
+
+            if (frontWrap && frontWrap.parentElement) {
+                frontWrap.parentElement.classList.toggle('hidden', mode === 'back');
+            }
+            if (backWrap && backWrap.parentElement) {
+                backWrap.parentElement.classList.toggle('hidden', mode === 'front');
+            }
+
+            if (btnBoth) btnBoth.className = `btn-photoshop px-2 text-[11px] font-medium ${mode === 'both' ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
+            if (btnFront) btnFront.className = `btn-photoshop px-2 text-[11px] font-medium ${mode === 'front' ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
+            if (btnBack) btnBack.className = `btn-photoshop px-2 text-[11px] font-medium ${mode === 'back' ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
         }
     </script>
 
