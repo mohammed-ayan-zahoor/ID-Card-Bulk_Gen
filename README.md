@@ -28,3 +28,5 @@ The site is a React + TypeScript + Vite application. The current editor is retai
 - Keep persistence local-first. Clerk sign-in and Supabase cloud sync are planned follow-on phases and are not configured yet.
 
 See [the scaling implementation plan](docs/SCALING_IMPLEMENTATION_PLAN.md) and [starter-screen design notes](docs/DESIGN_REFERENCES.md).
+
+Phase 3 auth and cloud setup is documented in [the Clerk/Supabase setup guide](docs/PHASE_3_CLOUD_SETUP.md). Local-only use remains available without provider keys.

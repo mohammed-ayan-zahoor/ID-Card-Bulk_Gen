@@ -8,14 +8,15 @@ This document records the staged implementation plan and current progress. Produ
 
 ## Implementation status
 
-Work is underway on `feature/react-starter-screen-react-cloud-plan`:
+Phase 2 shipped on `main`; Phase 3 is in progress on `feature/phase-3-auth-cloud-foundation`:
 
 - React + TypeScript + Vite shell replaces the direct single-HTML entry point.
 - The existing editor is preserved as `public/editor.html` and opens from the project library through a same-origin bridge.
 - A dark, compact workspace home now provides Recent, Projects, Layouts, search, preview cards, and blank horizontal/vertical creation.
 - An IndexedDB repository stores projects/layouts and imports existing `localStorage` records non-destructively.
 - Vercel SPA deep-link rewriting is configured.
-- Clerk, Supabase, cloud sync, and the design-engine modular extraction remain future phases.
+- Optional Clerk sign-in and the Supabase cloud repository/RLS foundation are being implemented in Phase 3.
+- Explicit local-to-cloud migration, binary asset upload, and the design-engine modular extraction remain future work.
 
 Phase 2 local-library scope is implemented on this branch: blank project creation, orientation selection, IndexedDB projects/layouts, non-destructive legacy import, project actions, layout reuse, recent/project/library navigation, and editor autosave. The editor still runs as the preserved same-origin HTML application; extracting its engine is separate work.
 
@@ -132,9 +133,11 @@ Keep document content versioned (for example, `schemaVersion`) so future editor 
 
 ### Phase 3 — Sign-in and cloud foundation
 
+**In progress:** optional Clerk sign-in, per-user Supabase document repository, RLS schema, and private Storage bucket policies are implemented in the feature branch. Provider dashboard configuration and two-user live authorization verification are still required; see [Phase 3 setup](PHASE_3_CLOUD_SETUP.md).
+
 1. Add Clerk sign-in/sign-up and account-aware navigation. Keep local, unsigned use possible unless product decisions explicitly require accounts.
 2. Create Supabase schema and private Storage buckets for projects, layouts, previews, and assets.
-3. Configure Clerk-to-Supabase JWT verification and enable RLS policies. Test that one user cannot read or mutate another user’s rows or files.
+3. Configure Clerk-to-Supabase third-party auth and enable RLS policies. Test that one user cannot read or mutate another user’s rows or files.
 4. Add cloud repository implementations behind the same interfaces as local persistence.
 5. Define ownership, deletion, account export, and asset cleanup behavior.
 

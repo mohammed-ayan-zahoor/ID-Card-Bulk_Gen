@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { importLegacyLayouts, migrateLegacyData, workspaceDb } from '../data/workspaceDb';
+import { createCloudWorkspaceDb } from '../data/cloudWorkspaceDb';
 import { emptyDocument, makeId } from '../data/types';
 import type { CardDocument, LayoutRecord, Orientation, ProjectRecord } from '../data/types';
+import type { WorkspaceAuth } from '../auth/types';
 
 type Section = 'recent' | 'projects' | 'layouts';
 type Route = { page: 'home'; section: Section } | { page: 'editor'; projectId: string };
@@ -32,7 +34,7 @@ const editedLabel = (value: string) => {
   return days < 7 ? `Edited ${days} day${days === 1 ? '' : 's'} ago` : `Edited ${new Date(value).toLocaleDateString()}`;
 };
 
-export function App() {
+export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accountName?: string | null }) {
   const [route, setRoute] = useState<Route>(routeFromLocation);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [layouts, setLayouts] = useState<LayoutRecord[]>([]);
@@ -42,11 +44,16 @@ export function App() {
   const [fileView, setFileView] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'edited' | 'name'>('edited');
   const [project, setProject] = useState<ProjectRecord | null>(null);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+
+  const cloudDb = useMemo(() => auth?.signedIn && auth.userId ? createCloudWorkspaceDb(auth.userId, auth.getToken) : null, [auth?.signedIn, auth?.userId, auth?.getToken]);
+  const repository = cloudDb ?? workspaceDb;
 
   const refresh = useCallback(async () => {
-    const [nextProjects, nextLayouts] = await Promise.all([workspaceDb.listProjects(), workspaceDb.listLayouts()]);
+    const [nextProjects, nextLayouts] = await Promise.all([repository.listProjects(), repository.listLayouts()]);
     setProjects(nextProjects); setLayouts(nextLayouts);
-  }, []);
+    setWorkspaceError(null);
+  }, [repository]);
 
   useEffect(() => {
     const onPop = () => setRoute(routeFromLocation());
@@ -56,35 +63,41 @@ export function App() {
 
   useEffect(() => {
     let active = true;
-    void migrateLegacyData().then(refresh).catch((error) => console.error('Local project migration failed:', error))
-      .finally(() => { if (active) setLoaded(true); });
+    if (auth?.clerkConfigured && !auth.loaded) return () => { active = false; };
+    setLoaded(false);
+    void migrateLegacyData().then(refresh).catch((error) => {
+      console.error('Workspace loading failed:', error);
+      if (active) setWorkspaceError(error instanceof Error ? error.message : 'Could not load this workspace.');
+    }).finally(() => { if (active) setLoaded(true); });
     return () => { active = false; };
-  }, [refresh]);
+  }, [auth?.clerkConfigured, auth?.loaded, refresh]);
 
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
-      if (event.key === 'idCardLayouts') void importLegacyLayouts().then(refresh).catch(console.error);
+    if (event.key === 'idCardLayouts' && !cloudDb) void importLegacyLayouts().then(refresh).catch(console.error);
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, [refresh]);
+  }, [refresh, cloudDb]);
 
   useEffect(() => {
     if (route.page !== 'editor') { setProject(null); return; }
     let active = true;
-    void workspaceDb.listProjects().then((items) => {
+    setProject(null);
+    setWorkspaceError(null);
+    void repository.listProjects().then((items) => {
       if (active) setProject(items.find((item) => item.id === route.projectId) || null);
-    });
+    }).catch((error) => { if (active) setWorkspaceError(error instanceof Error ? error.message : 'Could not open this project.'); });
     return () => { active = false; };
-  }, [route]);
+  }, [route, repository]);
 
   const goHome = useCallback((section: Section = 'recent') => navigate(section === 'recent' ? '/' : `/?view=${section}`), []);
   const openProject = useCallback((item: ProjectRecord) => navigate(`/projects/${encodeURIComponent(item.id)}`), []);
   const saveProject = useCallback(async (item: ProjectRecord) => {
-    await workspaceDb.saveProject(item);
+    await repository.saveProject(item);
     setProject(item);
     setProjects((current) => [item, ...current.filter((entry) => entry.id !== item.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
-  }, []);
+  }, [repository]);
 
   const createProject = useCallback(async (orientation: Orientation, layout?: LayoutRecord) => {
     const base = emptyDocument(orientation, layout?.name || 'Untitled card');
@@ -93,10 +106,10 @@ export function App() {
       backgrounds: layout?.backgrounds || {},
       placeholders: layout ? structuredClone(layout.placeholders) : { front: [], back: [] },
     };
-    await workspaceDb.saveProject(record);
+    await repository.saveProject(record);
     setProjects((current) => [record, ...current.filter((item) => item.id !== record.id)]);
     setShowCreate(false); openProject(record);
-  }, [openProject]);
+  }, [openProject, repository]);
 
   const renameProject = useCallback(async (item: ProjectRecord) => {
     const name = window.prompt('Name this project', item.name)?.trim();
@@ -110,43 +123,48 @@ export function App() {
 
   const deleteProject = useCallback(async (item: ProjectRecord) => {
     if (!window.confirm(`Move “${item.name}” to trash?`)) return;
-    await workspaceDb.delete(item.id); setProjects((items) => items.filter((entry) => entry.id !== item.id));
-  }, []);
+    await repository.delete(item.id); setProjects((items) => items.filter((entry) => entry.id !== item.id));
+  }, [repository]);
 
   const renameLayout = useCallback(async (item: LayoutRecord) => {
     const name = window.prompt('Name this layout', item.name)?.trim();
-    if (name && name !== item.name) { await workspaceDb.saveLayout({ ...item, name, updatedAt: new Date().toISOString() }); await refresh(); }
-  }, [refresh]);
+    if (name && name !== item.name) { await repository.saveLayout({ ...item, name, updatedAt: new Date().toISOString() }); await refresh(); }
+  }, [refresh, repository]);
   const deleteLayout = useCallback(async (item: LayoutRecord) => {
     if (!window.confirm(`Delete the “${item.name}” layout?`)) return;
-    for (const key of ['idCardLayouts', 'card_generator_layouts']) {
-      try {
-        const stored = JSON.parse(localStorage.getItem(key) || '{}') as Record<string, unknown>;
-        delete stored[item.name];
-        localStorage.setItem(key, JSON.stringify(stored));
-      } catch { /* IndexedDB remains the source for the workspace library. */ }
+    if (!cloudDb) {
+      for (const key of ['idCardLayouts', 'card_generator_layouts']) {
+        try {
+          const stored = JSON.parse(localStorage.getItem(key) || '{}') as Record<string, unknown>;
+          delete stored[item.name];
+          localStorage.setItem(key, JSON.stringify(stored));
+        } catch { /* IndexedDB remains the source for the workspace library. */ }
+      }
     }
-    await workspaceDb.delete(item.id); setLayouts((items) => items.filter((entry) => entry.id !== item.id));
-  }, []);
+    await repository.delete(item.id); setLayouts((items) => items.filter((entry) => entry.id !== item.id));
+  }, [cloudDb, repository]);
 
   const visibleProjects = useMemo(() => projects.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())).sort((a, b) => sortBy === 'name' ? a.name.localeCompare(b.name) : b.updatedAt.localeCompare(a.updatedAt)), [projects, query, sortBy]);
   const visibleLayouts = useMemo(() => layouts.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())), [layouts, query]);
 
+  if (auth?.clerkConfigured && !auth.loaded) return <div className="loading-screen"><span className="spinner" />Checking your account…</div>;
+
   if (route.page === 'editor') {
-    if (!project && loaded) return <main className="not-found"><Brand /><p>This project could not be found on this device.</p><button className="button-secondary" onClick={() => goHome('projects')}>Back to projects</button></main>;
-    return project ? <EditorScreen project={project} onBack={goHome} onSave={saveProject} /> : <div className="loading-screen"><span className="spinner" />Opening your project…</div>;
+    if (!project && loaded && workspaceError) return <main className="not-found"><Brand /><p>{workspaceError}</p><button className="button-secondary" onClick={() => void refresh()}>Try again</button><button className="button-secondary" onClick={() => goHome('projects')}>Back to projects</button></main>;
+    if (!project && loaded) return <main className="not-found"><Brand /><p>This project could not be found in this workspace.</p><button className="button-secondary" onClick={() => goHome('projects')}>Back to projects</button></main>;
+    return project ? <EditorScreen key={`${auth?.userId || 'local'}:${project.id}`} project={project} onBack={goHome} onSave={saveProject} /> : <div className="loading-screen"><span className="spinner" />Opening your project…</div>;
   }
 
   const section = route.section;
   return <div className="workspace-shell spectrum spectrum--dark">
-    <header className="home-topbar"><Brand /><button className="button-primary top-create" onClick={() => setShowCreate(true)}><Glyph name="plus" />Create new</button></header>
+    <header className="home-topbar"><Brand /><div className="workspace-account"><span className={`workspace-save-dot ${cloudDb ? 'cloud' : ''}`} /><span>{cloudDb ? `${accountName || 'Signed in'} · Cloud workspace` : auth?.signedIn ? `${accountName || 'Signed in'} · Local only` : 'Saved on this device'}</span>{auth?.accountControl}</div><button className="button-primary top-create" onClick={() => setShowCreate(true)}><Glyph name="plus" />Create new</button></header>
     <div className="home-body">
       <aside className="home-sidebar" aria-label="Workspace navigation"><div className="sidebar-caption">Workspace</div>
         {(['recent', 'projects', 'layouts'] as const).map((item) => <button key={item} className={`sidebar-link ${section === item ? 'active' : ''}`} onClick={() => goHome(item)}><Glyph name={item} />{label(item)}{item === 'projects' && <span className="sidebar-count">{projects.length}</span>}</button>)}
       </aside>
       <main className="home-content">
             <div className="content-heading"><h1>{section === 'recent' ? 'Recent' : section === 'projects' ? 'Projects' : 'Layouts'}</h1><div className="library-controls"><label className="search-field"><Glyph name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search files" aria-label="Search files" /></label><select aria-label="Sort files" value={sortBy} onChange={(event) => setSortBy(event.target.value as 'edited' | 'name')}><option value="edited">Recently edited</option><option value="name">Name</option></select><div className="view-toggle" aria-label="File view"><button aria-label="Grid view" aria-pressed={fileView === 'grid'} onClick={() => setFileView('grid')}>Grid</button><button aria-label="List view" aria-pressed={fileView === 'list'} onClick={() => setFileView('list')}>List</button></div></div></div>
-        {!loaded ? <div className="loading-inline"><span className="spinner" />Loading local files…</div> : <>
+        {!loaded ? <div className="loading-inline"><span className="spinner" />Loading {cloudDb ? 'cloud' : 'local'} files…</div> : workspaceError ? <div className="workspace-error" role="alert"><strong>Could not load this workspace</strong><span>{workspaceError}</span><button className="button-secondary" onClick={() => void refresh()}>Try again</button></div> : <>
           {(section === 'recent' || section === 'projects') && <section className="home-section"><SectionHeading title={section === 'recent' ? 'Recent projects' : 'All projects'} detail={visibleProjects.length ? `${visibleProjects.length} ${visibleProjects.length === 1 ? 'project' : 'projects'}` : 'Projects you edit will appear here'} action={section === 'recent' && projects.length > 4 ? <button className="text-button" onClick={() => goHome('projects')}>View all →</button> : undefined} />
             {visibleProjects.length ? <div className={`file-grid recent-grid ${fileView === 'list' ? 'list-view' : ''}`}>{visibleProjects.slice(0, section === 'recent' ? 8 : undefined).map((item) => <ProjectCard key={item.id} project={item} onOpen={() => openProject(item)} onRename={() => void renameProject(item)} onDuplicate={() => void duplicateProject(item)} onDelete={() => void deleteProject(item)} />)}</div> : <EmptyState title={query ? 'No matching projects' : 'No projects yet'} text={query ? 'Try a different search.' : 'Create a card and it will be saved here automatically.'} action={!query ? <button className="button-secondary" onClick={() => setShowCreate(true)}><Glyph name="plus" />Create your first card</button> : undefined} />}
           </section>}

@@ -11,6 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/react": "^6.18.8",
+    "@supabase/supabase-js": "^2.119.0",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.2",
     "qrcodejs": "^1.0.0",
