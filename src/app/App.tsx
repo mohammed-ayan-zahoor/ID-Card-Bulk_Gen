@@ -42,6 +42,8 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [importingLayouts, setImportingLayouts] = useState(false);
+  const layoutImportRef = useRef<HTMLInputElement>(null);
   const [fileView, setFileView] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'edited' | 'name'>('edited');
   const [project, setProject] = useState<ProjectRecord | null>(null);
@@ -152,6 +154,48 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
     setLayouts((current) => [item, ...current.filter((entry) => entry.id !== item.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
   }, [repository]);
 
+  const importLayoutFile = useCallback(async (file: File) => {
+    setImportingLayouts(true);
+    try {
+      const parsed = JSON.parse(await file.text()) as Record<string, unknown>;
+      let source: Record<string, unknown>;
+      if (parsed.layouts && typeof parsed.layouts === 'object') source = parsed.layouts as Record<string, unknown>;
+      else if (parsed.placeholders) {
+        const name = typeof parsed.name === 'string' ? parsed.name : file.name.replace(/\.json$/i, '');
+        source = { [name]: parsed };
+      } else source = parsed;
+
+      const now = new Date().toISOString();
+      const records = Object.entries(source).flatMap(([name, raw]) => {
+        if (!raw || typeof raw !== 'object') return [];
+        const value = raw as Partial<LayoutRecord> & { dateCreated?: string };
+        if ((value.orientation !== 'horizontal' && value.orientation !== 'vertical') || !value.placeholders) return [];
+        const createdAt = value.createdAt || value.dateCreated || value.updatedAt || now;
+        return [{
+          ...value,
+          id: makeId('layout'),
+          kind: 'layout' as const,
+          schemaVersion: 1 as const,
+          name: value.name || name,
+          orientation: value.orientation,
+          backgrounds: value.backgrounds || {},
+          placeholders: { front: value.placeholders.front || [], back: value.placeholders.back || [] },
+          createdAt,
+          updatedAt: value.updatedAt || createdAt,
+        }];
+      });
+      if (records.length === 0) throw new Error('No valid layouts were found in that JSON file.');
+      for (const record of records) await repository.saveLayout(record);
+      setLayouts((current) => [...records, ...current].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+      window.alert(`Imported ${records.length} layout${records.length === 1 ? '' : 's'}. The original file and browser layouts were left unchanged.`);
+    } catch (error) {
+      window.alert(error instanceof Error ? `Could not import layouts: ${error.message}` : 'Could not import layouts from this file.');
+    } finally {
+      setImportingLayouts(false);
+      if (layoutImportRef.current) layoutImportRef.current.value = '';
+    }
+  }, [repository]);
+
   const visibleProjects = useMemo(() => projects.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())).sort((a, b) => sortBy === 'name' ? a.name.localeCompare(b.name) : b.updatedAt.localeCompare(a.updatedAt)), [projects, query, sortBy]);
   const visibleLayouts = useMemo(() => layouts.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())), [layouts, query]);
 
@@ -178,7 +222,7 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
           {(section === 'recent' || section === 'projects') && <section className="home-section"><SectionHeading title={section === 'recent' ? 'Recent projects' : 'All projects'} detail={visibleProjects.length ? `${visibleProjects.length} ${visibleProjects.length === 1 ? 'project' : 'projects'}` : 'Projects you edit will appear here'} action={section === 'recent' && projects.length > 4 ? <button className="text-button" onClick={() => goHome('projects')}>View all →</button> : undefined} />
             {visibleProjects.length ? <div className={`file-grid recent-grid ${fileView === 'list' ? 'list-view' : ''}`}>{visibleProjects.slice(0, section === 'recent' ? 8 : undefined).map((item) => <ProjectCard key={item.id} project={item} onOpen={() => openProject(item)} onRename={() => void renameProject(item)} onDuplicate={() => void duplicateProject(item)} onDelete={() => void deleteProject(item)} />)}</div> : <EmptyState title={query ? 'No matching projects' : 'No projects yet'} text={query ? 'Try a different search.' : 'Create a card and it will be saved here automatically.'} action={!query ? <button className="button-secondary" onClick={() => setShowCreate(true)}>Create your first card</button> : undefined} />}
           </section>}
-          {(section === 'recent' || section === 'layouts') && <section className="home-section"><SectionHeading title={section === 'recent' ? 'Your layouts' : 'Saved layouts'} detail={visibleLayouts.length ? `${visibleLayouts.length} reusable ${visibleLayouts.length === 1 ? 'layout' : 'layouts'}` : 'Save a design as a layout from the editor'} />
+          {(section === 'recent' || section === 'layouts') && <section className="home-section"><SectionHeading title={section === 'recent' ? 'Your layouts' : 'Saved layouts'} detail={visibleLayouts.length ? `${visibleLayouts.length} reusable ${visibleLayouts.length === 1 ? 'layout' : 'layouts'}` : 'Save a design as a layout from the editor'} action={<><button className="button-secondary" disabled={importingLayouts} onClick={() => layoutImportRef.current?.click()}>{importingLayouts ? 'Importing…' : 'Import layouts'}</button><input ref={layoutImportRef} type="file" accept="application/json,.json" hidden onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) void importLayoutFile(file); }} /></>} />
             {visibleLayouts.length ? <div className="file-grid">{visibleLayouts.map((item) => <div key={item.id} className="layout-card-wrap"><LayoutCard layout={item} onUse={() => void createProject(item.orientation, item)} /><div className="layout-card-actions"><button onClick={() => void renameLayout(item)}>Rename</button><button className="danger-action" onClick={() => void deleteLayout(item)}>Delete</button></div></div>)}</div> : <EmptyState title={query ? 'No matching layouts' : 'Your saved layouts will live here'} text={query ? 'Try a different search.' : 'Save a layout in the editor and it will appear here as a reusable preview.'} />}
           </section>}
         </>}
