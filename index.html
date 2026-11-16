@@ -2836,7 +2836,7 @@
                 
                 const docSettingsDims = document.getElementById('doc-settings-dims');
                 const docSettingsOrient = document.getElementById('doc-settings-orient');
-                if (docSettingsDims) docSettingsDims.textContent = `${cW} × ${cH} px`;
+                if (docSettingsDims) docSettingsDims.textContent = `${newW} × ${newH} px`;
                 if (docSettingsOrient) docSettingsOrient.textContent = isHorizontal ? 'Horizontal' : 'Vertical';
 if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 if (backDimsLabel)  backDimsLabel.textContent  = `${newW} × ${newH}`;
@@ -2869,10 +2869,12 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 if (canvasArea) canvasArea.dataset.orientation = newOrientation;
 
                 // Update orientation buttons
-                if (orientationHorizontalBtn) orientationHorizontalBtn.className = `flex-1 py-1.5 rounded-full text-xs font-semibold transition-all ${isHorizontal ? 'bg-surface text-ink-900 shadow-sm' : 'bg-transparent text-ink-500 hover:text-ink-900'}`;
-                if (orientationVerticalBtn) orientationVerticalBtn.className = `flex-1 py-1.5 rounded-full text-xs font-semibold transition-all ${!isHorizontal ? 'bg-surface text-ink-900 shadow-sm' : 'bg-transparent text-ink-500 hover:text-ink-900'}`;
+                if (orientationHorizontalBtn) orientationHorizontalBtn.className = `btn-photoshop px-2 text-xs font-medium transition-colors ${isHorizontal ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
+                if (orientationVerticalBtn) orientationVerticalBtn.className = `btn-photoshop px-2 text-xs font-medium transition-colors ${!isHorizontal ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
 
-                // Redraw canvases with new dimensions
+                // Redraw canvases with new dimensions and maintain current zoom
+                const currentZoom = (zoomSelect && zoomSelect.value) ? zoomSelect.value : '0.7';
+                applyZoom(currentZoom);
                 drawAllCanvases();
                 renderPlaceholders();
 
