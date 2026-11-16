@@ -459,10 +459,10 @@
         }
         .layer-order-btn:hover { color: #FFFFFF; }
 
-        /* Figma/Photoshop Selection Box */
+        /* Figma/Photoshop Selection Box & Handles */
         .placeholder {
             position: absolute;
-            border: 1px dashed rgba(91, 76, 240, 0.4);
+            border: 1px dashed rgba(91, 76, 240, 0.3);
             background: transparent;
             cursor: move;
             user-select: none;
@@ -470,11 +470,11 @@
             z-index: 10;
         }
         .placeholder:hover {
-            border: 1px solid rgba(91, 76, 240, 0.8);
+            border: 1px solid rgba(91, 76, 240, 0.6);
         }
         .placeholder.active {
-            border: 1px solid var(--accent-primary);
-            outline: 1px solid var(--accent-primary);
+            border: 1px solid #5B4CF0 !important;
+            outline: none !important;
             z-index: 20;
         }
         .placeholder .ph-label {
@@ -485,6 +485,38 @@
             pointer-events: none;
         }
 
+        /* Resize Handles (.rh) */
+        .placeholder .rh {
+            display: none;
+            position: absolute;
+            width: 7px;
+            height: 7px;
+            background: #FFFFFF;
+            border: 1px solid #5B4CF0;
+            box-sizing: border-box;
+            border-radius: 0;
+            z-index: 30;
+        }
+        .placeholder.active .rh {
+            display: block;
+        }
+        .placeholder .rh::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+        }
+        .rh-nw { top: 0; left: 0; transform: translate(-50%, -50%); cursor: nwse-resize; }
+        .rh-n  { top: 0; left: 50%; transform: translate(-50%, -50%); cursor: ns-resize; }
+        .rh-ne { top: 0; left: 100%; transform: translate(-50%, -50%); cursor: nesw-resize; }
+        .rh-e  { top: 50%; left: 100%; transform: translate(-50%, -50%); cursor: ew-resize; }
+        .rh-se { top: 100%; left: 100%; transform: translate(-50%, -50%); cursor: nwse-resize; }
+        .rh-s  { top: 100%; left: 50%; transform: translate(-50%, -50%); cursor: ns-resize; }
+        .rh-sw { top: 100%; left: 0; transform: translate(-50%, -50%); cursor: nesw-resize; }
+        .rh-w  { top: 50%; left: 0; transform: translate(-50%, -50%); cursor: ew-resize; }
+
         /* Floating Minimal Toolbar (Duplicate, Delete) */
         .field-toolbar {
             position: absolute;
@@ -493,11 +525,180 @@
             gap: 4px;
             background: #1F1F1F;
             border: 1px solid var(--border-control);
-            border-radius: 4px;
+            border-radius: 3px;
             padding: 2px 4px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.5);
             z-index: 100;
-            transform: translateY(calc(-100% - 6px));
+            transform: translateY(calc(-100% - 8px));
+            transition: transform 0.05s ease-out;
+        }
+
+        /* Segmented Control Component (.seg) */
+        .seg {
+            display: inline-flex;
+            align-items: center;
+            background: #2E2E2E;
+            border: 1px solid #2A2A2A;
+            border-radius: 3px;
+            padding: 2px;
+            gap: 2px;
+            box-sizing: border-box;
+        }
+        .seg button {
+            background: transparent;
+            border: none !important;
+            border-radius: 2px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #9A9A9A;
+            cursor: pointer;
+            line-height: 16px;
+            transition: background 0.1s, color 0.1s;
+        }
+        .seg button:hover {
+            color: #FFFFFF;
+        }
+        .seg button[aria-pressed="true"] {
+            background: #535353 !important;
+            color: #FFFFFF !important;
+            font-weight: 500;
+        }
+
+        /* Real-time Guide Lines */
+        .guide-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 25;
+        }
+        .guide-svg line {
+            stroke: #FF3DA5 !important;
+            stroke-width: 1 !important;
+            vector-effect: non-scaling-stroke !important;
+            shape-rendering: crispEdges !important;
+        }
+
+        /* Live Measurement Badge */
+        .measure-badge {
+            position: fixed;
+            pointer-events: none;
+            background: #1F1F1F;
+            color: #FFFFFF;
+            border: 1px solid #5A5A5A;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 2px 6px;
+            z-index: 10000;
+            white-space: nowrap;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        /* Stage Layout & Adobe-Style Rulers Chrome */
+        #workspace-stage {
+            grid-column: 2 / 3;
+            background-color: var(--bg-pasteboard);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+        #doc-tab-strip {
+            height: 32px;
+            background-color: var(--bg-chrome);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            flex-shrink: 0;
+            z-index: 15;
+        }
+        .doc-tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-primary);
+            background: var(--bg-panel);
+            padding: 6px 12px;
+            border-right: 1px solid var(--border-subtle);
+            border-left: 1px solid var(--border-subtle);
+            border-top: 2px solid var(--accent-primary);
+            height: 32px;
+            box-sizing: border-box;
+        }
+        #stage-ruler-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 20px 1fr;
+            grid-template-rows: 20px 1fr;
+            overflow: hidden;
+            position: relative;
+            background-color: var(--bg-pasteboard);
+        }
+        #ruler-corner {
+            width: 20px;
+            height: 20px;
+            background-color: #2B2B2B;
+            border-right: 1px solid #383838;
+            border-bottom: 1px solid #383838;
+            font-size: 9px;
+            font-family: monospace;
+            font-weight: 600;
+            color: #8A8A8A;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            z-index: 12;
+        }
+        #ruler-corner:hover {
+            color: #FFFFFF;
+            background-color: #383838;
+        }
+        #ruler-top-container {
+            height: 20px;
+            overflow: hidden;
+            background-color: #2B2B2B;
+            border-bottom: 1px solid #383838;
+            position: relative;
+            z-index: 11;
+        }
+        #ruler-top {
+            display: block;
+            width: 100%;
+            height: 20px;
+        }
+        #ruler-left-container {
+            width: 20px;
+            overflow: hidden;
+            background-color: #2B2B2B;
+            border-right: 1px solid #383838;
+            position: relative;
+            z-index: 11;
+        }
+        #ruler-left {
+            display: block;
+            width: 20px;
+            height: 100%;
+        }
+        #stage-scroll-viewport {
+            overflow: auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 24px;
+            background-color: var(--bg-pasteboard);
         }
         .field-toolbar.visible { display: flex; }
         .ftb {
@@ -654,9 +855,9 @@
         <div id="workspace-optionsbar">
             <div class="flex items-center gap-3">
                 <!-- Card Setup / Orientation Segmented Control -->
-                <div class="flex items-center bg-field border border-line rounded p-0.5">
-                    <button id="orientation-horizontal-btn" class="btn-photoshop px-2 text-xs font-medium" title="Horizontal CR-80 (856 × 540)">Horizontal</button>
-                    <button id="orientation-vertical-btn" class="btn-photoshop px-2 text-xs font-medium text-ink-dim" title="Vertical CR-80 (540 × 856)">Vertical</button>
+                <div id="orientation-seg-group" class="seg">
+                    <button id="orientation-horizontal-btn" aria-pressed="true" title="Horizontal CR-80 (856 × 540)">Horizontal</button>
+                    <button id="orientation-vertical-btn" aria-pressed="false" title="Vertical CR-80 (540 × 856)">Vertical</button>
                 </div>
                 <div class="h-4 w-[1px] bg-line"></div>
 
@@ -717,40 +918,61 @@
 
         <!-- ── Center Work Area / Pasteboard Stage ── -->
         <main id="workspace-stage">
-
-            <!-- Document View Tabs: Front / Back / Both -->
-            <div class="flex items-center gap-1 bg-chrome border border-line rounded p-0.5 mb-4 self-center">
-                <button id="view-tab-both" class="btn-photoshop px-2 text-[11px] font-medium bg-selected text-white" onclick="switchCanvasView('both')">Both Artboards</button>
-                <button id="view-tab-front" class="btn-photoshop px-2 text-[11px] font-medium text-ink-dim hover:text-white" onclick="switchCanvasView('front')">Front Only</button>
-                <button id="view-tab-back" class="btn-photoshop px-2 text-[11px] font-medium text-ink-dim hover:text-white" onclick="switchCanvasView('back')">Back Only</button>
-            </div>
-            <div id="canvas-area" data-orientation="horizontal">
-                <!-- Front Artboard -->
-                <div class="flex flex-col items-start">
-                    <div class="artboard-header w-full">
-                        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-accent"></span> Front Artboard</span>
-                        <span id="front-dims-label" class="font-mono text-ink-off">856 × 540</span>
-                    </div>
-                    <div id="front-canvas-wrapper" class="canvas-wrapper active">
-                        <canvas id="front-canvas" width="856" height="540"></canvas>
-                        <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
-                            <div id="front-field-toolbar" class="field-toolbar"></div>
-                            <svg id="front-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-                        </div>
+            <!-- 32px Document Tab Strip -->
+            <div id="doc-tab-strip">
+                <div class="flex items-center gap-2">
+                    <div class="doc-tab">
+                        <span class="w-2 h-2 rounded-full bg-accent"></span>
+                        <span id="doc-tab-title">Untitled.card @ 70% (Front/Back, CR-80)</span>
                     </div>
                 </div>
+                <!-- Document View Tabs: Front / Back / Both -->
+                <div id="view-tabs-seg" class="seg">
+                    <button id="view-tab-both" aria-pressed="true" onclick="switchCanvasView('both')">Both Artboards</button>
+                    <button id="view-tab-front" aria-pressed="false" onclick="switchCanvasView('front')">Front Only</button>
+                    <button id="view-tab-back" aria-pressed="false" onclick="switchCanvasView('back')">Back Only</button>
+                </div>
+            </div>
 
-                <!-- Back Artboard -->
-                <div class="flex flex-col items-start">
-                    <div class="artboard-header w-full">
-                        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-ink-off"></span> Back Artboard</span>
-                        <span id="back-dims-label" class="font-mono text-ink-off">856 × 540</span>
-                    </div>
-                    <div id="back-canvas-wrapper" class="canvas-wrapper">
-                        <canvas id="back-canvas" width="856" height="540"></canvas>
-                        <div id="back-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
-                            <div id="back-field-toolbar" class="field-toolbar"></div>
-                            <svg id="back-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+            <!-- Adobe-Style Rulers & Scroll Viewport -->
+            <div id="stage-ruler-grid">
+                <div id="ruler-corner" title="Cycle units (mm / px / in)">mm</div>
+                <div id="ruler-top-container">
+                    <canvas id="ruler-top" height="20"></canvas>
+                </div>
+                <div id="ruler-left-container">
+                    <canvas id="ruler-left" width="20"></canvas>
+                </div>
+                <div id="stage-scroll-viewport">
+                    <div id="canvas-area" data-orientation="horizontal">
+                        <!-- Front Artboard -->
+                        <div class="flex flex-col items-start">
+                            <div class="artboard-header w-full">
+                                <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-accent"></span> Front Artboard</span>
+                                <span id="front-dims-label" class="font-mono text-ink-off">856 × 540</span>
+                            </div>
+                            <div id="front-canvas-wrapper" class="canvas-wrapper active">
+                                <canvas id="front-canvas" width="856" height="540"></canvas>
+                                <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
+                                    <div id="front-field-toolbar" class="field-toolbar"></div>
+                                    <svg id="front-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Back Artboard -->
+                        <div class="flex flex-col items-start">
+                            <div class="artboard-header w-full">
+                                <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-ink-off"></span> Back Artboard</span>
+                                <span id="back-dims-label" class="font-mono text-ink-off">856 × 540</span>
+                            </div>
+                            <div id="back-canvas-wrapper" class="canvas-wrapper">
+                                <canvas id="back-canvas" width="856" height="540"></canvas>
+                                <div id="back-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
+                                    <div id="back-field-toolbar" class="field-toolbar"></div>
+                                    <svg id="back-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -951,6 +1173,8 @@
                 <span id="status-selection-info">No selection</span>
             </div>
             <div class="flex items-center gap-3">
+                <span id="status-cursor-coords" class="font-mono text-ink-dim">X: 0.0 mm  Y: 0.0 mm</span>
+                <span class="text-ink-off">|</span>
                 <div class="flex items-center gap-1.5">
                     <span>Zoom:</span>
                     <select id="zoom-select" class="bg-field text-white border-line text-xs py-0 px-1 rounded h-5">
@@ -1115,6 +1339,90 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- Helper: Segmented Control State ---
+            function setSegmentState(groupEl, activeBtnOrId) {
+                if (!groupEl) return;
+                const target = typeof activeBtnOrId === 'string' ? document.getElementById(activeBtnOrId) : activeBtnOrId;
+                groupEl.querySelectorAll('button').forEach(btn => {
+                    const isActive = (btn === target);
+                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                });
+            }
+            window.setSegmentState = setSegmentState;
+
+            // --- Helper: Active Ruler Units & Formatting ---
+            let activeRulerUnit = 'mm'; // 'mm' | 'px' | 'in'
+            function toRulerUnit(canvasPx, axis) {
+                const isHoriz = (orientation === 'horizontal');
+                const cW = isHoriz ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const cH = isHoriz ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                const cardDimMm = axis === 'x' ? (isHoriz ? 85.6 : 54.0) : (isHoriz ? 54.0 : 85.6);
+                const cardDimPx = axis === 'x' ? cW : cH;
+                if (activeRulerUnit === 'mm') {
+                    const mm = canvasPx * (cardDimMm / cardDimPx);
+                    return mm.toFixed(1) + ' mm';
+                } else if (activeRulerUnit === 'in') {
+                    const inches = (canvasPx * (cardDimMm / cardDimPx)) / 25.4;
+                    return inches.toFixed(2) + ' in';
+                } else {
+                    return Math.round(canvasPx) + ' px';
+                }
+            }
+
+            // --- Helper: Centralized Delete Field ---
+            function deleteField(side, id) {
+                if (!side || !id || !placeholders[side]) return;
+                placeholders[side] = placeholders[side].filter(p => p.id !== id);
+                if (activePlaceholderId === id) {
+                    setActivePlaceholder(null);
+                }
+                renderPlaceholders();
+                drawAllCanvases();
+                if (typeof renderLayerList === 'function') renderLayerList();
+                clearGuides();
+                updateSelectionStatus();
+                if (typeof window.drawRulers === 'function') window.drawRulers();
+            }
+            window.deleteField = deleteField;
+
+            // --- Helper: Floating Measurement Badge ---
+            function showMeasureBadge(e, text) {
+                const badge = document.getElementById('measure-badge');
+                if (!badge) return;
+                badge.textContent = text;
+                badge.style.display = 'block';
+                badge.style.left = `${e.clientX + 14}px`;
+                badge.style.top = `${e.clientY + 14}px`;
+            }
+            function hideMeasureBadge() {
+                const badge = document.getElementById('measure-badge');
+                if (badge) badge.style.display = 'none';
+            }
+
+            // --- Helper: Live Status Bar Selection Info ---
+            function updateSelectionStatus() {
+                const selInfo = document.getElementById('status-selection-info');
+                if (!selInfo) return;
+                if (!activePlaceholderId) {
+                    selInfo.textContent = 'No selection';
+                    return;
+                }
+                const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
+                if (!p) {
+                    selInfo.textContent = 'No selection';
+                    return;
+                }
+                const cW = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const cH = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                const typeCap = p.type.charAt(0).toUpperCase() + p.type.slice(1);
+                const name = p.key || p.staticText || p.id;
+                const xStr = toRulerUnit(p.x * cW, 'x');
+                const yStr = toRulerUnit(p.y * cH, 'y');
+                const wStr = toRulerUnit(p.width * cW, 'x');
+                const hStr = toRulerUnit(p.height * cH, 'y');
+                selInfo.textContent = `${typeCap} '${name}'  X: ${xStr}  Y: ${yStr}  W: ${wStr}  H: ${hStr}`;
+            }
+
             // --- DOM Elements ---
             const bgImageFrontInput = document.getElementById('bg-image-front-input');
             const bgImageBackInput = document.getElementById('bg-image-back-input');
@@ -1217,6 +1525,7 @@
             let activePlaceholderId = null;
             let dragOffsetX, dragOffsetY;
             let isResizing = false;
+            let isDragging = false;
             let orientation = 'horizontal';
             let previewIndex = 0;       // current record shown in preview mode
             let inPreviewMode = false;
@@ -1971,6 +2280,9 @@
                 // First sync the wrapper positioning
                 syncPlaceholderWrappers();
 
+                const cW = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const cH = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+
                 const renderSide = (side) => {
                     const wrapper = side === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                     // Remove only placeholder elements, leaving the toolbar and guide-svg intact in the DOM
@@ -1979,13 +2291,40 @@
                     placeholders[side].forEach(p => {
                         const el = document.createElement('div');
                         el.id = p.id;
-                        el.className = `placeholder ${p.type}-placeholder ${p.id === activePlaceholderId ? 'active' : ''}`;
+                        const isActive = (p.id === activePlaceholderId);
+                        el.className = `placeholder ${p.type}-placeholder ${isActive ? 'active' : ''}`;
 
-                        // Use percentage positioning to match canvas exactly
+                        // Percentage coordinates
                         el.style.left = `${p.x * 100}%`;
                         el.style.top = `${p.y * 100}%`;
                         el.style.width = `${p.width * 100}%`;
                         el.style.position = 'absolute';
+
+                        // Calculate height to match drawn bounds exactly
+                        let computedH = p.height || 0.1;
+                        if (p.type === 'text') {
+                            const val = p.staticText ? p.staticText : `{{${p.key}}}`;
+                            const words = val.split(' ');
+                            const maxWidthPx = (p.width || 0.3) * cW;
+                            const fontSize = p.fontSize || 14;
+                            const lineHeight = p.lineHeight || 18;
+                            const avgCharWidth = fontSize * 0.55;
+                            let lineLength = 0;
+                            let lineCount = 1;
+                            words.forEach(word => {
+                                const wordLen = (word.length + 1) * avgCharWidth;
+                                if (lineLength + wordLen > maxWidthPx && lineLength > 0) {
+                                    lineCount++;
+                                    lineLength = wordLen;
+                                } else {
+                                    lineLength += wordLen;
+                                }
+                            });
+                            const textHeightPx = Math.max(lineHeight, lineCount * lineHeight);
+                            const textHeightNorm = textHeightPx / cH;
+                            computedH = Math.max(p.height || 0, textHeightNorm);
+                        }
+                        el.style.height = `${computedH * 100}%`;
 
                         if (p.type === 'text') {
                             if (p.fontFamily) {
@@ -2006,50 +2345,8 @@
                         } else {
                             el.innerHTML = `<span class="ph-label">T  ${displayText}</span>`;
                         }
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'delete-btn';
-                        deleteBtn.innerHTML = '×';
-                        deleteBtn.title = 'Delete this field';
-                        deleteBtn.type = 'button';
 
-                        // Enhanced delete button event handling
-                        deleteBtn.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-
-                            console.log('Delete button clicked for placeholder:', p.id);
-
-                            // Remove from placeholders array
-                            placeholders[side] = placeholders[side].filter(pl => pl.id !== p.id);
-
-                            // Clear active selection if this was the active placeholder
-                            if (activePlaceholderId === p.id) {
-                                setActivePlaceholder(null);
-                            }
-
-                            // Re-render everything
-                            renderPlaceholders();
-                            drawAllCanvases();
-
-                            console.log(`Placeholder ${p.id} deleted successfully`);
-                        });
-
-                        // Prevent all drag-related events on delete button
-                        deleteBtn.addEventListener('mousedown', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                        });
-
-                        deleteBtn.addEventListener('dragstart', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        });
-
-                        el.appendChild(deleteBtn);
-
-                        // 8 resize handles — one per direction
+                        // 8 resize handles (.rh)
                         const DIRS = ['nw','n','ne','e','se','s','sw','w'];
                         DIRS.forEach(dir => {
                             const rh = document.createElement('div');
@@ -2059,30 +2356,31 @@
                             el.appendChild(rh);
                         });
 
-                        // Add drag event listener to the main element, but exclude delete button and resize handle
+                        // Drag event listener (ignoring resize handles)
                         el.addEventListener('mousedown', (e) => {
-                            // Don't start drag if clicking on delete button or any resize handle
-                            if (e.target.classList.contains('delete-btn') ||
-                                e.target.classList.contains('rh')) return;
+                            if (e.target.classList.contains('rh')) return;
                             onDragStart(e);
                         });
 
                         wrapper.appendChild(el);
                     });
-                }
+                };
                 renderSide('front');
                 renderSide('back');
                 if (typeof renderLayerList === 'function') renderLayerList();
+                if (typeof updateSelectionStatus === 'function') updateSelectionStatus();
             };
+
             const setActiveSide = (side) => {
                 activeSide = side;
                 frontCanvasWrapper.classList.toggle('active', side === 'front');
                 backCanvasWrapper.classList.toggle('active', side === 'back');
                 setActivePlaceholder(null);
                 if (typeof renderLayerList === 'function') renderLayerList();
+                if (typeof window.drawRulers === 'function') window.drawRulers();
             };
+
             const adjustPanelOrder = (activeId) => {
-                // In Photoshop workspace layout, panels are cleanly docked in tabs
                 if (activeId && typeof switchDockTab === 'function') {
                     switchDockTab('properties');
                 }
@@ -2098,6 +2396,8 @@
                 if (id) renderEditPanel();
                 renderPlaceholders();
                 updateFieldToolbar();
+                updateSelectionStatus();
+                if (typeof window.drawRulers === 'function') window.drawRulers();
             };
 
             // --- Layer List ---
@@ -2110,7 +2410,6 @@
                     layerList.innerHTML = '<div class="layer-list-empty">No fields yet</div>';
                     return;
                 }
-                // Reverse so top of list = highest layer (last in array = rendered last = on top)
                 layerList.innerHTML = [...items].reverse().map((p, revIdx) => {
                     const realIdx = items.length - 1 - revIdx;
                     const isActive = p.id === activePlaceholderId;
@@ -2126,6 +2425,8 @@
                                 onclick="moveLayer('${p.id}', 1)">▲</button>
                             <button class="layer-order-btn" title="Move down" ${canDown ? '' : 'disabled style="opacity:0.3"'}
                                 onclick="moveLayer('${p.id}', -1)">▼</button>
+                            <button class="layer-order-btn hover:text-red-400" title="Delete layer"
+                                onclick="deleteField('${activeSide}', '${p.id}')">✕</button>
                         </div>
                     </div>`;
                 }).join('');
@@ -2145,21 +2446,31 @@
             // --- Floating Field Toolbar ---
             const frontFieldToolbar = document.getElementById('front-field-toolbar');
             const backFieldToolbar  = document.getElementById('back-field-toolbar');
+            if (frontFieldToolbar) frontFieldToolbar.addEventListener('mousedown', e => e.stopPropagation());
+            if (backFieldToolbar) backFieldToolbar.addEventListener('mousedown', e => e.stopPropagation());
 
             const updateFieldToolbar = () => {
                 const toolbar = activeSide === 'front' ? frontFieldToolbar : backFieldToolbar;
                 const other   = activeSide === 'front' ? backFieldToolbar  : frontFieldToolbar;
                 other.classList.remove('visible');
 
-                if (!activePlaceholderId) { toolbar.classList.remove('visible'); return; }
+                if (!activePlaceholderId || isDragging || isResizing) {
+                    toolbar.classList.remove('visible');
+                    return;
+                }
                 const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
                 if (!p) { toolbar.classList.remove('visible'); return; }
 
-                // Position above the element (uses same % coordinate space)
+                // Position above the element, flip below if it would leave the artboard top edge
                 toolbar.style.left = `${p.x * 100}%`;
-                toolbar.style.top  = `${p.y * 100}%`;
+                if (p.y < 0.12) {
+                    toolbar.style.top = `${(p.y + (p.height || 0.1)) * 100}%`;
+                    toolbar.style.transform = 'translateY(8px)';
+                } else {
+                    toolbar.style.top  = `${p.y * 100}%`;
+                    toolbar.style.transform = 'translateY(calc(-100% - 8px))';
+                }
 
-                // Build type-aware content
                 let html = '';
 
                 if (p.type === 'text') {
@@ -2174,7 +2485,7 @@
                     <div class="ft-sep"></div>
                     <button class="ftb" title="Decrease font size"
                         onclick="updatePlaceholderProp('${p.id}','fontSize',${sz - 1})">−</button>
-                    <span style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:600;min-width:26px;text-align:center">${sz}</span>
+                    <span style="color:rgba(255,255,255,0.9);font-size:12px;font-weight:600;min-width:24px;text-align:center">${sz}</span>
                     <button class="ftb" title="Increase font size"
                         onclick="updatePlaceholderProp('${p.id}','fontSize',${sz + 1})">+</button>
                     <div class="ft-sep"></div>
@@ -2195,17 +2506,17 @@
                 } else if (p.type === 'qr') {
                     const qrCol = p.qrColor || '#000000';
                     html += `
-                    <span style="color:rgba(255,255,255,0.5);font-size:10px;padding:0 4px">QR color</span>
+                    <span style="color:rgba(255,255,255,0.5);font-size:10px;padding:0 4px">QR</span>
                     <button class="ftb ftb-color" title="QR color">
                         <div class="swatch" style="background:${qrCol}"></div>
                         <input type="color" value="${qrCol}" oninput="updatePlaceholderProp('${p.id}','qrColor',this.value)">
                     </button>`;
                 }
 
-                // Delete button — always last
+                // Delete button calling centralized deleteField
                 html += `<div class="ft-sep"></div>
                     <button class="ftb danger" title="Delete field (Del)"
-                        onclick="(function(){placeholders[activeSide]=placeholders[activeSide].filter(pl=>pl.id!=='${p.id}');setActivePlaceholder(null);drawAllCanvases();})()">
+                        onclick="deleteField('${activeSide}','${p.id}')">
                         &#x2715;
                     </button>`;
 
@@ -2254,7 +2565,7 @@
                 let content = geomBlock + `
                 <div class="space-y-3">
                     <div>
-                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">${keyInputLabel}</label>
+                        <label class="block text-[11px] font-medium text-ink-dim mb-1">${keyInputLabel}</label>
                         <input type="text" value="${keyInputValue}" oninput="updatePlaceholderProp('${p.id}', '${p.staticText ? 'staticText' : 'key'}', this.value)" class="w-full p-2 border rounded">
                     </div>`;
 
@@ -2262,7 +2573,7 @@
                     content += `
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider">Font Family</label>
+                            <label class="block text-[11px] font-medium text-ink-dim">Font Family</label>
                             <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
                                 Google Fonts (1500+)
@@ -2379,17 +2690,17 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Font Size</label>
+                            <label class="block text-[11px] font-medium text-ink-dim mb-1">Font Size</label>
                             <input type="number" value="${p.fontSize}" oninput="updatePlaceholderProp('${p.id}', 'fontSize', this.value)" class="w-full p-2 border rounded">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Line Height</label>
+                            <label class="block text-[11px] font-medium text-ink-dim mb-1">Line Height</label>
                             <input type="number" value="${p.lineHeight}" oninput="updatePlaceholderProp('${p.id}', 'lineHeight', this.value)" class="w-full p-2 border rounded">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3 items-center">
                         <div>
-                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Font Weight</label>
+                            <label class="block text-[11px] font-medium text-ink-dim mb-1">Font Weight</label>
                             <select onchange="updatePlaceholderProp('${p.id}', 'fontWeight', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900 font-medium">
                                 <option value="300" ${String(p.fontWeight) === '300' ? 'selected' : ''}>Light (300)</option>
                                 <option value="normal" ${(!p.fontWeight || String(p.fontWeight) === 'normal' || String(p.fontWeight) === '400') ? 'selected' : ''}>Regular (400)</option>
@@ -2401,20 +2712,20 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Style / Italic</label>
-                            <div class="flex bg-surface-sunken rounded-lg p-0.5 border border-ink-200">
-                                <button onclick="updatePlaceholderProp('${p.id}', 'fontStyle', 'normal')" class="flex-1 py-1 rounded text-xs font-semibold ${p.fontStyle !== 'italic' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Normal</button>
-                                <button onclick="updatePlaceholderProp('${p.id}', 'fontStyle', 'italic')" class="flex-1 py-1 rounded text-xs font-semibold ${p.fontStyle === 'italic' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Italic</button>
+                            <label class="block text-[11px] font-medium text-ink-dim mb-1">Style / Italic</label>
+                            <div class="seg w-full">
+                                <button class="flex-1" aria-pressed="${p.fontStyle !== 'italic'}" onclick="updatePlaceholderProp('${p.id}', 'fontStyle', 'normal')">Normal</button>
+                                <button class="flex-1" aria-pressed="${p.fontStyle === 'italic'}" onclick="updatePlaceholderProp('${p.id}', 'fontStyle', 'italic')">Italic</button>
                             </div>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3 items-center">
                         <div>
-                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Letter Spacing (Narrow)</label>
+                            <label class="block text-[11px] font-medium text-ink-dim mb-1">Letter Spacing (Narrow)</label>
                             <input type="number" step="0.5" placeholder="0 (Normal)" value="${p.letterSpacing || 0}" oninput="updatePlaceholderProp('${p.id}', 'letterSpacing', this.value)" class="w-full p-2 border rounded text-xs bg-surface text-ink-900">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Color</label>
+                            <label class="block text-[11px] font-medium text-ink-dim mb-1">Color</label>
                             <div class="flex items-center gap-2">
                                 <input type="color" value="${p.color}" oninput="updatePlaceholderProp('${p.id}', 'color', this.value)" class="w-10 h-8 border rounded cursor-pointer p-0">
                                 <span class="text-xs font-mono text-ink-700">${p.color}</span>
@@ -2422,29 +2733,29 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Alignment</label>
-                        <div class="flex bg-surface-sunken rounded-lg p-0.5 border border-ink-200">
-                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'left')" class="flex-1 py-1 rounded text-xs font-semibold ${p.align === 'left' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Left</button>
-                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'center')" class="flex-1 py-1 rounded text-xs font-semibold ${p.align === 'center' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Center</button>
-                            <button onclick="updatePlaceholderProp('${p.id}', 'align', 'right')" class="flex-1 py-1 rounded text-xs font-semibold ${p.align === 'right' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Right</button>
+                        <label class="block text-[11px] font-medium text-ink-dim mb-1">Alignment</label>
+                        <div class="seg w-full">
+                            <button class="flex-1" aria-pressed="${p.align === 'left'}" onclick="updatePlaceholderProp('${p.id}', 'align', 'left')">Left</button>
+                            <button class="flex-1" aria-pressed="${p.align === 'center'}" onclick="updatePlaceholderProp('${p.id}', 'align', 'center')">Center</button>
+                            <button class="flex-1" aria-pressed="${p.align === 'right'}" onclick="updatePlaceholderProp('${p.id}', 'align', 'right')">Right</button>
                         </div>
                     </div>`;
                 } else if (p.type === 'photo') {
                     p.shape = p.shape || 'square';
                     content += `
                     <div>
-                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Photo Shape</label>
-                        <div class="flex bg-surface-sunken rounded-lg p-0.5 border border-ink-200">
-                            <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'square')" class="flex-1 py-1 rounded text-xs font-semibold ${p.shape === 'square' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Square</button>
-                            <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'rounded')" class="flex-1 py-1 rounded text-xs font-semibold ${p.shape === 'rounded' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Rounded</button>
-                            <button onclick="updatePlaceholderProp('${p.id}', 'shape', 'circle')" class="flex-1 py-1 rounded text-xs font-semibold ${p.shape === 'circle' ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'}">Circle</button>
+                        <label class="block text-[11px] font-medium text-ink-dim mb-1">Photo Shape</label>
+                        <div class="seg w-full">
+                            <button class="flex-1" aria-pressed="${p.shape === 'square'}" onclick="updatePlaceholderProp('${p.id}', 'shape', 'square')">Square</button>
+                            <button class="flex-1" aria-pressed="${p.shape === 'rounded'}" onclick="updatePlaceholderProp('${p.id}', 'shape', 'rounded')">Rounded</button>
+                            <button class="flex-1" aria-pressed="${p.shape === 'circle'}" onclick="updatePlaceholderProp('${p.id}', 'shape', 'circle')">Circle</button>
                         </div>
                     </div>`;
                 } else if (p.type === 'qr') {
                     p.qrColor = p.qrColor || '#000000';
                     content += `
                     <div>
-                        <label class="block text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">QR Code Color</label>
+                        <label class="block text-[11px] font-medium text-ink-dim mb-1">QR Code Color</label>
                         <div class="flex items-center gap-2">
                             <input type="color" value="${p.qrColor}" oninput="updatePlaceholderProp('${p.id}', 'qrColor', this.value)" class="w-10 h-8 border rounded cursor-pointer p-0">
                             <span class="text-xs font-mono text-ink-700">${p.qrColor}</span>
@@ -2512,6 +2823,10 @@
                 const target = e.target.closest('.placeholder');
                 if (!target) return;
 
+                isDragging = true;
+                if (frontFieldToolbar) frontFieldToolbar.classList.remove('visible');
+                if (backFieldToolbar) backFieldToolbar.classList.remove('visible');
+
                 if (activePlaceholderId !== target.id) setActivePlaceholder(target.id);
 
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
@@ -2562,29 +2877,33 @@
                 pData.x = Math.max(-pData.width + bufferX, Math.min(pData.x, 1 - bufferX));
                 pData.y = Math.max(-pData.height + bufferY, Math.min(pData.y, 1 - bufferY));
 
-                // Smart snap — adjust position and collect guide lines
-                computeSnap(pData, unscaledW, unscaledH);
+                // Smart snap with scale awareness
+                computeSnap(pData, unscaledW, unscaledH, scale);
 
                 activeEl.style.left = `${pData.x * 100}%`;
                 activeEl.style.top  = `${pData.y * 100}%`;
 
-                // Keep toolbar pinned above the element while dragging
-                const tb = activeSide === 'front' ? frontFieldToolbar : backFieldToolbar;
-                if (tb) { tb.style.left = `${pData.x * 100}%`; tb.style.top = `${pData.y * 100}%`; }
+                // Live measurement badge during drag
+                const cW = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const cH = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                showMeasureBadge(e, `X: ${toRulerUnit(pData.x * cW, 'x')}  Y: ${toRulerUnit(pData.y * cH, 'y')}`);
             };
             const onDragEnd = () => {
+                isDragging = false;
                 document.removeEventListener('mousemove', onDragMove);
                 document.removeEventListener('mouseup', onDragEnd);
+                hideMeasureBadge();
                 drawAllCanvases();
                 syncGeomInputs();
                 updateFieldToolbar();
                 clearGuides();
+                updateSelectionStatus();
+                if (typeof window.drawRulers === 'function') window.drawRulers();
             };
 
-            // --- Smart snap guides ---
+            // --- Smart snap guides & Magnetic Snapping ---
             const frontGuideSvg = document.getElementById('front-guide-svg');
             const backGuideSvg  = document.getElementById('back-guide-svg');
-            const SNAP_PX = 5; // snap threshold in wrapper pixels
 
             const clearGuides = () => {
                 if (frontGuideSvg) frontGuideSvg.innerHTML = '';
@@ -2595,11 +2914,11 @@
                 svg.innerHTML = '';
                 guides.forEach(g => {
                     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    if (g.axis === 'x') {   // vertical guide line at x=g.pos
+                    if (g.axis === 'x') {
                         const px = (g.pos / W) * 100;
                         line.setAttribute('x1', `${px}%`); line.setAttribute('x2', `${px}%`);
                         line.setAttribute('y1', '0%');      line.setAttribute('y2', '100%');
-                    } else {                 // horizontal guide line at y=g.pos
+                    } else {
                         const py = (g.pos / H) * 100;
                         line.setAttribute('x1', '0%');      line.setAttribute('x2', '100%');
                         line.setAttribute('y1', `${py}%`);  line.setAttribute('y2', `${py}%`);
@@ -2608,15 +2927,14 @@
                 });
             };
 
-            // Mutates pData.x/y to snap, returns nothing — guides drawn as side-effect
-            const computeSnap = (pData, W, H) => {
+            // Magnetic snap calculation with constant 6 screen px threshold
+            const computeSnap = (pData, W, H, scale = 1.0) => {
                 const svg = activeSide === 'front' ? frontGuideSvg : backGuideSvg;
                 if (!svg) return;
 
-                const others = placeholders[activeSide].filter(p => p.id !== activePlaceholderId);
-                if (!others.length) { svg.innerHTML = ''; return; }
+                // Constant 6 screen pixels converted to unscaled wrapper pixels
+                const SNAP_PX = 6 / (scale || 1.0);
 
-                // Active element key points in wrapper-pixels
                 const ax1 = pData.x * W;
                 const ax2 = (pData.x + pData.width) * W;
                 const axc = ax1 + (ax2 - ax1) / 2;
@@ -2624,9 +2942,13 @@
                 const ay2 = (pData.y + pData.height) * H;
                 const ayc = ay1 + (ay2 - ay1) / 2;
 
-                let snapX = null, snapY = null;
-                const guides = [];
+                // Candidate snap targets
+                // 1. Artboard boundaries & center & 3mm (~30px at CR-80) safe margin
+                const xTargets = [0, 30, W / 2, W - 30, W];
+                const yTargets = [0, 30, H / 2, H - 30, H];
 
+                // 2. Alignment with all other placeholders on the same side
+                const others = placeholders[activeSide].filter(p => p.id !== activePlaceholderId);
                 others.forEach(o => {
                     const ox1 = o.x * W;
                     const ox2 = (o.x + o.width) * W;
@@ -2634,39 +2956,51 @@
                     const oy1 = o.y * H;
                     const oy2 = (o.y + o.height) * H;
                     const oyc = oy1 + (oy2 - oy1) / 2;
+                    xTargets.push(ox1, oxc, ox2);
+                    yTargets.push(oy1, oyc, oy2);
+                });
 
-                    // X-axis snaps: check each active x-point against each ref x-point
-                    const xPairs = [
-                        [ax1, ox1], [ax1, ox2], [ax1, oxc],
-                        [ax2, ox1], [ax2, ox2], [ax2, oxc],
-                        [axc, ox1], [axc, ox2], [axc, oxc],
-                    ];
-                    xPairs.forEach(([ap, rp]) => {
-                        if (snapX === null && Math.abs(ap - rp) < SNAP_PX) {
-                            // shift pData.x so that ap aligns with rp
-                            pData.x += (rp - ap) / W;
-                            snapX = rp;
-                            guides.push({ axis: 'x', pos: rp });
-                        }
-                    });
-
-                    // Y-axis snaps
-                    const yPairs = [
-                        [ay1, oy1], [ay1, oy2], [ay1, oyc],
-                        [ay2, oy1], [ay2, oy2], [ay2, oyc],
-                        [ayc, oy1], [ayc, oy2], [ayc, oyc],
-                    ];
-                    yPairs.forEach(([ap, rp]) => {
-                        if (snapY === null && Math.abs(ap - rp) < SNAP_PX) {
-                            pData.y += (rp - ap) / H;
-                            snapY = rp;
-                            guides.push({ axis: 'y', pos: rp });
+                let bestSnapX = null;
+                let minDiffX = SNAP_PX;
+                let shiftX = 0;
+                [ax1, axc, ax2].forEach(ap => {
+                    xTargets.forEach(target => {
+                        const diff = Math.abs(ap - target);
+                        if (diff < minDiffX) {
+                            minDiffX = diff;
+                            bestSnapX = target;
+                            shiftX = target - ap;
                         }
                     });
                 });
 
+                let bestSnapY = null;
+                let minDiffY = SNAP_PX;
+                let shiftY = 0;
+                [ay1, ayc, ay2].forEach(ap => {
+                    yTargets.forEach(target => {
+                        const diff = Math.abs(ap - target);
+                        if (diff < minDiffY) {
+                            minDiffY = diff;
+                            bestSnapY = target;
+                            shiftY = target - ap;
+                        }
+                    });
+                });
+
+                const guides = [];
+                if (bestSnapX !== null) {
+                    pData.x += shiftX / W;
+                    guides.push({ axis: 'x', pos: bestSnapX });
+                }
+                if (bestSnapY !== null) {
+                    pData.y += shiftY / H;
+                    guides.push({ axis: 'y', pos: bestSnapY });
+                }
+
                 drawGuides(svg, guides, W, H);
             };
+
             // Updates the X/Y/W/H inputs without re-rendering the whole panel
             const syncGeomInputs = () => {
                 const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
@@ -2679,9 +3013,10 @@
                 set('geom-w', Math.round(p.width * cW));
                 set('geom-h', Math.round(p.height * cH));
             };
-            // direction and starting geometry captured at mousedown
+
+            // Direction and starting geometry captured at mousedown
             let resizeDir = 'se';
-            let resizeOrigin = null; // { x, y, w, h, mouseX, mouseY } all in wrapper-unscaled px
+            let resizeOrigin = null;
 
             const onResizeStart = (e) => {
                 e.preventDefault(); e.stopPropagation();
@@ -2692,7 +3027,6 @@
 
                 resizeDir = e.target.dataset.dir || 'se';
 
-                // Capture the element's current geometry in wrapper-pixel space
                 const wrapper = activeSide === 'front' ? frontPlaceholderWrapper : backPlaceholderWrapper;
                 const scale   = getWrapperScale(wrapper);
                 const pData   = placeholders[activeSide].find(p => p.id === target.id);
@@ -2706,9 +3040,14 @@
                     mouseY: (e.clientY - wrapper.getBoundingClientRect().top)  / scale,
                 };
 
+                // Hide toolbar while resizing
+                if (frontFieldToolbar) frontFieldToolbar.classList.remove('visible');
+                if (backFieldToolbar) backFieldToolbar.classList.remove('visible');
+
                 document.addEventListener('mousemove', onResizeMove);
                 document.addEventListener('mouseup', onResizeEnd);
             };
+
             const onResizeMove = (e) => {
                 const activeEl = document.getElementById(activePlaceholderId);
                 const pData = placeholders[activeSide].find(p => p.id === activePlaceholderId);
@@ -2724,37 +3063,47 @@
                 const dx = mx - resizeOrigin.mouseX;
                 const dy = my - resizeOrigin.mouseY;
 
-                const MIN = 20; // minimum size in wrapper-pixels
+                const MIN = 15;
                 let { x, y, w, h } = resizeOrigin;
 
-                // Each direction adjusts the appropriate edges
                 const dir = resizeDir;
                 if (dir.includes('e')) { w = Math.max(MIN, w + dx); }
                 if (dir.includes('s')) { h = Math.max(MIN, h + dy); }
                 if (dir.includes('w')) { const nw = Math.max(MIN, w - dx); x = x + w - nw; w = nw; }
                 if (dir.includes('n')) { const nh = Math.max(MIN, h - dy); y = y + h - nh; h = nh; }
 
-                // Commit to pData as fractions
                 pData.x = x / W;  pData.y = y / H;
                 pData.width = w / W; pData.height = h / H;
+
+                // Snap during resize
+                computeSnap(pData, W, H, scale);
 
                 activeEl.style.left   = `${pData.x * 100}%`;
                 activeEl.style.top    = `${pData.y * 100}%`;
                 activeEl.style.width  = `${pData.width  * 100}%`;
                 activeEl.style.height = `${pData.height * 100}%`;
 
-                // Keep toolbar pinned above the element while resizing
-                const tb = activeSide === 'front' ? frontFieldToolbar : backFieldToolbar;
-                if (tb) { tb.style.left = `${pData.x * 100}%`; tb.style.top = `${pData.y * 100}%`; }
+                // Live measurement badge
+                const cW = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const cH = orientation === 'horizontal' ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                showMeasureBadge(e, `W: ${toRulerUnit(pData.width * cW, 'x')}  H: ${toRulerUnit(pData.height * cH, 'y')}`);
 
                 drawAllCanvases();
             };
+
             const onResizeEnd = () => {
                 isResizing = false;
                 document.removeEventListener('mousemove', onResizeMove);
                 document.removeEventListener('mouseup', onResizeEnd);
-                syncGeomInputs(); // refresh W/H in panel after resize
+                hideMeasureBadge();
+                drawAllCanvases();
+                syncGeomInputs();
+                updateFieldToolbar();
+                clearGuides();
+                updateSelectionStatus();
+                if (typeof window.drawRulers === 'function') window.drawRulers();
             };
+
             document.addEventListener('keydown', (e) => {
                 // Never intercept when the user is typing in an input, textarea, or select
                 const tag = document.activeElement?.tagName;
@@ -2773,9 +3122,7 @@
                 // Delete / Backspace — remove the selected field
                 if (e.key === 'Delete' || e.key === 'Backspace') {
                     e.preventDefault();
-                    placeholders[activeSide] = placeholders[activeSide].filter(p => p.id !== activePlaceholderId);
-                    setActivePlaceholder(null);
-                    drawAllCanvases();
+                    deleteField(activeSide, activePlaceholderId);
                     return;
                 }
 
@@ -2862,15 +3209,18 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 const canvasArea = document.getElementById('canvas-area');
                 if (canvasArea) canvasArea.dataset.orientation = newOrientation;
 
-                // Update orientation buttons
-                if (orientationHorizontalBtn) orientationHorizontalBtn.className = `btn-photoshop px-2 text-xs font-medium transition-colors ${isHorizontal ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
-                if (orientationVerticalBtn) orientationVerticalBtn.className = `btn-photoshop px-2 text-xs font-medium transition-colors ${!isHorizontal ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
+                // Update orientation segmented control state
+                const segGroup = document.getElementById('orientation-seg-group');
+                if (typeof setSegmentState === 'function' && segGroup) {
+                    setSegmentState(segGroup, isHorizontal ? 'orientation-horizontal-btn' : 'orientation-vertical-btn');
+                }
 
                 const zv = zoomSelect ? zoomSelect.value : '0.7';
                 const currentZoom = (zv === 'fit' || zv === 'actual') ? zv : (parseFloat(zv) || 0.7);
                 applyZoom(currentZoom);
                 drawAllCanvases();
                 renderPlaceholders();
+                if (typeof window.drawRulers === 'function') window.drawRulers();
             };
             // --- Zoom Management ---
             const applyZoom = (zoomLevel) => {
@@ -2883,8 +3233,8 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 if (zoomLevel === 'actual') {
                     actualZoom = 1.0;
                 } else if (zoomLevel === 'fit') {
-                    // Compute best fit against workspace stage dimensions
-                    const stage = document.getElementById('workspace-stage');
+                    // Compute best fit against workspace scroll viewport dimensions
+                    const stage = document.getElementById('stage-scroll-viewport') || document.getElementById('workspace-stage');
                     const availW = (stage ? stage.clientWidth : 800) - 80;
                     const availH = (stage ? stage.clientHeight : 600) - 100;
                     const fitW = availW / (orientation === 'horizontal' ? baseWidth : (baseWidth * 2 + 40));
@@ -2924,17 +3274,23 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                     }
                 });
 
-                // Update status bar readout
+                // Update status bar readout and document tab title
                 const statusDocDims = document.getElementById('status-doc-dims');
                 if (statusDocDims) {
                     const pct = Math.round(actualZoom * 100);
                     statusDocDims.textContent = `CR-80: ${baseWidth} × ${baseHeight} px @ ${pct}% (Export scale: ${PDF_SCALE}x)`;
+                }
+                const docTabTitle = document.getElementById('doc-tab-title');
+                if (docTabTitle) {
+                    const pct = Math.round(actualZoom * 100);
+                    docTabTitle.textContent = `Untitled.card @ ${pct}% (${orientation === 'horizontal' ? 'Horizontal' : 'Vertical'}, CR-80)`;
                 }
 
                 setTimeout(() => {
                     syncPlaceholderWrappers();
                     renderPlaceholders();
                     drawAllCanvases();
+                    if (typeof window.drawRulers === 'function') window.drawRulers();
                 }, 10);
             };
 
@@ -4106,6 +4462,236 @@ if (generatePdfBtn) {
                 }
             };
 
+
+            // =========================================================================
+            // Adobe-Style Rulers Engine
+            // =========================================================================
+            const topRulerCanvas = document.getElementById('ruler-top');
+            const leftRulerCanvas = document.getElementById('ruler-left');
+            const rulerCorner = document.getElementById('ruler-corner');
+            const stageViewport = document.getElementById('stage-scroll-viewport');
+
+            function drawRulers(cursorX = null, cursorY = null) {
+                if (!topRulerCanvas || !leftRulerCanvas || !stageViewport) return;
+
+                const activeWrapper = (activeSide === 'back' && document.getElementById('back-canvas-wrapper')) ? document.getElementById('back-canvas-wrapper') : document.getElementById('front-canvas-wrapper');
+                if (!activeWrapper) return;
+
+                const viewRect = stageViewport.getBoundingClientRect();
+                const artRect = activeWrapper.getBoundingClientRect();
+
+                const dpr = window.devicePixelRatio || 1;
+                const topW = viewRect.width;
+                const topH = 20;
+                const leftW = 20;
+                const leftH = viewRect.height;
+
+                if (topRulerCanvas.width !== Math.round(topW * dpr) || topRulerCanvas.height !== Math.round(topH * dpr)) {
+                    topRulerCanvas.width = Math.round(topW * dpr);
+                    topRulerCanvas.height = Math.round(topH * dpr);
+                }
+                if (leftRulerCanvas.width !== Math.round(leftW * dpr) || leftRulerCanvas.height !== Math.round(leftH * dpr)) {
+                    leftRulerCanvas.width = Math.round(leftW * dpr);
+                    leftRulerCanvas.height = Math.round(leftH * dpr);
+                }
+
+                const tCtx = topRulerCanvas.getContext('2d');
+                const lCtx = leftRulerCanvas.getContext('2d');
+
+                tCtx.setTransform(1, 0, 0, 1, 0, 0);
+                tCtx.scale(dpr, dpr);
+                lCtx.setTransform(1, 0, 0, 1, 0, 0);
+                lCtx.scale(dpr, dpr);
+
+                tCtx.fillStyle = '#2B2B2B';
+                tCtx.fillRect(0, 0, topW, topH);
+                lCtx.fillStyle = '#2B2B2B';
+                lCtx.fillRect(0, 0, leftW, leftH);
+
+                const originX = artRect.left - viewRect.left;
+                const originY = artRect.top - viewRect.top;
+
+                const isHoriz = (orientation === 'horizontal');
+                const cW = isHoriz ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const cH = isHoriz ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+                const cardDimX_mm = isHoriz ? 85.6 : 54.0;
+                const cardDimY_mm = isHoriz ? 54.0 : 85.6;
+
+                let pxPerUnitX, pxPerUnitY, steps;
+                if (activeRulerUnit === 'mm') {
+                    pxPerUnitX = artRect.width / cardDimX_mm;
+                    pxPerUnitY = artRect.height / cardDimY_mm;
+                    steps = [1, 2, 5, 10, 20, 50, 100];
+                } else if (activeRulerUnit === 'in') {
+                    pxPerUnitX = artRect.width / (cardDimX_mm / 25.4);
+                    pxPerUnitY = artRect.height / (cardDimY_mm / 25.4);
+                    steps = [0.25, 0.5, 1, 2, 5];
+                } else {
+                    pxPerUnitX = artRect.width / cW;
+                    pxPerUnitY = artRect.height / cH;
+                    steps = [10, 20, 50, 100, 200, 500];
+                }
+
+                let stepX = steps[steps.length - 1];
+                for (const s of steps) {
+                    if (s * pxPerUnitX >= 60) { stepX = s; break; }
+                }
+                let stepY = steps[steps.length - 1];
+                for (const s of steps) {
+                    if (s * pxPerUnitY >= 60) { stepY = s; break; }
+                }
+
+                // Selection highlight band on rulers
+                if (activePlaceholderId) {
+                    const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
+                    if (p) {
+                        const pX1 = originX + p.x * artRect.width;
+                        const pX2 = pX1 + p.width * artRect.width;
+                        tCtx.fillStyle = 'rgba(91, 76, 240, 0.28)';
+                        tCtx.fillRect(pX1, 0, pX2 - pX1, topH);
+
+                        const pY1 = originY + p.y * artRect.height;
+                        const pY2 = pY1 + p.height * artRect.height;
+                        lCtx.fillStyle = 'rgba(91, 76, 240, 0.28)';
+                        lCtx.fillRect(0, pY1, leftW, pY2 - pY1);
+                    }
+                }
+
+                // Draw Top Ruler Ticks & Labels
+                tCtx.strokeStyle = '#5A5A5A';
+                tCtx.fillStyle = '#8A8A8A';
+                tCtx.font = '9px monospace';
+                tCtx.lineWidth = 1;
+
+                const startUnitX = Math.floor(-originX / pxPerUnitX / stepX) * stepX - stepX;
+                const endUnitX = Math.ceil((topW - originX) / pxPerUnitX / stepX) * stepX + stepX;
+
+                for (let u = startUnitX; u <= endUnitX; u += stepX) {
+                    const screenX = Math.round(originX + u * pxPerUnitX) + 0.5;
+                    tCtx.beginPath();
+                    tCtx.moveTo(screenX, 0);
+                    tCtx.lineTo(screenX, topH);
+                    tCtx.stroke();
+
+                    const lbl = (activeRulerUnit === 'in' && stepX < 1) ? u.toFixed(2) : String(Math.round(u));
+                    tCtx.fillText(lbl, screenX + 2, 9);
+
+                    const subCount = (activeRulerUnit === 'in' && stepX <= 1) ? 4 : 5;
+                    const subStep = stepX / subCount;
+                    for (let j = 1; j < subCount; j++) {
+                        const subScreenX = Math.round(originX + (u + j * subStep) * pxPerUnitX) + 0.5;
+                        const tickH = (j === subCount / 2) ? 10 : 5;
+                        tCtx.beginPath();
+                        tCtx.moveTo(subScreenX, topH - tickH);
+                        tCtx.lineTo(subScreenX, topH);
+                        tCtx.stroke();
+                    }
+                }
+
+                // Draw Left Ruler Ticks & Labels
+                lCtx.strokeStyle = '#5A5A5A';
+                lCtx.fillStyle = '#8A8A8A';
+                lCtx.font = '9px monospace';
+                lCtx.lineWidth = 1;
+
+                const startUnitY = Math.floor(-originY / pxPerUnitY / stepY) * stepY - stepY;
+                const endUnitY = Math.ceil((leftH - originY) / pxPerUnitY / stepY) * stepY + stepY;
+
+                for (let u = startUnitY; u <= endUnitY; u += stepY) {
+                    const screenY = Math.round(originY + u * pxPerUnitY) + 0.5;
+                    lCtx.beginPath();
+                    lCtx.moveTo(0, screenY);
+                    lCtx.lineTo(leftW, screenY);
+                    lCtx.stroke();
+
+                    const lbl = (activeRulerUnit === 'in' && stepY < 1) ? u.toFixed(2) : String(Math.round(u));
+                    lCtx.save();
+                    lCtx.translate(leftW - 3, screenY + 2);
+                    lCtx.rotate(-Math.PI / 2);
+                    lCtx.textAlign = 'right';
+                    lCtx.fillText(lbl, 0, 0);
+                    lCtx.restore();
+
+                    const subCount = (activeRulerUnit === 'in' && stepY <= 1) ? 4 : 5;
+                    const subStep = stepY / subCount;
+                    for (let j = 1; j < subCount; j++) {
+                        const subScreenY = Math.round(originY + (u + j * subStep) * pxPerUnitY) + 0.5;
+                        const tickW = (j === subCount / 2) ? 10 : 5;
+                        lCtx.beginPath();
+                        lCtx.moveTo(leftW - tickW, subScreenY);
+                        lCtx.lineTo(leftW, subScreenY);
+                        lCtx.stroke();
+                    }
+                }
+
+                // Cursor tracking ticks
+                if (cursorX !== null) {
+                    tCtx.strokeStyle = '#5B4CF0';
+                    tCtx.beginPath();
+                    tCtx.moveTo(cursorX + 0.5, 0);
+                    tCtx.lineTo(cursorX + 0.5, topH);
+                    tCtx.stroke();
+                }
+                if (cursorY !== null) {
+                    lCtx.strokeStyle = '#5B4CF0';
+                    lCtx.beginPath();
+                    lCtx.moveTo(0, cursorY + 0.5);
+                    lCtx.lineTo(leftW, cursorY + 0.5);
+                    lCtx.stroke();
+                }
+            }
+            window.drawRulers = drawRulers;
+
+            // Unit cycling on corner click
+            if (rulerCorner) {
+                rulerCorner.addEventListener('click', () => {
+                    const units = ['mm', 'px', 'in'];
+                    const nextIdx = (units.indexOf(activeRulerUnit) + 1) % units.length;
+                    activeRulerUnit = units[nextIdx];
+                    rulerCorner.textContent = activeRulerUnit;
+                    drawRulers();
+                    updateSelectionStatus();
+                });
+            }
+
+            // Viewport scroll & pointer tracking
+            if (stageViewport) {
+                stageViewport.addEventListener('scroll', () => {
+                    drawRulers();
+                });
+
+                stageViewport.addEventListener('mousemove', (e) => {
+                    const viewRect = stageViewport.getBoundingClientRect();
+                    const cursorX = e.clientX - viewRect.left;
+                    const cursorY = e.clientY - viewRect.top;
+                    drawRulers(cursorX, cursorY);
+
+                    // Update cursor status readout
+                    const statusCoords = document.getElementById('status-cursor-coords');
+                    if (statusCoords) {
+                        const activeWrapper = (activeSide === 'back' && document.getElementById('back-canvas-wrapper')) ? document.getElementById('back-canvas-wrapper') : document.getElementById('front-canvas-wrapper');
+                        if (activeWrapper) {
+                            const rect = activeWrapper.getBoundingClientRect();
+                            const scale = getWrapperScale(activeWrapper);
+                            const canvasX = (e.clientX - rect.left) / scale;
+                            const canvasY = (e.clientY - rect.top) / scale;
+                            const xStr = toRulerUnit(canvasX, 'x');
+                            const yStr = toRulerUnit(canvasY, 'y');
+                            statusCoords.textContent = `X: ${xStr}  Y: ${yStr}`;
+                        }
+                    }
+                });
+
+                stageViewport.addEventListener('mouseleave', () => {
+                    drawRulers();
+                });
+            }
+
+            // Initial ruler draw
+            setTimeout(() => {
+                drawRulers();
+                updateSelectionStatus();
+            }, 100);
             initialSetup();
         });
     </script>
@@ -4900,9 +5486,7 @@ if (generatePdfBtn) {
         function switchCanvasView(mode) {
             const frontWrap = document.getElementById('front-canvas-wrapper');
             const backWrap = document.getElementById('back-canvas-wrapper');
-            const btnBoth = document.getElementById('view-tab-both');
-            const btnFront = document.getElementById('view-tab-front');
-            const btnBack = document.getElementById('view-tab-back');
+            const seg = document.getElementById('view-tabs-seg');
 
             if (frontWrap && frontWrap.parentElement) {
                 frontWrap.parentElement.classList.toggle('hidden', mode === 'back');
@@ -4911,12 +5495,21 @@ if (generatePdfBtn) {
                 backWrap.parentElement.classList.toggle('hidden', mode === 'front');
             }
 
-            if (btnBoth) btnBoth.className = `btn-photoshop px-2 text-[11px] font-medium ${mode === 'both' ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
-            if (btnFront) btnFront.className = `btn-photoshop px-2 text-[11px] font-medium ${mode === 'front' ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
-            if (btnBack) btnBack.className = `btn-photoshop px-2 text-[11px] font-medium ${mode === 'back' ? 'bg-selected text-white' : 'text-ink-dim hover:text-white'}`;
+            if (typeof setSegmentState === 'function' && seg) {
+                setSegmentState(seg, 'view-tab-' + mode);
+            } else {
+                ['both', 'front', 'back'].forEach(m => {
+                    const btn = document.getElementById('view-tab-' + m);
+                    if (btn) btn.setAttribute('aria-pressed', m === mode ? 'true' : 'false');
+                });
+            }
+            if (typeof window.drawRulers === 'function') {
+                window.drawRulers();
+            }
         }
     </script>
 
+    <div id="measure-badge" class="measure-badge"></div>
 </body>
 
 </html>
