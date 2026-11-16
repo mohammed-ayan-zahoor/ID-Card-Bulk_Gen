@@ -294,32 +294,51 @@ function EditorScreen({ project, onBack, onSave, onSaveLayout }: { project: Proj
   const projectRef = useRef(project);
   const signatureRef = useRef('');
   const inFlight = useRef<Promise<void> | null>(null);
+  const returningRef = useRef(false);
+  const [returning, setReturning] = useState(false);
   const [, setStatus] = useState<'saved' | 'saving' | 'error'>('saved');
   useEffect(() => { projectRef.current = project; }, [project]);
 
   const capture = useCallback(async (force = false) => {
     const legacy = frameRef.current?.contentWindow as EditorBridge | null | undefined;
     const getDocumentState = legacy?.getDocumentState;
-    if (!legacy || !getDocumentState) return;
+    if (!legacy || !getDocumentState) return false;
     if (inFlight.current) {
       await inFlight.current;
-      if (force) return capture(true);
-      return;
+      return capture(force);
     }
+    let succeeded = true;
     const task = (async () => {
       try {
         const doc = getDocumentState(projectRef.current.name);
         const signature = JSON.stringify({ orientation: doc.orientation, backgrounds: doc.backgrounds, placeholders: doc.placeholders, templateId: doc.templateId });
         if (!force && signature === signatureRef.current) return;
         signatureRef.current = signature; setStatus('saving'); legacy.setSaveStatus?.('Saving');
-        const thumbnail = await legacy.generateDocThumbnail?.() ?? projectRef.current.thumbnail;
-        const updated: ProjectRecord = { ...projectRef.current, ...doc, kind: 'project', id: projectRef.current.id, name: projectRef.current.name, schemaVersion: 1, createdAt: projectRef.current.createdAt, updatedAt: new Date().toISOString(), thumbnail };
+        // The list preview can render the background and fields directly. Creating
+        // a second full-size PNG here made every forced save block navigation.
+        const updated: ProjectRecord = { ...projectRef.current, ...doc, kind: 'project', id: projectRef.current.id, name: projectRef.current.name, schemaVersion: 1, createdAt: projectRef.current.createdAt, updatedAt: new Date().toISOString(), thumbnail: null };
         await onSave(updated); projectRef.current = updated; setStatus('saved'); legacy.setSaveStatus?.('Saved');
-      } catch (error) { signatureRef.current = ''; console.error('Project autosave failed:', error); setStatus('error'); (frameRef.current?.contentWindow as EditorBridge | null)?.setSaveStatus?.('Save failed'); }
+      } catch (error) { succeeded = false; signatureRef.current = ''; console.error('Project autosave failed:', error); setStatus('error'); (frameRef.current?.contentWindow as EditorBridge | null)?.setSaveStatus?.('Save failed'); }
     })();
     inFlight.current = task;
     try { await task; } finally { if (inFlight.current === task) inFlight.current = null; }
+    return succeeded;
   }, [onSave]);
+
+  const returnToWorkspace = useCallback(async () => {
+    if (returningRef.current) return;
+    returningRef.current = true;
+    setReturning(true);
+    // Save only if the document changed since the last autosave. If a save is
+    // already running, capture() waits for it and checks again before returning.
+    const saved = await capture();
+    if (saved) {
+      onBack('recent');
+    } else {
+      returningRef.current = false;
+      setReturning(false);
+    }
+  }, [capture, onBack]);
 
   const onFrameLoad = useCallback(() => {
     const legacy = frameRef.current?.contentWindow as EditorBridge | null | undefined;
@@ -351,5 +370,5 @@ function EditorScreen({ project, onBack, onSave, onSaveLayout }: { project: Proj
     return () => window.removeEventListener('message', onMessage);
   }, [onSaveLayout]);
 
-  return <div className="editor-host-shell"><header className="editor-host-bar"><button className="back-home-button" onClick={() => { void capture(true).finally(() => onBack('recent')); }}><Glyph name="back" size={17} /><span>Workspace</span></button></header><iframe ref={frameRef} className="editor-frame" src="/editor.html" title="ID card editor" onLoad={onFrameLoad}/></div>;
+  return <div className="editor-host-shell"><header className="editor-host-bar"><button className={`back-home-button${returning ? ' is-returning' : ''}`} onClick={() => void returnToWorkspace()} disabled={returning} aria-busy={returning}><Glyph name="back" size={17} /><span>{returning ? 'Saving and returning…' : 'Workspace'}</span></button></header><iframe ref={frameRef} className="editor-frame" src="/editor.html" title="ID card editor" onLoad={onFrameLoad}/></div>;
 }
