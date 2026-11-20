@@ -678,13 +678,14 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 25;
+            z-index: 30;
         }
         .guide-svg line {
             stroke: #FF3DA5 !important;
-            stroke-width: 1 !important;
+            stroke-width: 1.5 !important;
             vector-effect: non-scaling-stroke !important;
             shape-rendering: crispEdges !important;
+            filter: drop-shadow(0 0 2px rgba(255, 61, 165, 0.8));
         }
 
         /* Persistent Photoshop-style User Guides */
@@ -3288,27 +3289,37 @@
                 });
             };
 
-            // Magnetic snap calculation with constant 6 screen px threshold
-            const computeSnap = (pData, W, H, scale = 1.0) => {
+            // Magnetic snap calculation with user-guide priority and resize support
+            const computeSnap = (pData, W, H, scale = 1.0, rDir = null) => {
                 const svg = activeSide === 'front' ? frontGuideSvg : backGuideSvg;
                 if (!svg) return;
 
-                // Constant 6 screen pixels converted to unscaled wrapper pixels
-                const SNAP_PX = 6 / (scale || 1.0);
+                // Dedicated snap distances in unscaled pixels:
+                // User guides get 10 screen px (strong magnetic attraction)
+                // Other alignment objects get 6 screen px
+                const SNAP_GUIDE_PX = 10 / (scale || 1.0);
+                const SNAP_OBJ_PX   = 6  / (scale || 1.0);
 
-                const ax1 = pData.x * W;
-                const ax2 = (pData.x + pData.width) * W;
-                const axc = ax1 + (ax2 - ax1) / 2;
-                const ay1 = pData.y * H;
-                const ay2 = (pData.y + pData.height) * H;
-                const ayc = ay1 + (ay2 - ay1) / 2;
+                let x = pData.x * W;
+                let y = pData.y * H;
+                let w = pData.width * W;
+                let h = pData.height * H;
 
-                // Candidate snap targets
-                // 1. Artboard boundaries & center & 3mm (~30px at CR-80) safe margin
-                const xTargets = [0, 30, W / 2, W - 30, W];
-                const yTargets = [0, 30, H / 2, H - 30, H];
+                const guides = [];
 
-                // 2. Alignment with all other placeholders on the same side
+                // 1. User Guides (highest priority)
+                const userXTargets = [];
+                const userYTargets = [];
+                if (userGuidesVisible && Array.isArray(userGuides)) {
+                    userGuides.forEach(g => {
+                        if (g.axis === 'x') userXTargets.push(g.pos * W);
+                        else if (g.axis === 'y') userYTargets.push(g.pos * H);
+                    });
+                }
+
+                // 2. Other alignment targets (artboard bounds + other placeholders)
+                const otherXTargets = [0, 30, W / 2, W - 30, W];
+                const otherYTargets = [0, 30, H / 2, H - 30, H];
                 const others = placeholders[activeSide].filter(p => p.id !== activePlaceholderId);
                 others.forEach(o => {
                     const ox1 = o.x * W;
@@ -3317,54 +3328,180 @@
                     const oy1 = o.y * H;
                     const oy2 = (o.y + o.height) * H;
                     const oyc = oy1 + (oy2 - oy1) / 2;
-                    xTargets.push(ox1, oxc, ox2);
-                    yTargets.push(oy1, oyc, oy2);
+                    otherXTargets.push(ox1, oxc, ox2);
+                    otherYTargets.push(oy1, oyc, oy2);
                 });
 
-                // 3. User guides pulled from rulers
-                if (userGuidesVisible && Array.isArray(userGuides)) {
-                    userGuides.forEach(g => {
-                        if (g.axis === 'x') xTargets.push(g.pos * W);
-                        else if (g.axis === 'y') yTargets.push(g.pos * H);
-                    });
-                }
-
-                let bestSnapX = null;
-                let minDiffX = SNAP_PX;
-                let shiftX = 0;
-                [ax1, axc, ax2].forEach(ap => {
-                    xTargets.forEach(target => {
-                        const diff = Math.abs(ap - target);
-                        if (diff < minDiffX) {
-                            minDiffX = diff;
-                            bestSnapX = target;
-                            shiftX = target - ap;
+                if (rDir) {
+                    // --- RESIZE SNAPPING (anchors unaffected edges, snaps moving edge) ---
+                    if (rDir.includes('e')) {
+                        const right = x + w;
+                        let bestSnap = null;
+                        let minDiff = SNAP_GUIDE_PX;
+                        userXTargets.forEach(t => {
+                            const d = Math.abs(right - t);
+                            if (d < minDiff) { minDiff = d; bestSnap = t; }
+                        });
+                        if (bestSnap === null) {
+                            minDiff = SNAP_OBJ_PX;
+                            otherXTargets.forEach(t => {
+                                const d = Math.abs(right - t);
+                                if (d < minDiff) { minDiff = d; bestSnap = t; }
+                            });
                         }
-                    });
-                });
-
-                let bestSnapY = null;
-                let minDiffY = SNAP_PX;
-                let shiftY = 0;
-                [ay1, ayc, ay2].forEach(ap => {
-                    yTargets.forEach(target => {
-                        const diff = Math.abs(ap - target);
-                        if (diff < minDiffY) {
-                            minDiffY = diff;
-                            bestSnapY = target;
-                            shiftY = target - ap;
+                        if (bestSnap !== null) {
+                            w = Math.max(15, bestSnap - x);
+                            guides.push({ axis: 'x', pos: bestSnap });
                         }
-                    });
-                });
+                    } else if (rDir.includes('w')) {
+                        const left = x;
+                        let bestSnap = null;
+                        let minDiff = SNAP_GUIDE_PX;
+                        userXTargets.forEach(t => {
+                            const d = Math.abs(left - t);
+                            if (d < minDiff) { minDiff = d; bestSnap = t; }
+                        });
+                        if (bestSnap === null) {
+                            minDiff = SNAP_OBJ_PX;
+                            otherXTargets.forEach(t => {
+                                const d = Math.abs(left - t);
+                                if (d < minDiff) { minDiff = d; bestSnap = t; }
+                            });
+                        }
+                        if (bestSnap !== null) {
+                            const right = x + w;
+                            x = Math.min(right - 15, bestSnap);
+                            w = right - x;
+                            guides.push({ axis: 'x', pos: bestSnap });
+                        }
+                    }
 
-                const guides = [];
-                if (bestSnapX !== null) {
-                    pData.x += shiftX / W;
-                    guides.push({ axis: 'x', pos: bestSnapX });
-                }
-                if (bestSnapY !== null) {
-                    pData.y += shiftY / H;
-                    guides.push({ axis: 'y', pos: bestSnapY });
+                    if (rDir.includes('s')) {
+                        const bottom = y + h;
+                        let bestSnap = null;
+                        let minDiff = SNAP_GUIDE_PX;
+                        userYTargets.forEach(t => {
+                            const d = Math.abs(bottom - t);
+                            if (d < minDiff) { minDiff = d; bestSnap = t; }
+                        });
+                        if (bestSnap === null) {
+                            minDiff = SNAP_OBJ_PX;
+                            otherYTargets.forEach(t => {
+                                const d = Math.abs(bottom - t);
+                                if (d < minDiff) { minDiff = d; bestSnap = t; }
+                            });
+                        }
+                        if (bestSnap !== null) {
+                            h = Math.max(15, bestSnap - y);
+                            guides.push({ axis: 'y', pos: bestSnap });
+                        }
+                    } else if (rDir.includes('n')) {
+                        const top = y;
+                        let bestSnap = null;
+                        let minDiff = SNAP_GUIDE_PX;
+                        userYTargets.forEach(t => {
+                            const d = Math.abs(top - t);
+                            if (d < minDiff) { minDiff = d; bestSnap = t; }
+                        });
+                        if (bestSnap === null) {
+                            minDiff = SNAP_OBJ_PX;
+                            otherYTargets.forEach(t => {
+                                const d = Math.abs(top - t);
+                                if (d < minDiff) { minDiff = d; bestSnap = t; }
+                            });
+                        }
+                        if (bestSnap !== null) {
+                            const bottom = y + h;
+                            y = Math.min(bottom - 15, bestSnap);
+                            h = bottom - y;
+                            guides.push({ axis: 'y', pos: bestSnap });
+                        }
+                    }
+
+                    pData.x = x / W;
+                    pData.y = y / H;
+                    pData.width = w / W;
+                    pData.height = h / H;
+                } else {
+                    // --- DRAG SNAPPING (Priority 1: User Guides; Priority 2: Objects/Bounds) ---
+                    const ax1 = x;
+                    const ax2 = x + w;
+                    const axc = x + w / 2;
+                    const ay1 = y;
+                    const ay2 = y + h;
+                    const ayc = y + h / 2;
+
+                    let bestSnapX = null;
+                    let shiftX = 0;
+                    let minDiffX = SNAP_GUIDE_PX;
+
+                    // 1. Check user guides first on X
+                    [ax1, axc, ax2].forEach(ap => {
+                        userXTargets.forEach(target => {
+                            const diff = Math.abs(ap - target);
+                            if (diff < minDiffX) {
+                                minDiffX = diff;
+                                bestSnapX = target;
+                                shiftX = target - ap;
+                            }
+                        });
+                    });
+
+                    // 2. If no user guide snapped, check objects & bounds
+                    if (bestSnapX === null) {
+                        minDiffX = SNAP_OBJ_PX;
+                        [ax1, axc, ax2].forEach(ap => {
+                            otherXTargets.forEach(target => {
+                                const diff = Math.abs(ap - target);
+                                if (diff < minDiffX) {
+                                    minDiffX = diff;
+                                    bestSnapX = target;
+                                    shiftX = target - ap;
+                                }
+                            });
+                        });
+                    }
+
+                    if (bestSnapX !== null) {
+                        pData.x += shiftX / W;
+                        guides.push({ axis: 'x', pos: bestSnapX });
+                    }
+
+                    let bestSnapY = null;
+                    let shiftY = 0;
+                    let minDiffY = SNAP_GUIDE_PX;
+
+                    // 1. Check user guides first on Y
+                    [ay1, ayc, ay2].forEach(ap => {
+                        userYTargets.forEach(target => {
+                            const diff = Math.abs(ap - target);
+                            if (diff < minDiffY) {
+                                minDiffY = diff;
+                                bestSnapY = target;
+                                shiftY = target - ap;
+                            }
+                        });
+                    });
+
+                    // 2. If no user guide snapped, check objects & bounds
+                    if (bestSnapY === null) {
+                        minDiffY = SNAP_OBJ_PX;
+                        [ay1, ayc, ay2].forEach(ap => {
+                            otherYTargets.forEach(target => {
+                                const diff = Math.abs(ap - target);
+                                if (diff < minDiffY) {
+                                    minDiffY = diff;
+                                    bestSnapY = target;
+                                    shiftY = target - ap;
+                                }
+                            });
+                        });
+                    }
+
+                    if (bestSnapY !== null) {
+                        pData.y += shiftY / H;
+                        guides.push({ axis: 'y', pos: bestSnapY });
+                    }
                 }
 
                 drawGuides(svg, guides, W, H);
@@ -3461,7 +3598,7 @@
                 pData.width = w / W; pData.height = h / H;
 
                 // Snap during resize
-                computeSnap(pData, W, H, scale);
+                computeSnap(pData, W, H, scale, dir);
 
                 activeEl.style.left   = `${pData.x * 100}%`;
                 activeEl.style.top    = `${pData.y * 100}%`;
@@ -5380,16 +5517,36 @@ if (generatePdfBtn) {
                     let fraction;
                     if (pulledGuideAxis === 'y') {
                         fraction = (e.clientY - rect.top) / rect.height;
-                        if (Math.abs(e.clientY - (rect.top + rect.height / 2)) < 8) fraction = 0.5;
-                        else if (Math.abs(e.clientY - rect.top) < 6) fraction = 0;
-                        else if (Math.abs(e.clientY - (rect.top + rect.height)) < 6) fraction = 1;
+                        let bestSnap = null;
+                        let minD = 8 / rect.height;
+                        [0, 0.5, 1.0].forEach(t => {
+                            const d = Math.abs(fraction - t);
+                            if (d < minD) { minD = d; bestSnap = t; }
+                        });
+                        (placeholders[activeSide] || []).forEach(p => {
+                            [p.y, p.y + p.height / 2, p.y + p.height].forEach(t => {
+                                const d = Math.abs(fraction - t);
+                                if (d < minD) { minD = d; bestSnap = t; }
+                            });
+                        });
+                        if (bestSnap !== null) fraction = bestSnap;
                         let cardPx = fraction * cH;
                         showMeasureBadge(e, `Y: ${toRulerUnit(cardPx, 'y')}`);
                     } else {
                         fraction = (e.clientX - rect.left) / rect.width;
-                        if (Math.abs(e.clientX - (rect.left + rect.width / 2)) < 8) fraction = 0.5;
-                        else if (Math.abs(e.clientX - rect.left) < 6) fraction = 0;
-                        else if (Math.abs(e.clientX - (rect.left + rect.width)) < 6) fraction = 1;
+                        let bestSnap = null;
+                        let minD = 8 / rect.width;
+                        [0, 0.5, 1.0].forEach(t => {
+                            const d = Math.abs(fraction - t);
+                            if (d < minD) { minD = d; bestSnap = t; }
+                        });
+                        (placeholders[activeSide] || []).forEach(p => {
+                            [p.x, p.x + p.width / 2, p.x + p.width].forEach(t => {
+                                const d = Math.abs(fraction - t);
+                                if (d < minD) { minD = d; bestSnap = t; }
+                            });
+                        });
+                        if (bestSnap !== null) fraction = bestSnap;
                         let cardPx = fraction * cW;
                         showMeasureBadge(e, `X: ${toRulerUnit(cardPx, 'x')}`);
                     }
@@ -5435,14 +5592,34 @@ if (generatePdfBtn) {
                 let fraction;
                 if (pulledGuideAxis === 'y') {
                     fraction = (e.clientY - rect.top) / rect.height;
-                    if (Math.abs(e.clientY - (rect.top + rect.height / 2)) < 8) fraction = 0.5;
-                    else if (Math.abs(e.clientY - rect.top) < 6) fraction = 0;
-                    else if (Math.abs(e.clientY - (rect.top + rect.height)) < 6) fraction = 1;
+                    let bestSnap = null;
+                    let minD = 8 / rect.height;
+                    [0, 0.5, 1.0].forEach(t => {
+                        const d = Math.abs(fraction - t);
+                        if (d < minD) { minD = d; bestSnap = t; }
+                    });
+                    (placeholders[activeSide] || []).forEach(p => {
+                        [p.y, p.y + p.height / 2, p.y + p.height].forEach(t => {
+                            const d = Math.abs(fraction - t);
+                            if (d < minD) { minD = d; bestSnap = t; }
+                        });
+                    });
+                    if (bestSnap !== null) fraction = bestSnap;
                 } else {
                     fraction = (e.clientX - rect.left) / rect.width;
-                    if (Math.abs(e.clientX - (rect.left + rect.width / 2)) < 8) fraction = 0.5;
-                    else if (Math.abs(e.clientX - rect.left) < 6) fraction = 0;
-                    else if (Math.abs(e.clientX - (rect.left + rect.width)) < 6) fraction = 1;
+                    let bestSnap = null;
+                    let minD = 8 / rect.width;
+                    [0, 0.5, 1.0].forEach(t => {
+                        const d = Math.abs(fraction - t);
+                        if (d < minD) { minD = d; bestSnap = t; }
+                    });
+                    (placeholders[activeSide] || []).forEach(p => {
+                        [p.x, p.x + p.width / 2, p.x + p.width].forEach(t => {
+                            const d = Math.abs(fraction - t);
+                            if (d < minD) { minD = d; bestSnap = t; }
+                        });
+                    });
+                    if (bestSnap !== null) fraction = bestSnap;
                 }
 
                 if (fraction >= -0.05 && fraction <= 1.05) {
