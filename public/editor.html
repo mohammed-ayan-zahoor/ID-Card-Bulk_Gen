@@ -7,10 +7,6 @@
     <title>Quantech ID Card Generator</title>
     <link rel="stylesheet" href="/vendor/spectrum-tokens.css">
     <link rel="stylesheet" href="/editor-tailwind.css">
-    <script defer src="/vendor/xlsx.full.min.js"></script>
-    <script defer src="/vendor/jszip.min.js"></script>
-    <script defer src="/vendor/jspdf.umd.min.js"></script>
-    <script defer src="/vendor/qrcode.min.js"></script>
     <style>
         :root {
             --bg-pasteboard: var(--spectrum-gray-50, #2B2B2B);
@@ -691,6 +687,67 @@
             shape-rendering: crispEdges !important;
         }
 
+        /* Persistent Photoshop-style User Guides */
+        .user-guides-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 26;
+            overflow: visible;
+        }
+        .user-guides-svg.guides-hidden {
+            display: none !important;
+        }
+        .user-guide-line {
+            stroke: #00E5FF;
+            stroke-width: 1;
+            vector-effect: non-scaling-stroke;
+            shape-rendering: crispEdges;
+            pointer-events: none;
+        }
+        .user-guide-group:hover .user-guide-line {
+            stroke: #FFFFFF;
+            filter: drop-shadow(0 0 1.5px #00E5FF);
+        }
+        .user-guide-hit {
+            stroke: transparent;
+            stroke-width: 12;
+            pointer-events: stroke;
+        }
+        .user-guide-hit.axis-y {
+            cursor: ns-resize;
+        }
+        .user-guide-hit.axis-x {
+            cursor: ew-resize;
+        }
+        .active-drag-guide {
+            position: fixed;
+            pointer-events: none;
+            z-index: 99999;
+        }
+        .active-drag-guide.axis-y {
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: #00E5FF;
+            box-shadow: 0 0 3px rgba(0, 229, 255, 0.9);
+        }
+        .active-drag-guide.axis-x {
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: #00E5FF;
+            box-shadow: 0 0 3px rgba(0, 229, 255, 0.9);
+        }
+        #ruler-top-container, #ruler-top {
+            cursor: ns-resize;
+        }
+        #ruler-left-container, #ruler-left {
+            cursor: ew-resize;
+        }
+
         /* Live Measurement Badge */
         .measure-badge {
             position: fixed;
@@ -1029,7 +1086,7 @@
             </div>
 
             <!-- Row 2, Col 1: 20x20 Corner Box -->
-            <div id="ruler-corner" title="Cycle units (mm / px / in)">mm</div>
+            <div id="ruler-corner" title="Cycle units (mm / px / in) • Pull guides from rulers • Ctrl+; to toggle">mm</div>
 
             <!-- Row 2, Col 2: Top Ruler spanning to dock edge -->
             <div id="ruler-top-container">
@@ -1056,6 +1113,7 @@
                             <svg id="front-card-mask-svg" class="card-mask-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 540"></svg>
                             <div id="front-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
                                 <svg id="front-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                                <svg id="front-user-guides-svg" class="user-guides-svg" xmlns="http://www.w3.org/2000/svg"></svg>
                             </div>
                         </div>
                     </div>
@@ -1072,6 +1130,7 @@
                             <svg id="back-card-mask-svg" class="card-mask-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 540"></svg>
                             <div id="back-placeholder-wrapper" class="absolute top-0 left-0 w-full h-full">
                                 <svg id="back-guide-svg" class="guide-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                                <svg id="back-user-guides-svg" class="user-guides-svg" xmlns="http://www.w3.org/2000/svg"></svg>
                             </div>
                         </div>
                     </div>
@@ -1120,6 +1179,21 @@
                                     <input type="file" id="doc-bg-back-proxy" accept="image/*" class="hidden" onchange="document.getElementById('bg-image-back-input').files = this.files; document.getElementById('bg-image-back-input').dispatchEvent(new Event('change'));">
                                 </label>
                             </div>
+                        </div>
+                        <div class="pt-2 border-t border-line">
+                            <div class="flex items-center justify-between text-[11px] mb-1.5">
+                                <span class="text-ink-dim">Guide Lines</span>
+                                <span class="text-[11px] text-ink-dim font-mono" id="doc-guides-count">0 on active</span>
+                            </div>
+                            <div class="flex gap-2 mb-1">
+                                <button type="button" id="doc-toggle-guides-btn" class="btn-photoshop flex-1 justify-center text-center">
+                                    Hide Guides
+                                </button>
+                                <button type="button" id="doc-clear-guides-btn" class="btn-photoshop flex-1 justify-center text-center text-ink-dim hover:text-red-400">
+                                    Clear Guides
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-ink-dim leading-tight">Drag from top or left ruler onto card. Drag back to ruler to delete. (Ctrl+; to toggle)</p>
                         </div>
                     </div>
                 </div>
@@ -1439,6 +1513,45 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- Vendor Script Lazy Loader ---
+            const VENDOR_SCRIPTS = {
+                xlsx: '/vendor/xlsx.full.min.js',
+                jszip: '/vendor/jszip.min.js',
+                jspdf: '/vendor/jspdf.umd.min.js',
+                qrcode: '/vendor/qrcode.min.js'
+            };
+            function ensureVendorScript(name) {
+                if (name === 'xlsx' && window.XLSX) return Promise.resolve();
+                if (name === 'jszip' && window.JSZip) return Promise.resolve();
+                if (name === 'jspdf' && window.jspdf) return Promise.resolve();
+                if (name === 'qrcode' && window.QRCode) return Promise.resolve();
+
+                return new Promise((resolve, reject) => {
+                    const existing = document.querySelector(`script[src="${VENDOR_SCRIPTS[name]}"]`);
+                    if (existing) {
+                        existing.addEventListener('load', () => resolve());
+                        existing.addEventListener('error', (err) => reject(err));
+                        return;
+                    }
+                    const script = document.createElement('script');
+                    script.src = VENDOR_SCRIPTS[name];
+                    script.onload = () => resolve();
+                    script.onerror = (err) => reject(new Error('Failed to load ' + name));
+                    document.head.appendChild(script);
+                });
+            }
+            window.ensureVendorScript = ensureVendorScript;
+
+            // --- Document Change Notification for Host ---
+            function notifyDocChanged() {
+                try {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'quantech:doc-changed' }, window.location.origin);
+                    }
+                } catch (e) {}
+            }
+            window.notifyDocChanged = notifyDocChanged;
+
             // --- Helper: Segmented Control State ---
             function setSegmentState(groupEl, activeBtnOrId) {
                 if (!groupEl) return;
@@ -1500,6 +1613,7 @@
                 clearGuides();
                 updateSelectionStatus();
                 if (typeof window.drawRulers === 'function') window.drawRulers();
+                notifyDocChanged();
             }
             window.deleteField = deleteField;
 
@@ -1682,6 +1796,7 @@
                     orientation: orientation,
                     backgrounds: { front: bgImages.front.src, back: bgImages.back.src },
                     placeholders: JSON.parse(JSON.stringify(placeholders)),
+                    guides: JSON.parse(JSON.stringify(userGuides)),
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                     templateId: currentTemplateId
@@ -1767,12 +1882,14 @@
                 currentTemplateId = 'blank';
                 orientation = newOrient;
                 placeholders = { front: [], back: [] };
+                userGuides = { front: [], back: [] };
                 activePlaceholderId = null;
                 userCustomBg = { front: false, back: false };
                 bgImages.front.src = getBlankBg('front', orientation);
                 bgImages.back.src = getBlankBg('back', orientation);
                 setOrientation(newOrient);
                 renderPlaceholders();
+                if (typeof renderUserGuides === 'function') renderUserGuides();
                 drawAllCanvases();
                 if (typeof renderLayerList === 'function') renderLayerList();
                 if (typeof updateSelectionStatus === 'function') updateSelectionStatus();
@@ -1788,6 +1905,8 @@
                 if (!doc) return;
                 currentTemplateId = doc.templateId || 'blank';
                 const nextOrientation = doc.orientation || 'horizontal';
+                const hasQr = (doc.placeholders?.front || []).concat(doc.placeholders?.back || []).some(p => p.type === 'qr');
+                if (hasQr) ensureVendorScript('qrcode').then(() => drawAllCanvases()).catch(() => {});
                 setOrientation(nextOrientation, true);
                 orientation = nextOrientation;
                 bgImages.front.src = doc.backgrounds?.front || getDefaultBg('front', nextOrientation);
@@ -1795,9 +1914,14 @@
                 placeholders = doc.placeholders
                     ? JSON.parse(JSON.stringify(doc.placeholders))
                     : { front: [], back: [] };
+                userGuides = (doc.guides && typeof doc.guides === 'object') ? {
+                    front: Array.isArray(doc.guides.front) ? JSON.parse(JSON.stringify(doc.guides.front)) : [],
+                    back: Array.isArray(doc.guides.back) ? JSON.parse(JSON.stringify(doc.guides.back)) : []
+                } : { front: [], back: [] };
                 activePlaceholderId = null;
                 userCustomBg = { front: true, back: true };
                 renderPlaceholders();
+                if (typeof renderUserGuides === 'function') renderUserGuides();
                 drawAllCanvases();
                 if (typeof renderLayerList === 'function') renderLayerList();
                 if (typeof updateSelectionStatus === 'function') updateSelectionStatus();
@@ -1829,6 +1953,12 @@
 
             const drawQrCodeOnContext = (targetCtx, value, x, y, pWidth, pHeight, qrColor = '#000000') => {
                 if (!value) return;
+                if (!window.QRCode) {
+                    ensureVendorScript('qrcode').then(() => {
+                        drawAllCanvases();
+                    }).catch(console.error);
+                    return;
+                }
                 try {
                     const qrSize = Math.max(Math.round(Math.min(pWidth, pHeight)), 128);
                     const qrContainer = document.createElement('div');
@@ -2549,6 +2679,10 @@
                 const newPlaceholder = { ...base, ...pData };
                 placeholders[activeSide].push(newPlaceholder);
                 setActivePlaceholder(newPlaceholder.id);
+                if (newPlaceholder.type === 'qr') {
+                    ensureVendorScript('qrcode').then(() => drawAllCanvases()).catch(() => {});
+                }
+                notifyDocChanged();
             };
             window.insertWorkspaceElement = (type, preset = {}) => addPlaceholder({
                 type,
@@ -2566,6 +2700,7 @@
                 bgImages[side].src = dataUrl;
                 userCustomBg[side] = true;
                 drawAllCanvases();
+                notifyDocChanged();
             };
             window.insertUploadedImage = (dataUrl, name) => addPlaceholder({ type:'photo', key:name || 'Image', imageData:dataUrl, x:.36, y:.32, width:.28, height:.3, shape:'square' });
             window.loadUploadedFont = (name, dataUrl) => {
@@ -2709,6 +2844,7 @@
                 [arr[i], arr[j]] = [arr[j], arr[i]];
                 renderPlaceholders();
                 drawAllCanvases();
+                notifyDocChanged();
             };
 
             // Floating toolbar removed; contextual controls are in options bar
@@ -2993,6 +3129,7 @@
                 drawAllCanvases();
                 updateSelectionStatus();
                 if (typeof window.drawRulers === 'function') window.drawRulers();
+                notifyDocChanged();
             };
             window.updatePlaceholderProp = (id, prop, value) => {
                 const p = findPlaceholder(id);
@@ -3012,6 +3149,7 @@
                         ensureGoogleFontLoaded(value);
                     }
                     drawAllCanvases();
+                    notifyDocChanged();
                 }
             };
             // --- Interaction Logic ---
@@ -3107,6 +3245,7 @@
                 clearGuides();
                 updateSelectionStatus();
                 if (typeof window.drawRulers === 'function') window.drawRulers();
+                notifyDocChanged();
             };
 
             // --- Smart snap guides & Magnetic Snapping ---
@@ -3167,6 +3306,14 @@
                     xTargets.push(ox1, oxc, ox2);
                     yTargets.push(oy1, oyc, oy2);
                 });
+
+                // 3. User guides pulled from rulers
+                if (userGuidesVisible && userGuides[activeSide]) {
+                    userGuides[activeSide].forEach(g => {
+                        if (g.axis === 'x') xTargets.push(g.pos * W);
+                        else if (g.axis === 'y') yTargets.push(g.pos * H);
+                    });
+                }
 
                 let bestSnapX = null;
                 let minDiffX = SNAP_PX;
@@ -3326,6 +3473,7 @@
                 clearGuides();
                 updateSelectionStatus();
                 if (typeof window.drawRulers === 'function') window.drawRulers();
+                notifyDocChanged();
             };
 
             // Safety guard: ensure drag and resize states always clean up if mouseup fires anywhere
@@ -3345,6 +3493,27 @@
                     return;
                 }
 
+                // Cmd/Ctrl+R — toggle rulers visibility
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r') {
+                    e.preventDefault();
+                    const stage = document.getElementById('workspace-stage');
+                    if (stage) {
+                        stage.classList.toggle('rulers-hidden');
+                        if (typeof window.drawRulers === 'function') window.drawRulers();
+                    }
+                    return;
+                }
+
+                // Cmd/Ctrl+; — toggle user guides visibility (Photoshop standard)
+                if ((e.ctrlKey || e.metaKey) && (e.key === ';' || e.code === 'Semicolon')) {
+                    e.preventDefault();
+                    userGuidesVisible = !userGuidesVisible;
+                    renderUserGuides();
+                    drawRulers();
+                    toast(userGuidesVisible ? 'Guides visible' : 'Guides hidden', 'info');
+                    return;
+                }
+
                 if (!activePlaceholderId) return;
                 const pData = findPlaceholder(activePlaceholderId);
                 if (!pData) return;
@@ -3354,17 +3523,6 @@
                 if (e.key === 'Delete' || e.key === 'Backspace') {
                     e.preventDefault();
                     deleteField(side, activePlaceholderId);
-                    return;
-                }
-
-                // Cmd/Ctrl+R — toggle rulers visibility
-                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r') {
-                    e.preventDefault();
-                    const stage = document.getElementById('workspace-stage');
-                    if (stage) {
-                        stage.classList.toggle('rulers-hidden');
-                        if (typeof window.drawRulers === 'function') window.drawRulers();
-                    }
                     return;
                 }
 
@@ -3465,6 +3623,8 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 if (typeof updateCardMaskSvg === 'function') updateCardMaskSvg();
                 if (typeof updateAllUnitReadouts === 'function') updateAllUnitReadouts();
                 if (typeof window.drawRulers === 'function') window.drawRulers();
+                if (typeof renderUserGuides === 'function') renderUserGuides();
+                if (!force) notifyDocChanged();
             };
             // --- Zoom Management ---
             const applyZoom = (zoomLevel) => {
@@ -3538,7 +3698,10 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                     if (file) {
                         userCustomBg[side] = true;
                         const reader = new FileReader();
-                        reader.onload = (event) => { bgImages[side].src = event.target.result; };
+                        reader.onload = (event) => {
+                            bgImages[side].src = event.target.result;
+                            notifyDocChanged();
+                        };
                         reader.readAsDataURL(file);
                     }
                 });
@@ -3554,6 +3717,7 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                     if (bgImageFrontInput) bgImageFrontInput.value = '';
                     bgImages.front.src = getDefaultBg('front', orientation);
                     drawAllCanvases();
+                    notifyDocChanged();
                     toast('Front background cleared from canvas.', 'info');
                 });
             }
@@ -3563,6 +3727,7 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                     if (bgImageBackInput) bgImageBackInput.value = '';
                     bgImages.back.src = getDefaultBg('back', orientation);
                     drawAllCanvases();
+                    notifyDocChanged();
                     toast('Back background cleared from canvas.', 'info');
                 });
             }
@@ -3579,8 +3744,9 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 if (!file) return;
 
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = async (event) => {
                     try {
+                        await ensureVendorScript('xlsx');
                         let parsedData = [];
                         const arrayBuffer = event.target.result;
                         const filenameLower = file.name.toLowerCase();
@@ -3917,6 +4083,7 @@ if (generatePdfBtn) {
                     showProgress(0);
 
                 try {
+                    await ensureVendorScript('jspdf');
                     const { jsPDF } = window.jspdf;
                     const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
                     const isHorizontal = orientation === 'horizontal';
@@ -4009,6 +4176,7 @@ if (generatePdfBtn) {
                             loadingText.textContent = totalBatches > 1
                                 ? `Generating PDF (Part ${batchIdx + 1} of ${totalBatches})... page ${pageNum} / ${totalPages}`
                                 : `Generating PDF... page ${pageNum} / ${totalPages}`;
+                            await new Promise(r => setTimeout(r, 0));
 
                             // ROW 1 (Fronts)
                             const row1Size = Math.min(cardsPerRow, data.length - i);
@@ -4084,6 +4252,7 @@ if (generatePdfBtn) {
                     showProgress(0);
 
                     try {
+                        await ensureVendorScript('jszip');
                         const zip = new JSZip();
                         const tempCanvas = document.createElement('canvas');
                         const w = orientation === 'horizontal' ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
@@ -4102,6 +4271,8 @@ if (generatePdfBtn) {
 
                             await drawCardOnContext(tempCtx, 'back', w, h, data[i]);
                             zip.file(`${baseName}_Back.png`, tempCanvas.toDataURL('image/png').split(',')[1], { base64: true });
+
+                            await new Promise(r => setTimeout(r, 0));
                         }
 
                         const content = await zip.generateAsync({ type: 'blob' });
@@ -4326,6 +4497,7 @@ if (generatePdfBtn) {
                 }
                 renderPlaceholders();
                 drawAllCanvases();
+                notifyDocChanged();
                 toast(`Layout "${layoutName}" loaded!`, 'success');
             };
 
@@ -4888,6 +5060,33 @@ if (generatePdfBtn) {
                     }
                 }
 
+                // User guide markers on rulers
+                if (userGuidesVisible && userGuides[activeSide]) {
+                    userGuides[activeSide].forEach(g => {
+                        if (g.axis === 'x') {
+                            const screenX = Math.round(originX + g.pos * artRect.width) + 0.5;
+                            if (screenX >= 0 && screenX <= topW) {
+                                tCtx.fillStyle = '#00E5FF';
+                                tCtx.beginPath();
+                                tCtx.moveTo(screenX - 3, topH);
+                                tCtx.lineTo(screenX + 3, topH);
+                                tCtx.lineTo(screenX, topH - 5);
+                                tCtx.fill();
+                            }
+                        } else {
+                            const screenY = Math.round(originY + g.pos * artRect.height) + 0.5;
+                            if (screenY >= 0 && screenY <= leftH) {
+                                lCtx.fillStyle = '#00E5FF';
+                                lCtx.beginPath();
+                                lCtx.moveTo(leftW, screenY - 3);
+                                lCtx.lineTo(leftW, screenY + 3);
+                                lCtx.lineTo(leftW - 5, screenY);
+                                lCtx.fill();
+                            }
+                        }
+                    });
+                }
+
                 // Cursor tracking ticks
                 if (cursorX !== null) {
                     tCtx.strokeStyle = '#5B4CF0';
@@ -4970,6 +5169,336 @@ if (generatePdfBtn) {
                 drawRulers();
                 updateSelectionStatus();
             }, 100);
+
+            // =========================================================================
+            // Photoshop-Style Pullable Guides Engine
+            // =========================================================================
+            let userGuides = { front: [], back: [] };
+            let userGuidesVisible = true;
+            let isPullingGuide = false;
+            let pulledGuideAxis = null;
+            let pulledGuideExisting = null; // null if new, or { guide, side } if moving existing
+
+            function renderUserGuides() {
+                ['front', 'back'].forEach(side => {
+                    const svg = document.getElementById(`${side}-user-guides-svg`);
+                    if (!svg) return;
+                    svg.innerHTML = '';
+                    if (!userGuidesVisible) return;
+
+                    const guides = userGuides[side] || [];
+                    guides.forEach(g => {
+                        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                        group.setAttribute('class', 'user-guide-group');
+                        group.dataset.guideId = g.id;
+                        group.dataset.side = side;
+                        group.dataset.axis = g.axis;
+
+                        const percent = (g.pos * 100).toFixed(4) + '%';
+
+                        // Visual line (cyan)
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('class', 'user-guide-line');
+                        if (g.axis === 'x') {
+                            line.setAttribute('x1', percent); line.setAttribute('x2', percent);
+                            line.setAttribute('y1', '0%');     line.setAttribute('y2', '100%');
+                        } else {
+                            line.setAttribute('x1', '0%');     line.setAttribute('x2', '100%');
+                            line.setAttribute('y1', percent); line.setAttribute('y2', percent);
+                        }
+
+                        // Invisible wide hitzone for mouse interaction
+                        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        hit.setAttribute('class', `user-guide-hit axis-${g.axis}`);
+                        if (g.axis === 'x') {
+                            hit.setAttribute('x1', percent); hit.setAttribute('x2', percent);
+                            hit.setAttribute('y1', '0%');     hit.setAttribute('y2', '100%');
+                        } else {
+                            hit.setAttribute('x1', '0%');     hit.setAttribute('x2', '100%');
+                            hit.setAttribute('y1', percent); hit.setAttribute('y2', percent);
+                        }
+
+                        hit.addEventListener('mouseenter', (e) => {
+                            if (isPullingGuide) return;
+                            const isHoriz = (orientation === 'horizontal');
+                            const dim = g.axis === 'x' ? (isHoriz ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT) : (isHoriz ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH);
+                            showMeasureBadge(e, `Guide: ${toRulerUnit(g.pos * dim, g.axis)} • Drag to move/delete • Dbl-click to remove`);
+                        });
+                        hit.addEventListener('mousemove', (e) => {
+                            if (isPullingGuide) return;
+                            const badge = document.getElementById('measure-badge');
+                            if (badge) {
+                                badge.style.left = `${e.clientX + 14}px`;
+                                badge.style.top = `${e.clientY + 14}px`;
+                            }
+                        });
+                        hit.addEventListener('mouseleave', () => {
+                            if (!isPullingGuide) hideMeasureBadge();
+                        });
+                        hit.addEventListener('mousedown', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            startPullingGuide(g.axis, e, { guide: g, side });
+                        });
+                        hit.addEventListener('dblclick', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            deleteUserGuide(side, g.id);
+                        });
+
+                        group.appendChild(line);
+                        group.appendChild(hit);
+                        svg.appendChild(group);
+                    });
+                });
+
+                updateDocGuidesBadge();
+            }
+            window.renderUserGuides = renderUserGuides;
+
+            function updateDocGuidesBadge() {
+                const badge = document.getElementById('doc-guides-count');
+                if (badge) {
+                    const count = (userGuides[activeSide] || []).length;
+                    badge.textContent = `${count} on ${activeSide}`;
+                }
+                const toggleBtn = document.getElementById('doc-toggle-guides-btn');
+                if (toggleBtn) {
+                    toggleBtn.textContent = userGuidesVisible ? 'Hide Guides' : 'Show Guides';
+                }
+            }
+
+            function deleteUserGuide(side, id) {
+                if (!userGuides[side]) return;
+                userGuides[side] = userGuides[side].filter(g => g.id !== id);
+                hideMeasureBadge();
+                renderUserGuides();
+                drawRulers();
+                notifyDocChanged();
+            }
+            window.deleteUserGuide = deleteUserGuide;
+
+            function clearUserGuides(side = null) {
+                if (side) {
+                    userGuides[side] = [];
+                } else {
+                    userGuides = { front: [], back: [] };
+                }
+                hideMeasureBadge();
+                renderUserGuides();
+                drawRulers();
+                notifyDocChanged();
+            }
+            window.clearUserGuides = clearUserGuides;
+
+            function getArtboardInfoAt(clientX, clientY) {
+                const front = document.getElementById('front-canvas-wrapper');
+                const back = document.getElementById('back-canvas-wrapper');
+                if (front && !front.parentElement.classList.contains('hidden')) {
+                    const r = front.getBoundingClientRect();
+                    if (clientX >= r.left - 24 && clientX <= r.right + 24 && clientY >= r.top - 24 && clientY <= r.bottom + 24) {
+                        return { side: 'front', rect: r, scale: getWrapperScale(front), el: front };
+                    }
+                }
+                if (back && !back.parentElement.classList.contains('hidden')) {
+                    const r = back.getBoundingClientRect();
+                    if (clientX >= r.left - 24 && clientX <= r.right + 24 && clientY >= r.top - 24 && clientY <= r.bottom + 24) {
+                        return { side: 'back', rect: r, scale: getWrapperScale(back), el: back };
+                    }
+                }
+                return null;
+            }
+
+            function getActiveArtboardInfo() {
+                const targetSide = activeSide === 'back' ? 'back' : 'front';
+                const el = document.getElementById(targetSide + '-canvas-wrapper') || document.getElementById('front-canvas-wrapper');
+                if (!el) return null;
+                return { side: targetSide, rect: el.getBoundingClientRect(), scale: getWrapperScale(el), el };
+            }
+
+            function startPullingGuide(axis, e, existing = null) {
+                isPullingGuide = true;
+                pulledGuideAxis = axis;
+                pulledGuideExisting = existing;
+
+                const dragGuideEl = document.getElementById('active-drag-guide');
+                if (dragGuideEl) {
+                    dragGuideEl.className = `active-drag-guide axis-${axis}`;
+                    dragGuideEl.classList.remove('hidden');
+                    if (axis === 'y') {
+                        dragGuideEl.style.top = `${e.clientY}px`;
+                        dragGuideEl.style.left = '0';
+                        dragGuideEl.style.width = '100vw';
+                        dragGuideEl.style.height = '1px';
+                    } else {
+                        dragGuideEl.style.left = `${e.clientX}px`;
+                        dragGuideEl.style.top = '0';
+                        dragGuideEl.style.width = '1px';
+                        dragGuideEl.style.height = '100vh';
+                    }
+                }
+                document.body.style.cursor = (axis === 'y' ? 'ns-resize' : 'ew-resize');
+                updateGuideDrag(e);
+
+                window.addEventListener('mousemove', onGuideWindowMouseMove);
+                window.addEventListener('mouseup', onGuideWindowMouseUp);
+            }
+
+            function onGuideWindowMouseMove(e) {
+                if (!isPullingGuide) return;
+                updateGuideDrag(e);
+            }
+
+            function updateGuideDrag(e) {
+                const dragGuideEl = document.getElementById('active-drag-guide');
+                if (dragGuideEl) {
+                    if (pulledGuideAxis === 'y') {
+                        dragGuideEl.style.top = `${e.clientY}px`;
+                    } else {
+                        dragGuideEl.style.left = `${e.clientX}px`;
+                    }
+                }
+
+                const targetInfo = getArtboardInfoAt(e.clientX, e.clientY) || getActiveArtboardInfo();
+                if (targetInfo) {
+                    const { rect, scale, side } = targetInfo;
+                    const isHoriz = (orientation === 'horizontal');
+                    const cW = isHoriz ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                    const cH = isHoriz ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+
+                    if (pulledGuideAxis === 'y') {
+                        let cardPx = (e.clientY - rect.top) / scale;
+                        if (Math.abs(cardPx - cH / 2) < 5) cardPx = cH / 2;
+                        else if (Math.abs(cardPx) < 4) cardPx = 0;
+                        else if (Math.abs(cardPx - cH) < 4) cardPx = cH;
+                        showMeasureBadge(e, `Y: ${toRulerUnit(cardPx, 'y')} (${side.toUpperCase()})`);
+                    } else {
+                        let cardPx = (e.clientX - rect.left) / scale;
+                        if (Math.abs(cardPx - cW / 2) < 5) cardPx = cW / 2;
+                        else if (Math.abs(cardPx) < 4) cardPx = 0;
+                        else if (Math.abs(cardPx - cW) < 4) cardPx = cW;
+                        showMeasureBadge(e, `X: ${toRulerUnit(cardPx, 'x')} (${side.toUpperCase()})`);
+                    }
+                }
+            }
+
+            function onGuideWindowMouseUp(e) {
+                if (!isPullingGuide) return;
+                isPullingGuide = false;
+
+                window.removeEventListener('mousemove', onGuideWindowMouseMove);
+                window.removeEventListener('mouseup', onGuideWindowMouseUp);
+
+                const dragGuideEl = document.getElementById('active-drag-guide');
+                if (dragGuideEl) {
+                    dragGuideEl.className = 'active-drag-guide hidden';
+                }
+                document.body.style.cursor = '';
+                hideMeasureBadge();
+
+                const topContainer = document.getElementById('ruler-top-container');
+                const leftContainer = document.getElementById('ruler-left-container');
+                const topRect = topContainer ? topContainer.getBoundingClientRect() : null;
+                const leftRect = leftContainer ? leftContainer.getBoundingClientRect() : null;
+
+                // Dropped back onto ruler -> delete existing or cancel new
+                const droppedOnRuler = (pulledGuideAxis === 'y' && topRect && e.clientY <= topRect.bottom + 8) ||
+                                      (pulledGuideAxis === 'x' && leftRect && e.clientX <= leftRect.right + 8);
+
+                if (droppedOnRuler) {
+                    if (pulledGuideExisting) {
+                        deleteUserGuide(pulledGuideExisting.side, pulledGuideExisting.guide.id);
+                        toast('Guide removed', 'info');
+                    }
+                    drawRulers();
+                    return;
+                }
+
+                const targetInfo = getArtboardInfoAt(e.clientX, e.clientY) || getActiveArtboardInfo();
+                if (!targetInfo) return;
+
+                const { rect, scale, side } = targetInfo;
+                const isHoriz = (orientation === 'horizontal');
+                const cW = isHoriz ? HORIZONTAL_WIDTH : HORIZONTAL_HEIGHT;
+                const cH = isHoriz ? HORIZONTAL_HEIGHT : HORIZONTAL_WIDTH;
+
+                let fraction;
+                if (pulledGuideAxis === 'y') {
+                    let cardPx = (e.clientY - rect.top) / scale;
+                    if (Math.abs(cardPx - cH / 2) < 5) cardPx = cH / 2;
+                    else if (Math.abs(cardPx) < 4) cardPx = 0;
+                    else if (Math.abs(cardPx - cH) < 4) cardPx = cH;
+                    fraction = cardPx / cH;
+                } else {
+                    let cardPx = (e.clientX - rect.left) / scale;
+                    if (Math.abs(cardPx - cW / 2) < 5) cardPx = cW / 2;
+                    else if (Math.abs(cardPx) < 4) cardPx = 0;
+                    else if (Math.abs(cardPx - cW) < 4) cardPx = cW;
+                    fraction = cardPx / cW;
+                }
+
+                if (fraction >= -0.05 && fraction <= 1.05) {
+                    fraction = Math.max(0, Math.min(1, fraction));
+                    if (pulledGuideExisting) {
+                        if (pulledGuideExisting.side !== side) {
+                            userGuides[pulledGuideExisting.side] = userGuides[pulledGuideExisting.side].filter(g => g.id !== pulledGuideExisting.guide.id);
+                            userGuides[side] = userGuides[side] || [];
+                            userGuides[side].push({ id: pulledGuideExisting.guide.id, axis: pulledGuideAxis, pos: fraction });
+                        } else {
+                            pulledGuideExisting.guide.pos = fraction;
+                        }
+                    } else {
+                        userGuides[side] = userGuides[side] || [];
+                        userGuides[side].push({
+                            id: 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                            axis: pulledGuideAxis,
+                            pos: fraction
+                        });
+                    }
+                    renderUserGuides();
+                    drawRulers();
+                    notifyDocChanged();
+                } else if (pulledGuideExisting) {
+                    deleteUserGuide(pulledGuideExisting.side, pulledGuideExisting.guide.id);
+                    toast('Guide removed', 'info');
+                }
+            }
+
+            // Ruler mousedown listeners to pull guides
+            const topRulerContainer = document.getElementById('ruler-top-container');
+            const leftRulerContainer = document.getElementById('ruler-left-container');
+            if (topRulerContainer) {
+                topRulerContainer.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startPullingGuide('y', e);
+                });
+            }
+            if (leftRulerContainer) {
+                leftRulerContainer.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startPullingGuide('x', e);
+                });
+            }
+
+            // Document Settings Guides buttons
+            const toggleGuidesBtn = document.getElementById('doc-toggle-guides-btn');
+            if (toggleGuidesBtn) {
+                toggleGuidesBtn.addEventListener('click', () => {
+                    userGuidesVisible = !userGuidesVisible;
+                    renderUserGuides();
+                    drawRulers();
+                });
+            }
+            const clearGuidesBtn = document.getElementById('doc-clear-guides-btn');
+            if (clearGuidesBtn) {
+                clearGuidesBtn.addEventListener('click', () => {
+                    if ((userGuides[activeSide] || []).length === 0) return;
+                    clearUserGuides(activeSide);
+                    toast(`Cleared guides on ${activeSide}`, 'info');
+                });
+            }
 
             // --- Contextual Options Bar Synchronizer & Handlers ---
             function updateOptionsBarFieldControls() {
@@ -5102,6 +5631,7 @@ if (generatePdfBtn) {
                     syncGeomInputs();
                     updateSelectionStatus();
                     if (typeof window.drawRulers === 'function') window.drawRulers();
+                    notifyDocChanged();
                 };
 
                 const cardAlignBtns = [
@@ -5129,6 +5659,7 @@ if (generatePdfBtn) {
                     placeholders[side].push(clone);
                     setActivePlaceholder(clone.id);
                     drawAllCanvases();
+                    notifyDocChanged();
                 });
 
                 const optBtnDel = document.getElementById('opt-btn-del');
@@ -5991,6 +6522,7 @@ if (generatePdfBtn) {
         }
     </script>
 
+    <div id="active-drag-guide" class="active-drag-guide hidden"></div>
     <div id="measure-badge" class="measure-badge"></div>
 </body>
 

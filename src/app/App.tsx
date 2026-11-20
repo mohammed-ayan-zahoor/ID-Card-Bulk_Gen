@@ -3,7 +3,7 @@ import { SignIn } from '@clerk/react';
 import { importLegacyLayouts, migrateLegacyData, workspaceDb } from '../data/workspaceDb';
 import { createCloudWorkspaceDb } from '../data/cloudWorkspaceDb';
 import { emptyDocument, makeId } from '../data/types';
-import type { CardDocument, LayoutRecord, Orientation, ProjectRecord } from '../data/types';
+import type { CardDocument, LayoutRecord, LayoutSummary, Orientation, ProjectRecord, ProjectSummary, WorkspacePageCursor } from '../data/types';
 import type { WorkspaceAuth } from '../auth/types';
 
 type Section = 'recent' | 'projects' | 'layouts';
@@ -37,8 +37,11 @@ const editedLabel = (value: string) => {
 
 export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accountName?: string | null }) {
   const [route, setRoute] = useState<Route>(routeFromLocation);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [layouts, setLayouts] = useState<LayoutRecord[]>([]);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [layouts, setLayouts] = useState<LayoutSummary[]>([]);
+  const [hasMoreProjects, setHasMoreProjects] = useState(false);
+  const [projectCursor, setProjectCursor] = useState<WorkspacePageCursor | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -53,10 +56,33 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
   const repository = cloudDb ?? workspaceDb;
 
   const refresh = useCallback(async () => {
-    const [nextProjects, nextLayouts] = await Promise.all([repository.listProjects(), repository.listLayouts()]);
-    setProjects(nextProjects); setLayouts(nextLayouts);
+    const t0 = performance.now();
+    const [projectPage, layoutPage] = await Promise.all([
+      repository.listProjectsPage(null, query, sortBy),
+      repository.listLayoutsPage(null, query),
+    ]);
+    console.info(`[Perf] Workspace loaded in ${(performance.now() - t0).toFixed(0)}ms (${projectPage.items.length} projects, ${layoutPage.items.length} layouts)`);
+    setProjects(projectPage.items);
+    setHasMoreProjects(projectPage.hasMore);
+    setProjectCursor(projectPage.nextCursor);
+    setLayouts(layoutPage.items);
     setWorkspaceError(null);
-  }, [repository]);
+  }, [repository, query, sortBy]);
+
+  const loadMoreProjects = useCallback(async () => {
+    if (!projectCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = await repository.listProjectsPage(projectCursor, query, sortBy);
+      setProjects((current) => [...current, ...nextPage.items]);
+      setHasMoreProjects(nextPage.hasMore);
+      setProjectCursor(nextPage.nextCursor);
+    } catch (err) {
+      console.error('Failed to load more projects:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [projectCursor, loadingMore, repository, query, sortBy]);
 
   useEffect(() => {
     const onPop = () => setRoute(routeFromLocation());
@@ -68,74 +94,107 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
     let active = true;
     if (auth?.clerkConfigured && !auth.loaded) return () => { active = false; };
     setLoaded(false);
-    void migrateLegacyData().then(refresh).catch((error) => {
+    const loadWorkspace = cloudDb
+      ? Promise.all([migrateLegacyData(), refresh()]).then(() => undefined)
+      : migrateLegacyData().then(refresh).then(() => undefined);
+    void loadWorkspace.catch((error) => {
       console.error('Workspace loading failed:', error);
       if (active) setWorkspaceError(error instanceof Error ? error.message : 'Could not load this workspace.');
     }).finally(() => { if (active) setLoaded(true); });
     return () => { active = false; };
-  }, [auth?.clerkConfigured, auth?.loaded, refresh]);
+  }, [auth?.clerkConfigured, auth?.loaded, cloudDb, refresh]);
 
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
-    if (event.key === 'idCardLayouts' && !cloudDb) void importLegacyLayouts().then(refresh).catch(console.error);
+      if (event.key === 'idCardLayouts' && !cloudDb) void importLegacyLayouts().then(refresh).catch(console.error);
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, [refresh, cloudDb]);
 
   useEffect(() => {
+    if (auth?.loaded) {
+      console.info(`[Perf] Auth ready (${auth.clerkConfigured ? 'Clerk' : 'Local'}, account: ${accountName || 'guest'})`);
+    }
+  }, [auth?.loaded, auth?.clerkConfigured, accountName]);
+
+  useEffect(() => {
     if (route.page !== 'editor') { setProject(null); return; }
-    const cached = projects.find((item) => item.id === route.projectId);
-    if (cached) { setProject(cached); setWorkspaceError(null); return; }
     let active = true;
     setProject(null);
     setWorkspaceError(null);
-    void repository.listProjects().then((items) => {
-      if (active) setProject(items.find((item) => item.id === route.projectId) || null);
+    const t0 = performance.now();
+    void repository.getProject(route.projectId).then((item) => {
+      if (active) {
+        if (item) console.info(`[Perf] Project document '${item.name}' loaded in ${(performance.now() - t0).toFixed(0)}ms`);
+        setProject(item || null);
+      }
     }).catch((error) => { if (active) setWorkspaceError(error instanceof Error ? error.message : 'Could not open this project.'); });
     return () => { active = false; };
-  }, [route, repository, projects]);
+  }, [route, repository]);
 
   const goHome = useCallback((section: Section = 'recent') => navigate(section === 'recent' ? '/' : `/?view=${section}`), []);
-  const openProject = useCallback((item: ProjectRecord) => navigate(`/projects/${encodeURIComponent(item.id)}`), []);
+  const openProject = useCallback((item: ProjectSummary | ProjectRecord) => navigate(`/projects/${encodeURIComponent(item.id)}`), []);
   const saveProject = useCallback(async (item: ProjectRecord) => {
     await repository.saveProject(item);
     setProject(item);
-    setProjects((current) => [item, ...current.filter((entry) => entry.id !== item.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+    const summary: ProjectSummary = {
+      kind: 'project', id: item.id, name: item.name, orientation: item.orientation,
+      createdAt: item.createdAt, updatedAt: item.updatedAt,
+      frontBackground: item.backgrounds.front, previewFields: (item.placeholders.front || []).slice(0, 24),
+    };
+    setProjects((current) => [summary, ...current.filter((entry) => entry.id !== item.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
   }, [repository]);
 
-  const createProject = useCallback(async (orientation: Orientation, layout?: LayoutRecord) => {
-    const base = emptyDocument(orientation, layout?.name || 'Untitled card');
+  const createProject = useCallback(async (orientation: Orientation, layout?: LayoutRecord | LayoutSummary) => {
+    let fullLayout: LayoutRecord | undefined;
+    if (layout) {
+      if ('backgrounds' in layout && layout.backgrounds) fullLayout = layout as LayoutRecord;
+      else fullLayout = await repository.getLayout(layout.id);
+    }
+    const base = emptyDocument(orientation, fullLayout?.name || 'Untitled card');
     const record: ProjectRecord = {
-      ...base, kind: 'project', templateId: layout?.templateId || 'blank',
-      backgrounds: layout?.backgrounds || {},
-      placeholders: layout ? structuredClone(layout.placeholders) : { front: [], back: [] },
+      ...base, kind: 'project', templateId: fullLayout?.templateId || 'blank',
+      backgrounds: fullLayout?.backgrounds || {},
+      backgroundAssetKeys: fullLayout?.backgroundAssetKeys,
+      placeholders: fullLayout ? structuredClone(fullLayout.placeholders) : { front: [], back: [] },
     };
     await repository.saveProject(record);
-    setProjects((current) => [record, ...current.filter((item) => item.id !== record.id)]);
+    const summary: ProjectSummary = {
+      kind: 'project', id: record.id, name: record.name, orientation: record.orientation,
+      createdAt: record.createdAt, updatedAt: record.updatedAt,
+      frontBackground: record.backgrounds.front, previewFields: (record.placeholders.front || []).slice(0, 24),
+    };
+    setProjects((current) => [summary, ...current.filter((item) => item.id !== record.id)]);
     setShowCreate(false); openProject(record);
   }, [openProject, repository]);
 
-  const renameProject = useCallback(async (item: ProjectRecord) => {
+  const renameProject = useCallback(async (item: ProjectSummary) => {
     const name = window.prompt('Name this project', item.name)?.trim();
-    if (name && name !== item.name) await saveProject({ ...item, name, updatedAt: new Date().toISOString() });
-  }, [saveProject]);
+    if (!name || name === item.name) return;
+    const full = await repository.getProject(item.id);
+    if (full) await saveProject({ ...full, name, updatedAt: new Date().toISOString() });
+  }, [saveProject, repository]);
 
-  const duplicateProject = useCallback(async (item: ProjectRecord) => {
+  const duplicateProject = useCallback(async (item: ProjectSummary) => {
+    const full = await repository.getProject(item.id);
+    if (!full) return;
     const now = new Date().toISOString();
-    await saveProject({ ...structuredClone(item), id: makeId('project'), name: `${item.name} copy`, createdAt: now, updatedAt: now });
-  }, [saveProject]);
+    await saveProject({ ...structuredClone(full), id: makeId('project'), name: `${full.name} copy`, createdAt: now, updatedAt: now });
+  }, [saveProject, repository]);
 
-  const deleteProject = useCallback(async (item: ProjectRecord) => {
+  const deleteProject = useCallback(async (item: ProjectSummary) => {
     if (!window.confirm(`Move “${item.name}” to trash?`)) return;
     await repository.delete(item.id); setProjects((items) => items.filter((entry) => entry.id !== item.id));
   }, [repository]);
 
-  const renameLayout = useCallback(async (item: LayoutRecord) => {
+  const renameLayout = useCallback(async (item: LayoutSummary) => {
     const name = window.prompt('Name this layout', item.name)?.trim();
-    if (name && name !== item.name) { await repository.saveLayout({ ...item, name, updatedAt: new Date().toISOString() }); await refresh(); }
+    if (!name || name === item.name) return;
+    const full = await repository.getLayout(item.id);
+    if (full) { await repository.saveLayout({ ...full, name, updatedAt: new Date().toISOString() }); await refresh(); }
   }, [refresh, repository]);
-  const deleteLayout = useCallback(async (item: LayoutRecord) => {
+  const deleteLayout = useCallback(async (item: LayoutSummary) => {
     if (!window.confirm(`Delete the “${item.name}” layout?`)) return;
     if (!cloudDb) {
       for (const key of ['idCardLayouts', 'card_generator_layouts']) {
@@ -151,7 +210,17 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
 
   const saveLayout = useCallback(async (item: LayoutRecord) => {
     await repository.saveLayout(item);
-    setLayouts((current) => [item, ...current.filter((entry) => entry.id !== item.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+    const summary: LayoutSummary = {
+      kind: 'layout',
+      id: item.id,
+      name: item.name,
+      orientation: item.orientation,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      frontBackground: item.backgrounds?.front,
+      previewFields: (item.placeholders.front || []).slice(0, 24),
+    };
+    setLayouts((current) => [summary, ...current.filter((entry) => entry.id !== item.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
   }, [repository]);
 
   const importLayoutFile = useCallback(async (file: File) => {
@@ -186,7 +255,17 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
       });
       if (records.length === 0) throw new Error('No valid layouts were found in that JSON file.');
       for (const record of records) await repository.saveLayout(record);
-      setLayouts((current) => [...records, ...current].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+      const summaries: LayoutSummary[] = records.map((record) => ({
+        kind: 'layout',
+        id: record.id,
+        name: record.name,
+        orientation: record.orientation,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        frontBackground: record.backgrounds?.front,
+        previewFields: (record.placeholders.front || []).slice(0, 24),
+      }));
+      setLayouts((current) => [...summaries, ...current].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
       window.alert(`Imported ${records.length} layout${records.length === 1 ? '' : 's'}. The original file and browser layouts were left unchanged.`);
     } catch (error) {
       window.alert(error instanceof Error ? `Could not import layouts: ${error.message}` : 'Could not import layouts from this file.');
@@ -220,7 +299,16 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
             <div className="content-heading"><h1>{section === 'recent' ? 'Recent' : section === 'projects' ? 'Projects' : 'Layouts'}</h1><div className="library-controls"><label className="search-field"><Glyph name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search files" aria-label="Search files" /></label><select aria-label="Sort files" value={sortBy} onChange={(event) => setSortBy(event.target.value as 'edited' | 'name')}><option value="edited">Recently edited</option><option value="name">Name</option></select><div className="view-toggle" aria-label="File view"><button aria-label="Grid view" aria-pressed={fileView === 'grid'} onClick={() => setFileView('grid')}>Grid</button><button aria-label="List view" aria-pressed={fileView === 'list'} onClick={() => setFileView('list')}>List</button></div></div></div>
         {!loaded ? <div className="loading-inline"><span className="spinner" />Loading {cloudDb ? 'cloud' : 'local'} files…</div> : workspaceError ? <div className="workspace-error" role="alert"><strong>Could not load this workspace</strong><span>{workspaceError}</span><button className="button-secondary" onClick={() => void refresh()}>Try again</button></div> : <>
           {(section === 'recent' || section === 'projects') && <section className="home-section"><SectionHeading title={section === 'recent' ? 'Recent projects' : 'All projects'} detail={visibleProjects.length ? `${visibleProjects.length} ${visibleProjects.length === 1 ? 'project' : 'projects'}` : 'Projects you edit will appear here'} action={section === 'recent' && projects.length > 4 ? <button className="text-button" onClick={() => goHome('projects')}>View all →</button> : undefined} />
-            {visibleProjects.length ? <div className={`file-grid recent-grid ${fileView === 'list' ? 'list-view' : ''}`}>{visibleProjects.slice(0, section === 'recent' ? 8 : undefined).map((item) => <ProjectCard key={item.id} project={item} onOpen={() => openProject(item)} onRename={() => void renameProject(item)} onDuplicate={() => void duplicateProject(item)} onDelete={() => void deleteProject(item)} />)}</div> : <EmptyState title={query ? 'No matching projects' : 'No projects yet'} text={query ? 'Try a different search.' : 'Create a card and it will be saved here automatically.'} action={!query ? <button className="button-secondary" onClick={() => setShowCreate(true)}>Create your first card</button> : undefined} />}
+            {visibleProjects.length ? <>
+              <div className={`file-grid recent-grid ${fileView === 'list' ? 'list-view' : ''}`}>{visibleProjects.slice(0, section === 'recent' ? 8 : undefined).map((item) => <ProjectCard key={item.id} project={item} onOpen={() => openProject(item)} onRename={() => void renameProject(item)} onDuplicate={() => void duplicateProject(item)} onDelete={() => void deleteProject(item)} />)}</div>
+              {section === 'projects' && hasMoreProjects && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                  <button className="button-secondary" disabled={loadingMore} onClick={() => void loadMoreProjects()}>
+                    {loadingMore ? 'Loading more…' : 'Load more projects'}
+                  </button>
+                </div>
+              )}
+            </> : <EmptyState title={query ? 'No matching projects' : 'No projects yet'} text={query ? 'Try a different search.' : 'Create a card and it will be saved here automatically.'} action={!query ? <button className="button-secondary" onClick={() => setShowCreate(true)}>Create your first card</button> : undefined} />}
           </section>}
           {(section === 'recent' || section === 'layouts') && <section className="home-section"><SectionHeading title={section === 'recent' ? 'Your layouts' : 'Saved layouts'} detail={visibleLayouts.length ? `${visibleLayouts.length} reusable ${visibleLayouts.length === 1 ? 'layout' : 'layouts'}` : 'Save a design as a layout from the editor'} action={<><button className="button-secondary" disabled={importingLayouts} onClick={() => layoutImportRef.current?.click()}>{importingLayouts ? 'Importing…' : 'Import layouts'}</button><input ref={layoutImportRef} type="file" accept="application/json,.json" hidden onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) void importLayoutFile(file); }} /></>} />
             {visibleLayouts.length ? <div className="file-grid">{visibleLayouts.map((item) => <div key={item.id} className="layout-card-wrap"><LayoutCard layout={item} onUse={() => void createProject(item.orientation, item)} /><div className="layout-card-actions"><button onClick={() => void renameLayout(item)}>Rename</button><button className="danger-action" onClick={() => void deleteLayout(item)}>Delete</button></div></div>)}</div> : <EmptyState title={query ? 'No matching layouts' : 'Your saved layouts will live here'} text={query ? 'Try a different search.' : 'Save a layout in the editor and it will appear here as a reusable preview.'} />}
@@ -310,18 +398,18 @@ function makeCardPreviewSvg(orientation: Orientation, background: string | undef
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-function ProjectCard({ project, onOpen, onRename, onDuplicate, onDelete }: { project: ProjectRecord; onOpen: () => void; onRename: () => void; onDuplicate: () => void; onDelete: () => void }) {
+function ProjectCard({ project, onOpen, onRename, onDuplicate, onDelete }: { project: ProjectSummary; onOpen: () => void; onRename: () => void; onDuplicate: () => void; onDelete: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return <article className="file-card"><button className="file-card-open" onClick={onOpen} aria-label={`Open ${project.name}`}>
-    <span className="file-card__stage"><CardPreview orientation={project.orientation} background={project.backgrounds.front} placeholders={project.placeholders.front} thumbnail={project.thumbnail} /></span>
+    <span className="file-card__stage"><CardPreview orientation={project.orientation} background={project.frontBackground} placeholders={project.previewFields} /></span>
     <span className="file-card__footer"><span className="file-card__icon"><Glyph name={project.orientation} size={16} /></span><span className="file-card__copy"><span className="file-card-title">{project.name}</span><span className="file-card-edited">{editedLabel(project.updatedAt)}</span></span><span className="file-card-list-meta">{label(project.orientation)} · CR-80</span></span>
   </button><div className="file-card-menu-wrap"><button className="icon-button file-card-menu" aria-label={`More actions for ${project.name}`} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><Glyph name="more" /></button>
     {menuOpen && <div className="context-menu" role="menu"><button role="menuitem" onClick={() => { setMenuOpen(false); onRename(); }}>Rename</button><button role="menuitem" onClick={() => { setMenuOpen(false); onDuplicate(); }}>Make a copy</button><button role="menuitem" className="danger-action" onClick={() => { setMenuOpen(false); onDelete(); }}>Delete project</button></div>}
   </div></article>;
 }
 
-function LayoutCard({ layout, onUse }: { layout: LayoutRecord; onUse: () => void }) {
-  return <button className="layout-card" onClick={onUse}><CardPreview orientation={layout.orientation} background={layout.backgrounds?.front} placeholders={layout.placeholders.front} thumbnail={layout.thumbnail} variant="layout" /><span className="file-card-title">{layout.name}</span><span className="file-card-meta">Saved layout · {label(layout.orientation)}</span><span className="layout-use-label">Use layout <span aria-hidden="true">↗</span></span></button>;
+function LayoutCard({ layout, onUse }: { layout: LayoutSummary; onUse: () => void }) {
+  return <button className="layout-card" onClick={onUse}><CardPreview orientation={layout.orientation} background={layout.frontBackground} placeholders={layout.previewFields} variant="layout" /><span className="file-card-title">{layout.name}</span><span className="file-card-meta">Saved layout · {label(layout.orientation)}</span><span className="layout-use-label">Use layout <span aria-hidden="true">↗</span></span></button>;
 }
 
 function CreateDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (orientation: Orientation) => void }) {
@@ -336,17 +424,20 @@ function CreateDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (o
 function EditorScreen({ project, onBack, onSave, onSaveLayout }: { project: ProjectRecord; onBack: (section?: Section) => void; onSave: (project: ProjectRecord) => Promise<void>; onSaveLayout: (layout: LayoutRecord) => Promise<void> }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const projectRef = useRef(project);
+  const dirtyRef = useRef(false);
+  const debounceTimerRef = useRef<number | null>(null);
   const signatureRef = useRef('');
   const inFlight = useRef<Promise<void> | null>(null);
   const returningRef = useRef(false);
   const [returning, setReturning] = useState(false);
-  const [, setStatus] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [status, setStatus] = useState<'saved' | 'saving' | 'dirty' | 'error'>('saved');
   useEffect(() => { projectRef.current = project; }, [project]);
 
   const capture = useCallback(async (force = false) => {
     const legacy = frameRef.current?.contentWindow as EditorBridge | null | undefined;
     const getDocumentState = legacy?.getDocumentState;
     if (!legacy || !getDocumentState) return false;
+    if (!force && !dirtyRef.current) return true;
     if (inFlight.current) {
       await inFlight.current;
       return capture(force);
@@ -356,13 +447,30 @@ function EditorScreen({ project, onBack, onSave, onSaveLayout }: { project: Proj
       try {
         const doc = getDocumentState(projectRef.current.name);
         const signature = JSON.stringify({ orientation: doc.orientation, backgrounds: doc.backgrounds, placeholders: doc.placeholders, templateId: doc.templateId });
-        if (!force && signature === signatureRef.current) return;
-        signatureRef.current = signature; setStatus('saving'); legacy.setSaveStatus?.('Saving');
-        // The list preview can render the background and fields directly. Creating
-        // a second full-size PNG here made every forced save block navigation.
+        if (!force && signature === signatureRef.current) {
+          dirtyRef.current = false;
+          setStatus('saved');
+          legacy.setSaveStatus?.('Saved');
+          return;
+        }
+        signatureRef.current = signature;
+        setStatus('saving');
+        legacy.setSaveStatus?.('Saving');
+        const saveStart = performance.now();
         const updated: ProjectRecord = { ...projectRef.current, ...doc, kind: 'project', id: projectRef.current.id, name: projectRef.current.name, schemaVersion: 1, createdAt: projectRef.current.createdAt, updatedAt: new Date().toISOString(), thumbnail: null };
-        await onSave(updated); projectRef.current = updated; setStatus('saved'); legacy.setSaveStatus?.('Saved');
-      } catch (error) { succeeded = false; signatureRef.current = ''; console.error('Project autosave failed:', error); setStatus('error'); (frameRef.current?.contentWindow as EditorBridge | null)?.setSaveStatus?.('Save failed'); }
+        await onSave(updated);
+        projectRef.current = updated;
+        dirtyRef.current = false;
+        setStatus('saved');
+        legacy.setSaveStatus?.('Saved');
+        console.info(`[Perf] Project save completed in ${(performance.now() - saveStart).toFixed(0)}ms`);
+      } catch (error) {
+        succeeded = false;
+        signatureRef.current = '';
+        console.error('Project autosave failed:', error);
+        setStatus('error');
+        (frameRef.current?.contentWindow as EditorBridge | null)?.setSaveStatus?.('Save failed');
+      }
     })();
     inFlight.current = task;
     try { await task; } finally { if (inFlight.current === task) inFlight.current = null; }
@@ -373,15 +481,24 @@ function EditorScreen({ project, onBack, onSave, onSaveLayout }: { project: Proj
     if (returningRef.current) return;
     returningRef.current = true;
     setReturning(true);
-    // Save only if the document changed since the last autosave. If a save is
-    // already running, capture() waits for it and checks again before returning.
-    const saved = await capture();
-    if (saved) {
-      onBack('recent');
-    } else {
-      returningRef.current = false;
-      setReturning(false);
+    if (debounceTimerRef.current) {
+      window.clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
     }
+    // Instant return if no unsaved changes and nothing in flight
+    if (!dirtyRef.current && !inFlight.current) {
+      onBack('recent');
+      return;
+    }
+    // Bounded save with 3s timeout cap so user is never trapped
+    const savePromise = capture(true);
+    const timeoutPromise = new Promise((resolve) => window.setTimeout(resolve, 3000));
+    try {
+      await Promise.race([savePromise, timeoutPromise]);
+    } catch (e) {
+      console.warn('Return save timed out or threw:', e);
+    }
+    onBack('recent');
   }, [capture, onBack]);
 
   const onFrameLoad = useCallback(() => {
@@ -390,29 +507,61 @@ function EditorScreen({ project, onBack, onSave, onSaveLayout }: { project: Proj
     legacy.loadProjectState(projectRef.current);
     legacy.setDocumentName?.(projectRef.current.name);
     legacy.setSaveStatus?.('Saved');
-    window.setTimeout(() => { void capture(true); }, 350);
-  }, [capture]);
+  }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(() => { void capture(); }, 900);
-    const saveOnHide = () => { if (document.visibilityState === 'hidden') void capture(true); };
+    const saveOnHide = () => { if (document.visibilityState === 'hidden' && dirtyRef.current) void capture(true); };
     document.addEventListener('visibilitychange', saveOnHide);
-    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', saveOnHide); };
+    return () => {
+      document.removeEventListener('visibilitychange', saveOnHide);
+      if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current);
+    };
   }, [capture]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow) return;
       const payload = event.data as { type?: string; layout?: LayoutRecord } | null;
+      if (payload?.type === 'quantech:doc-changed') {
+        dirtyRef.current = true;
+        setStatus('dirty');
+        (frameRef.current?.contentWindow as EditorBridge | null)?.setSaveStatus?.('Unsaved');
+        if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = window.setTimeout(() => {
+          debounceTimerRef.current = null;
+          void capture();
+        }, 1200);
+        return;
+      }
       if (payload?.type !== 'quantech:layout-saved' || !payload.layout) return;
-      void onSaveLayout(payload.layout).catch((error) => {
+      const current = projectRef.current;
+      const layout = { ...payload.layout, backgroundAssetKeys: {
+        front: payload.layout.backgrounds?.front === current.backgrounds.front ? current.backgroundAssetKeys?.front : undefined,
+        back: payload.layout.backgrounds?.back === current.backgrounds.back ? current.backgroundAssetKeys?.back : undefined,
+      } };
+      void onSaveLayout(layout).catch((error) => {
         console.error('Layout sync failed:', error);
         (frameRef.current?.contentWindow as EditorBridge | null)?.setSaveStatus?.('Layout save failed');
       });
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [onSaveLayout]);
+  }, [capture, onSaveLayout]);
 
-  return <div className="editor-host-shell"><header className="editor-host-bar"><button className={`back-home-button${returning ? ' is-returning' : ''}`} onClick={() => void returnToWorkspace()} disabled={returning} aria-busy={returning}><Glyph name="back" size={17} /><span>{returning ? 'Saving and returning…' : 'Workspace'}</span></button></header><iframe ref={frameRef} className="editor-frame" src="/editor.html" title="ID card editor" onLoad={onFrameLoad}/></div>;
+  const statusLabel = status === 'saving' ? 'Saving…' : status === 'dirty' ? 'Unsaved edits' : status === 'error' ? 'Save failed' : 'All changes saved';
+
+  return (
+    <div className="editor-host-shell">
+      <header className="editor-host-bar">
+        <button className={`back-home-button${returning ? ' is-returning' : ''}`} onClick={() => void returnToWorkspace()} disabled={returning} aria-busy={returning}>
+          <Glyph name="back" size={17} />
+          <span>{returning ? 'Saving and returning…' : 'Workspace'}</span>
+        </button>
+        <span className={`editor-host-status status-${status}`} style={{ fontSize: '12px', color: status === 'error' ? 'var(--danger, #e5484d)' : 'var(--muted, #8b949e)', marginLeft: '8px' }}>
+          {statusLabel}
+        </span>
+      </header>
+      <iframe ref={frameRef} className="editor-frame" src="/editor.html" title="ID card editor" onLoad={onFrameLoad}/>
+    </div>
+  );
 }
