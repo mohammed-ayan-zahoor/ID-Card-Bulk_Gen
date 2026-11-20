@@ -3311,7 +3311,11 @@
                 const userXTargets = [];
                 const userYTargets = [];
                 if (userGuidesVisible && Array.isArray(userGuides)) {
+                    const isHoriz = (orientation === 'horizontal');
                     userGuides.forEach(g => {
+                        const isSharedAxis = isHoriz ? (g.axis === 'x') : (g.axis === 'y');
+                        const applies = (g.side === 'both') || (g.side === activeSide) || (!g.side && isSharedAxis) || (!g.side);
+                        if (!applies) return;
                         if (g.axis === 'x') userXTargets.push(g.pos * W);
                         else if (g.axis === 'y') userYTargets.push(g.pos * H);
                     });
@@ -5213,7 +5217,11 @@ if (generatePdfBtn) {
 
                 // User guide markers on rulers
                 if (userGuidesVisible && Array.isArray(userGuides)) {
+                    const isHoriz = (orientation === 'horizontal');
                     userGuides.forEach(g => {
+                        const isSharedAxis = isHoriz ? (g.axis === 'x') : (g.axis === 'y');
+                        const applies = (g.side === 'both') || (g.side === activeSide) || (!g.side && isSharedAxis) || (!g.side);
+                        if (!applies) return;
                         if (g.axis === 'x') {
                             const screenX = Math.round(originX + g.pos * artRect.width) + 0.5;
                             if (screenX >= 0 && screenX <= topW) {
@@ -5338,6 +5346,11 @@ if (generatePdfBtn) {
                     if (!userGuidesVisible) return;
 
                     userGuides.forEach(g => {
+                        const isHoriz = (orientation === 'horizontal');
+                        const isSharedAxis = isHoriz ? (g.axis === 'x') : (g.axis === 'y');
+                        const applies = (g.side === 'both') || (g.side === side) || (!g.side && isSharedAxis) || (!g.side && side === activeSide);
+                        if (!applies) return;
+
                         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                         group.setAttribute('class', 'user-guide-group');
                         group.dataset.guideId = g.id;
@@ -5409,7 +5422,11 @@ if (generatePdfBtn) {
             function updateDocGuidesBadge() {
                 const badge = document.getElementById('doc-guides-count');
                 if (badge) {
-                    const count = userGuides.length;
+                    const isHoriz = (orientation === 'horizontal');
+                    const count = userGuides.filter(g => {
+                        const isSharedAxis = isHoriz ? (g.axis === 'x') : (g.axis === 'y');
+                        return (g.side === 'both') || (g.side === activeSide) || (!g.side && isSharedAxis) || (!g.side);
+                    }).length;
                     badge.textContent = `${count} active`;
                 }
                 const toggleBtn = document.getElementById('doc-toggle-guides-btn');
@@ -5517,36 +5534,10 @@ if (generatePdfBtn) {
                     let fraction;
                     if (pulledGuideAxis === 'y') {
                         fraction = (e.clientY - rect.top) / rect.height;
-                        let bestSnap = null;
-                        let minD = 8 / rect.height;
-                        [0, 0.5, 1.0].forEach(t => {
-                            const d = Math.abs(fraction - t);
-                            if (d < minD) { minD = d; bestSnap = t; }
-                        });
-                        (placeholders[activeSide] || []).forEach(p => {
-                            [p.y, p.y + p.height / 2, p.y + p.height].forEach(t => {
-                                const d = Math.abs(fraction - t);
-                                if (d < minD) { minD = d; bestSnap = t; }
-                            });
-                        });
-                        if (bestSnap !== null) fraction = bestSnap;
                         let cardPx = fraction * cH;
                         showMeasureBadge(e, `Y: ${toRulerUnit(cardPx, 'y')}`);
                     } else {
                         fraction = (e.clientX - rect.left) / rect.width;
-                        let bestSnap = null;
-                        let minD = 8 / rect.width;
-                        [0, 0.5, 1.0].forEach(t => {
-                            const d = Math.abs(fraction - t);
-                            if (d < minD) { minD = d; bestSnap = t; }
-                        });
-                        (placeholders[activeSide] || []).forEach(p => {
-                            [p.x, p.x + p.width / 2, p.x + p.width].forEach(t => {
-                                const d = Math.abs(fraction - t);
-                                if (d < minD) { minD = d; bestSnap = t; }
-                            });
-                        });
-                        if (bestSnap !== null) fraction = bestSnap;
                         let cardPx = fraction * cW;
                         showMeasureBadge(e, `X: ${toRulerUnit(cardPx, 'x')}`);
                     }
@@ -5592,45 +5583,21 @@ if (generatePdfBtn) {
                 let fraction;
                 if (pulledGuideAxis === 'y') {
                     fraction = (e.clientY - rect.top) / rect.height;
-                    let bestSnap = null;
-                    let minD = 8 / rect.height;
-                    [0, 0.5, 1.0].forEach(t => {
-                        const d = Math.abs(fraction - t);
-                        if (d < minD) { minD = d; bestSnap = t; }
-                    });
-                    (placeholders[activeSide] || []).forEach(p => {
-                        [p.y, p.y + p.height / 2, p.y + p.height].forEach(t => {
-                            const d = Math.abs(fraction - t);
-                            if (d < minD) { minD = d; bestSnap = t; }
-                        });
-                    });
-                    if (bestSnap !== null) fraction = bestSnap;
                 } else {
                     fraction = (e.clientX - rect.left) / rect.width;
-                    let bestSnap = null;
-                    let minD = 8 / rect.width;
-                    [0, 0.5, 1.0].forEach(t => {
-                        const d = Math.abs(fraction - t);
-                        if (d < minD) { minD = d; bestSnap = t; }
-                    });
-                    (placeholders[activeSide] || []).forEach(p => {
-                        [p.x, p.x + p.width / 2, p.x + p.width].forEach(t => {
-                            const d = Math.abs(fraction - t);
-                            if (d < minD) { minD = d; bestSnap = t; }
-                        });
-                    });
-                    if (bestSnap !== null) fraction = bestSnap;
                 }
 
                 if (fraction >= -0.05 && fraction <= 1.05) {
                     fraction = Math.max(0, Math.min(1, fraction));
                     if (pulledGuideExisting) {
                         pulledGuideExisting.pos = fraction;
+                        pulledGuideExisting.side = targetInfo.side;
                     } else {
                         userGuides.push({
                             id: 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
                             axis: pulledGuideAxis,
-                            pos: fraction
+                            pos: fraction,
+                            side: targetInfo.side
                         });
                     }
                     renderUserGuides();
