@@ -3644,10 +3644,17 @@
                 notifyDocChanged();
             };
 
-            // Safety guard: ensure drag and resize states always clean up if mouseup fires anywhere
+            // Safety guard: ensure drag, resize and guide-pull states always clean up if mouseup fires anywhere
             window.addEventListener('mouseup', () => {
                 if (isDragging) onDragEnd();
                 if (isResizing) onResizeEnd();
+                if (isPullingGuide) {
+                    isPullingGuide = false;
+                    const dragGuideEl = document.getElementById('active-drag-guide');
+                    if (dragGuideEl) dragGuideEl.className = 'active-drag-guide hidden';
+                    document.body.style.cursor = '';
+                    hideMeasureBadge();
+                }
             });
 
             document.addEventListener('keydown', (e) => {
@@ -5071,11 +5078,24 @@ if (generatePdfBtn) {
             function drawRulers(cursorX = null, cursorY = null) {
                 if (!topRulerCanvas || !leftRulerCanvas || !stageViewport) return;
 
-                const activeWrapper = (activeSide === 'back' && document.getElementById('back-canvas-wrapper')) ? document.getElementById('back-canvas-wrapper') : document.getElementById('front-canvas-wrapper');
+                const fWrap = document.getElementById('front-canvas-wrapper');
+                const bWrap = document.getElementById('back-canvas-wrapper');
+                const fVisible = fWrap && !fWrap.parentElement?.classList.contains('hidden');
+                const bVisible = bWrap && !bWrap.parentElement?.classList.contains('hidden');
+
+                let activeWrapper = null;
+                if (activeSide === 'back' && bVisible) {
+                    activeWrapper = bWrap;
+                } else if (fVisible) {
+                    activeWrapper = fWrap;
+                } else if (bVisible) {
+                    activeWrapper = bWrap;
+                }
                 if (!activeWrapper) return;
 
                 const viewRect = stageViewport.getBoundingClientRect();
                 const artRect = activeWrapper.getBoundingClientRect();
+                if (!artRect || artRect.width <= 0 || artRect.height <= 0) return;
 
                 const dpr = window.devicePixelRatio || 1;
                 const topContainer = document.getElementById('ruler-top-container');
@@ -5136,6 +5156,8 @@ if (generatePdfBtn) {
                     steps = [10, 20, 50, 100, 200, 500];
                 }
 
+                if (!isFinite(pxPerUnitX) || pxPerUnitX <= 0 || !isFinite(pxPerUnitY) || pxPerUnitY <= 0) return;
+
                 let stepX = steps[steps.length - 1];
                 for (const s of steps) {
                     if (s * pxPerUnitX >= 60) { stepX = s; break; }
@@ -5144,10 +5166,11 @@ if (generatePdfBtn) {
                 for (const s of steps) {
                     if (s * pxPerUnitY >= 60) { stepY = s; break; }
                 }
+                if (stepX <= 0 || !isFinite(stepX) || stepY <= 0 || !isFinite(stepY)) return;
 
                 // Selection highlight band on rulers
                 if (activePlaceholderId) {
-                    const p = placeholders[activeSide].find(pl => pl.id === activePlaceholderId);
+                    const p = (typeof findPlaceholder === 'function') ? findPlaceholder(activePlaceholderId) : placeholders[activeSide]?.find(pl => pl.id === activePlaceholderId);
                     if (p) {
                         const pX1 = originX + p.x * artRect.width;
                         const pX2 = pX1 + p.width * artRect.width;
@@ -5169,6 +5192,7 @@ if (generatePdfBtn) {
 
                 const startUnitX = Math.floor(-originX / pxPerUnitX / stepX) * stepX - stepX;
                 const endUnitX = Math.ceil((topW - originX) / pxPerUnitX / stepX) * stepX + stepX;
+                if (!isFinite(startUnitX) || !isFinite(endUnitX)) return;
 
                 for (let u = startUnitX; u <= endUnitX; u += stepX) {
                     const screenX = Math.round(originX + u * pxPerUnitX) + 0.5;
@@ -5200,6 +5224,7 @@ if (generatePdfBtn) {
 
                 const startUnitY = Math.floor(-originY / pxPerUnitY / stepY) * stepY - stepY;
                 const endUnitY = Math.ceil((leftH - originY) / pxPerUnitY / stepY) * stepY + stepY;
+                if (!isFinite(startUnitY) || !isFinite(endUnitY)) return;
 
                 for (let u = startUnitY; u <= endUnitY; u += stepY) {
                     const screenY = Math.round(originY + u * pxPerUnitY) + 0.5;
@@ -5481,11 +5506,11 @@ if (generatePdfBtn) {
                 const isHoriz = (orientation === 'horizontal');
                 // In vertical orientation, cards are side-by-side, sharing top and height
                 if (!isHoriz && axis === 'y') {
-                    return { rect: fRect, side: 'front' };
+                    return { rect: fRect || bRect, side: 'both' };
                 }
                 // In horizontal orientation, cards are stacked vertically, sharing left and width
                 if (isHoriz && axis === 'x') {
-                    return { rect: fRect, side: 'front' };
+                    return { rect: fRect || bRect, side: 'both' };
                 }
 
                 // Check which artboard center the pointer is closer to
@@ -6666,6 +6691,14 @@ if (generatePdfBtn) {
                 backWrap.parentElement.classList.toggle('hidden', mode === 'front');
             }
 
+            if (mode === 'back') {
+                activeSide = 'back';
+            } else if (mode === 'front') {
+                activeSide = 'front';
+            }
+            if (frontWrap) frontWrap.classList.toggle('active', activeSide === 'front');
+            if (backWrap) backWrap.classList.toggle('active', activeSide === 'back');
+
             if (typeof setSegmentState === 'function' && seg) {
                 setSegmentState(seg, 'view-tab-' + mode);
             } else {
@@ -6673,6 +6706,12 @@ if (generatePdfBtn) {
                     const btn = document.getElementById('view-tab-' + m);
                     if (btn) btn.setAttribute('aria-pressed', m === mode ? 'true' : 'false');
                 });
+            }
+            if (typeof renderLayerList === 'function') {
+                renderLayerList();
+            }
+            if (typeof renderUserGuides === 'function') {
+                renderUserGuides();
             }
             if (typeof window.drawRulers === 'function') {
                 window.drawRulers();

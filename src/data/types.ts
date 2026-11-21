@@ -9,6 +9,7 @@ export interface CardDocument {
   /** Private Storage object keys for cloud-backed backgrounds. */
   backgroundAssetKeys?: { front?: string; back?: string };
   placeholders: { front: CardPlaceholder[]; back: CardPlaceholder[] };
+  guides?: Array<{ id: string; axis: 'x' | 'y'; pos: number; unit?: string; side?: string }>;
   createdAt: string;
   updatedAt: string;
   templateId?: string;
@@ -65,6 +66,7 @@ export interface LayoutRecord {
   orientation: Orientation;
   backgrounds?: { front?: string; back?: string };
   placeholders: { front: CardPlaceholder[]; back: CardPlaceholder[] };
+  guides?: Array<{ id: string; axis: 'x' | 'y'; pos: number; unit?: string; side?: string }>;
   createdAt: string;
   updatedAt: string;
   /** Present on layouts written by the pre-IndexedDB editor. */

@@ -464,7 +464,7 @@ function EditorScreen({ project, onBack, onSave, onSaveLayout }: { project: Proj
     const task = (async () => {
       try {
         const doc = getDocumentState(projectRef.current.name);
-        const signature = JSON.stringify({ orientation: doc.orientation, backgrounds: doc.backgrounds, placeholders: doc.placeholders, templateId: doc.templateId });
+        const signature = JSON.stringify({ orientation: doc.orientation, backgrounds: doc.backgrounds, placeholders: doc.placeholders, templateId: doc.templateId, guides: doc.guides });
         if (!force && signature === signatureRef.current) {
           dirtyRef.current = false;
           setStatus('saved');
