@@ -43,7 +43,19 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
   const [projectCursor, setProjectCursor] = useState<WorkspacePageCursor | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const [query, setQuery] = useState('');
+  const [unsavedWarning, setUnsavedWarning] = useState<string | null>(() => {
+    try { return sessionStorage.getItem('quantech:unsaved_warning'); } catch { return null; }
+  });
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setQuery(searchInput);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
   const [showCreate, setShowCreate] = useState(false);
   const [importingLayouts, setImportingLayouts] = useState(false);
   const layoutImportRef = useRef<HTMLInputElement>(null);
@@ -296,7 +308,16 @@ export function App({ auth, accountName = null }: { auth?: WorkspaceAuth; accoun
         {(['recent', 'projects', 'layouts'] as const).map((item) => <button key={item} className={`sidebar-link ${section === item ? 'active' : ''}`} onClick={() => goHome(item)}><Glyph name={item} />{label(item)}{item === 'projects' && <span className="sidebar-count">{projects.length}</span>}</button>)}
       </aside>
       <main className="home-content">
-            <div className="content-heading"><h1>{section === 'recent' ? 'Recent' : section === 'projects' ? 'Projects' : 'Layouts'}</h1><div className="library-controls"><label className="search-field"><Glyph name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search files" aria-label="Search files" /></label><select aria-label="Sort files" value={sortBy} onChange={(event) => setSortBy(event.target.value as 'edited' | 'name')}><option value="edited">Recently edited</option><option value="name">Name</option></select><div className="view-toggle" aria-label="File view"><button aria-label="Grid view" aria-pressed={fileView === 'grid'} onClick={() => setFileView('grid')}>Grid</button><button aria-label="List view" aria-pressed={fileView === 'list'} onClick={() => setFileView('list')}>List</button></div></div></div>
+        {unsavedWarning && (
+          <div className="workspace-warning-banner" role="alert" style={{ background: '#3d2800', border: '1px solid #734e00', color: '#ffc86b', padding: '10px 16px', borderRadius: '6px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
+            <span>⚠️ Changes to <strong>{unsavedWarning}</strong> may not have finished saving before returning. Open the project to review and re-save.</span>
+            <button className="text-button" style={{ color: '#ffc86b', textDecoration: 'underline', cursor: 'pointer', border: 'none', background: 'transparent' }} onClick={() => {
+              try { sessionStorage.removeItem('quantech:unsaved_warning'); } catch {}
+              setUnsavedWarning(null);
+            }}>Dismiss</button>
+          </div>
+        )}
+        <div className="content-heading"><h1>{section === 'recent' ? 'Recent' : section === 'projects' ? 'Projects' : 'Layouts'}</h1><div className="library-controls"><label className="search-field"><Glyph name="search" /><input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search files" aria-label="Search files" /></label><select aria-label="Sort files" value={sortBy} onChange={(event) => setSortBy(event.target.value as 'edited' | 'name')}><option value="edited">Recently edited</option><option value="name">Name</option></select><div className="view-toggle" aria-label="File view"><button aria-label="Grid view" aria-pressed={fileView === 'grid'} onClick={() => setFileView('grid')}>Grid</button><button aria-label="List view" aria-pressed={fileView === 'list'} onClick={() => setFileView('list')}>List</button></div></div></div>
         {!loaded ? <div className="loading-inline"><span className="spinner" />Loading {cloudDb ? 'cloud' : 'local'} files…</div> : workspaceError ? <div className="workspace-error" role="alert"><strong>Could not load this workspace</strong><span>{workspaceError}</span><button className="button-secondary" onClick={() => void refresh()}>Try again</button></div> : <>
           {(section === 'recent' || section === 'projects') && <section className="home-section"><SectionHeading title={section === 'recent' ? 'Recent projects' : 'All projects'} detail={visibleProjects.length ? `${visibleProjects.length} ${visibleProjects.length === 1 ? 'project' : 'projects'}` : 'Projects you edit will appear here'} action={section === 'recent' && projects.length > 4 ? <button className="text-button" onClick={() => goHome('projects')}>View all →</button> : undefined} />
             {visibleProjects.length ? <>
@@ -491,12 +512,22 @@ function EditorScreen({ project, onBack, onSave, onSaveLayout }: { project: Proj
       return;
     }
     // Bounded save with 3s timeout cap so user is never trapped
+    let timedOut = false;
     const savePromise = capture(true);
-    const timeoutPromise = new Promise((resolve) => window.setTimeout(resolve, 3000));
+    const timeoutPromise = new Promise((resolve) => window.setTimeout(() => {
+      timedOut = true;
+      resolve(null);
+    }, 3000));
     try {
       await Promise.race([savePromise, timeoutPromise]);
     } catch (e) {
       console.warn('Return save timed out or threw:', e);
+      timedOut = true;
+    }
+    if (timedOut && dirtyRef.current) {
+      try {
+        sessionStorage.setItem('quantech:unsaved_warning', projectRef.current.name || 'Your card project');
+      } catch {}
     }
     onBack('recent');
   }, [capture, onBack]);
@@ -507,6 +538,17 @@ function EditorScreen({ project, onBack, onSave, onSaveLayout }: { project: Proj
     legacy.loadProjectState(projectRef.current);
     legacy.setDocumentName?.(projectRef.current.name);
     legacy.setSaveStatus?.('Saved');
+  }, []);
+
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (dirtyRef.current) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, []);
 
   useEffect(() => {

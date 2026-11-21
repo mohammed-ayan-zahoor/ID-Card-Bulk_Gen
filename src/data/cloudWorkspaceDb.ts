@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { makeId } from './types';
-import type { CardPlaceholder, LayoutRecord, LayoutSummary, ProjectRecord, ProjectSummary, WorkspacePage, WorkspacePageCursor, WorkspaceRecord } from './types';
+import type { CardPlaceholder, LayoutRecord, LayoutSummary, Orientation, ProjectRecord, ProjectSummary, WorkspacePage, WorkspacePageCursor, WorkspaceRecord } from './types';
 
 const STORAGE_PREFIX = 'storage://';
 const LARGE_IMAGE_THRESHOLD = 40_000;
@@ -9,10 +9,8 @@ export const WORKSPACE_PAGE_SIZE = 24;
 export type WorkspaceSort = 'edited' | 'name';
 
 export interface CloudWorkspaceDb {
-  listProjects(): Promise<ProjectRecord[]>;
   listProjectsPage(cursor: WorkspacePageCursor | null, search: string, sort: WorkspaceSort): Promise<WorkspacePage<ProjectSummary>>;
   getProject(id: string): Promise<ProjectRecord | undefined>;
-  listLayouts(): Promise<LayoutRecord[]>;
   listLayoutsPage(cursor: WorkspacePageCursor | null, search: string): Promise<WorkspacePage<LayoutSummary>>;
   getLayout(id: string): Promise<LayoutRecord | undefined>;
   saveProject(record: ProjectRecord): Promise<void>;
@@ -124,7 +122,57 @@ export function createCloudWorkspaceDb(ownerId: string, getToken: () => Promise<
       request = request.order('updated_at', { ascending: false }).order('id', { ascending: false });
       if (cursor) request = request.or(`updated_at.lt.${cursor.value},and(updated_at.eq.${cursor.value},id.lt.${filterValue(cursor.id)})`);
     }
-    const { data, error } = await request.limit(WORKSPACE_PAGE_SIZE + 1);
+    let { data, error } = await request.limit(WORKSPACE_PAGE_SIZE + 1);
+
+    // Resilient fallback if migration 20261117000000_workspace_summaries.sql has not been run on Supabase yet
+    if (error && (error.message.includes('column') || error.code === '42703')) {
+      const fallback = await supabase
+        .from('workspace_records')
+        .select('id,kind,document,created_at,updated_at')
+        .eq('owner_id', ownerId)
+        .eq('kind', kind)
+        .order('updated_at', { ascending: false })
+        .limit(WORKSPACE_PAGE_SIZE + 1);
+
+      if (fallback.error) throw new Error(`Could not load cloud ${kind}s: ${fallback.error.message}`);
+      const rawRows = fallback.data ?? [];
+      const hasMoreFallback = rawRows.length > WORKSPACE_PAGE_SIZE;
+      const pageFallback = rawRows.slice(0, WORKSPACE_PAGE_SIZE);
+      const items = pageFallback.map((row) => {
+        const doc = (row.document || {}) as Partial<WorkspaceRecord>;
+        return {
+          kind,
+          id: row.id,
+          name: doc.name || 'Untitled card',
+          orientation: (doc.orientation || 'horizontal') as Orientation,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          frontBackground: doc.backgrounds?.front,
+          previewFields: (doc.placeholders?.front || []).slice(0, 24).map((f) => ({
+            id: f.id,
+            type: f.type,
+            key: f.key,
+            staticText: f.staticText,
+            x: f.x,
+            y: f.y,
+            width: f.width,
+            height: f.height,
+            fontSize: f.fontSize,
+            fontWeight: f.fontWeight,
+            color: f.color,
+            fill: f.fill,
+            stroke: f.stroke,
+          })),
+        };
+      });
+      const lastFallback = pageFallback.at(-1);
+      return {
+        items,
+        hasMore: hasMoreFallback,
+        nextCursor: hasMoreFallback && lastFallback ? { value: lastFallback.updated_at, id: lastFallback.id } : null,
+      };
+    }
+
     if (error) throw new Error(`Could not load cloud ${kind}s: ${error.message}`);
     const rows = data ?? [];
     const hasMore = rows.length > WORKSPACE_PAGE_SIZE;
@@ -187,7 +235,7 @@ export function createCloudWorkspaceDb(ownerId: string, getToken: () => Promise<
         }),
       ));
 
-      const { error } = await supabase.from('workspace_records').upsert({
+      let { error } = await supabase.from('workspace_records').upsert({
         id: document.id,
         owner_id: ownerId,
         kind: document.kind,
@@ -199,6 +247,19 @@ export function createCloudWorkspaceDb(ownerId: string, getToken: () => Promise<
         created_at: document.createdAt,
         updated_at: document.updatedAt,
       });
+
+      if (error && (error.message.includes('column') || error.code === '42703')) {
+        const fallbackRes = await supabase.from('workspace_records').upsert({
+          id: document.id,
+          owner_id: ownerId,
+          kind: document.kind,
+          document,
+          created_at: document.createdAt,
+          updated_at: document.updatedAt,
+        });
+        error = fallbackRes.error;
+      }
+
       if (error) throw new Error(`Could not save to cloud: ${error.message}`);
     } catch (error) {
       if (newlyUploaded.length) {
@@ -230,12 +291,6 @@ export function createCloudWorkspaceDb(ownerId: string, getToken: () => Promise<
   }
 
   return {
-    listProjects: async () => {
-      const { data, error } = await supabase.from('workspace_records').select('document')
-        .eq('owner_id', ownerId).eq('kind', 'project').order('updated_at', { ascending: false });
-      if (error) throw new Error(`Could not load cloud projects: ${error.message}`);
-      return await hydrateRecords((data || []).map((r) => r.document as ProjectRecord), 'workspace-projects');
-    },
     listProjectsPage: (cursor, search, sort) => listPage('project', cursor, search, sort) as Promise<WorkspacePage<ProjectSummary>>,
     getProject: async (id) => {
       const { data, error } = await supabase.from('workspace_records').select('document')
@@ -243,12 +298,6 @@ export function createCloudWorkspaceDb(ownerId: string, getToken: () => Promise<
       if (error) throw new Error(`Could not open cloud project: ${error.message}`);
       if (!data?.document) return undefined;
       return (await hydrateRecords([data.document as ProjectRecord], 'workspace-projects'))[0];
-    },
-    listLayouts: async () => {
-      const { data, error } = await supabase.from('workspace_records').select('document')
-        .eq('owner_id', ownerId).eq('kind', 'layout').order('updated_at', { ascending: false });
-      if (error) throw new Error(`Could not load cloud layouts: ${error.message}`);
-      return await hydrateRecords((data || []).map((r) => r.document as LayoutRecord), 'workspace-layouts');
     },
     listLayoutsPage: (cursor, search) => listPage('layout', cursor, search) as Promise<WorkspacePage<LayoutSummary>>,
     getLayout: async (id) => {
@@ -275,30 +324,46 @@ export function createCloudWorkspaceDb(ownerId: string, getToken: () => Promise<
       }
     },
     migrateImages: async () => {
-      const { data, error } = await supabase.from('workspace_records').select('id, kind, document').eq('owner_id', ownerId);
-      if (error || !data) return { total: 0, migrated: 0 };
+      let offset = 0;
+      const batchSize = 25;
+      let total = 0;
       let migrated = 0;
-      for (const row of data) {
-        const doc = row.document as WorkspaceRecord | undefined;
-        if (!doc) continue;
-        let hasLargeImages = false;
-        if (doc.backgrounds?.front && isLargeImageDataUrl(doc.backgrounds.front)) hasLargeImages = true;
-        if (doc.backgrounds?.back && isLargeImageDataUrl(doc.backgrounds.back)) hasLargeImages = true;
-        for (const side of ['front', 'back'] as const) {
-          for (const p of doc.placeholders[side] || []) {
-            if (typeof p.imageData === 'string' && isLargeImageDataUrl(p.imageData)) hasLargeImages = true;
+
+      while (true) {
+        const { data, error } = await supabase
+          .from('workspace_records')
+          .select('id, kind, document')
+          .eq('owner_id', ownerId)
+          .range(offset, offset + batchSize - 1);
+
+        if (error || !data || data.length === 0) break;
+        total += data.length;
+
+        for (const row of data) {
+          const doc = row.document as WorkspaceRecord | undefined;
+          if (!doc) continue;
+          let hasLargeImages = false;
+          if (doc.backgrounds?.front && isLargeImageDataUrl(doc.backgrounds.front)) hasLargeImages = true;
+          if (doc.backgrounds?.back && isLargeImageDataUrl(doc.backgrounds.back)) hasLargeImages = true;
+          for (const side of ['front', 'back'] as const) {
+            for (const p of doc.placeholders[side] || []) {
+              if (typeof p.imageData === 'string' && isLargeImageDataUrl(p.imageData)) hasLargeImages = true;
+            }
+          }
+          if (hasLargeImages) {
+            try {
+              await save(doc);
+              migrated += 1;
+            } catch (e) {
+              console.warn(`Could not migrate images for record ${row.id}:`, e);
+            }
           }
         }
-        if (hasLargeImages) {
-          try {
-            await save(doc);
-            migrated += 1;
-          } catch (e) {
-            console.warn(`Could not migrate images for record ${row.id}:`, e);
-          }
-        }
+
+        if (data.length < batchSize) break;
+        offset += batchSize;
       }
-      return { total: data.length, migrated };
+      return { total, migrated };
     },
   };
 }

@@ -16,6 +16,11 @@ alter table public.workspace_records enable row level security;
 revoke all on public.workspace_records from anon;
 grant select, insert, update, delete on public.workspace_records to authenticated;
 
+-- NOTE: auth.uid() returns null here because we use Clerk as a third-party
+-- JWT provider, not Supabase native auth. The Clerk user ID lives in the
+-- JWT 'sub' claim. Use (select auth.jwt()->>'sub') everywhere, not auth.uid().
+-- See: https://supabase.com/docs/guides/auth/third-party/clerk
+
 drop policy if exists "Workspace owners can read their records" on public.workspace_records;
 create policy "Workspace owners can read their records"
   on public.workspace_records for select to authenticated

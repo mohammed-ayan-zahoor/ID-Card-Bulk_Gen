@@ -8,17 +8,17 @@
     "dev": "vite",
     "prebuild": "tailwindcss -c tailwind.config.cjs -i src/styles/editor-tailwind.css -o public/editor-tailwind.css",
     "build": "tsc -b && vite build",
+    "test": "node scripts/self-check.mjs",
     "preview": "vite preview"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "@clerk/react": "^6.18.8",
     "@supabase/supabase-js": "^2.119.0",
-    "jspdf": "^4.2.1",
-    "jszip": "^3.10.2",
-    "qrcodejs": "^1.0.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "xlsx": "^0.18.5"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@spectrum-css/tokens": "^16.0.2",

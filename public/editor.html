@@ -2390,6 +2390,19 @@
                 drawCardOnContext(backCtx, 'back', w, h, currentData);
             };
             window.drawAllCanvases = drawAllCanvases;
+
+            let _drawRafPending = false;
+            let _pendingRowData = null;
+            const scheduleRedraw = (rowData = null) => {
+                _pendingRowData = rowData;
+                if (_drawRafPending) return;
+                _drawRafPending = true;
+                requestAnimationFrame(() => {
+                    _drawRafPending = false;
+                    drawAllCanvases(_pendingRowData);
+                });
+            };
+            window.scheduleRedraw = scheduleRedraw;
             const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
                 const words = text.split(' ');
                 let line = '';
