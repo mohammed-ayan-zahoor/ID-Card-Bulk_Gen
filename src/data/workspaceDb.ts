@@ -136,7 +136,11 @@ function normalizeLayout(name: string, value: Partial<LayoutRecord>): LayoutReco
     id,
     name: value.name || name,
     orientation: value.orientation,
-    placeholders: { front: value.placeholders.front || [], back: value.placeholders.back || [] },
+    backgrounds: value.backgrounds || {},
+    placeholders: {
+      front: Array.isArray(value.placeholders) ? value.placeholders : (value.placeholders?.front || []),
+      back: Array.isArray(value.placeholders) ? [] : (value.placeholders?.back || []),
+    },
     createdAt: value.createdAt || value.dateCreated || value.updatedAt || now,
     updatedAt: value.updatedAt || value.dateCreated || value.createdAt || now,
   } as LayoutRecord;

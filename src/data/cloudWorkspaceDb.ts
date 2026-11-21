@@ -138,8 +138,40 @@ export function createCloudWorkspaceDb(ownerId: string, getToken: () => Promise<
       const rawRows = fallback.data ?? [];
       const hasMoreFallback = rawRows.length > WORKSPACE_PAGE_SIZE;
       const pageFallback = rawRows.slice(0, WORKSPACE_PAGE_SIZE);
+
+      const assetKeys = [
+        ...new Set(
+          pageFallback
+            .map((row) => {
+              const doc = (row.document || {}) as Partial<WorkspaceRecord>;
+              const bg = doc.backgrounds?.front;
+              return fromStorageRef(bg) || doc.backgroundAssetKeys?.front;
+            })
+            .filter((key): key is string => Boolean(key))
+        ),
+      ];
+
+      const signedByPath = new Map<string, string>();
+      for (let offset = 0; offset < assetKeys.length; offset += 100) {
+        const batch = assetKeys.slice(offset, offset + 100);
+        const { data: signedRows } = await supabase.storage.from(bucketFor(kind)).createSignedUrls(batch, SIGNED_URL_TTL_SECONDS);
+        for (const item of signedRows || []) {
+          if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+        }
+      }
+
       const items = pageFallback.map((row) => {
         const doc = (row.document || {}) as Partial<WorkspaceRecord>;
+        const rawBg = doc.backgrounds?.front;
+        const storageKey = fromStorageRef(rawBg) || doc.backgroundAssetKeys?.front;
+        const frontBackground = storageKey
+          ? signedByPath.get(storageKey)
+          : (rawBg && !rawBg.startsWith(STORAGE_PREFIX) ? rawBg : undefined);
+
+        const frontPlaceholders = Array.isArray(doc.placeholders)
+          ? doc.placeholders
+          : (doc.placeholders?.front || []);
+
         return {
           kind,
           id: row.id,
@@ -147,22 +179,8 @@ export function createCloudWorkspaceDb(ownerId: string, getToken: () => Promise<
           orientation: (doc.orientation || 'horizontal') as Orientation,
           createdAt: row.created_at,
           updatedAt: row.updated_at,
-          frontBackground: doc.backgrounds?.front,
-          previewFields: (doc.placeholders?.front || []).slice(0, 24).map((f) => ({
-            id: f.id,
-            type: f.type,
-            key: f.key,
-            staticText: f.staticText,
-            x: f.x,
-            y: f.y,
-            width: f.width,
-            height: f.height,
-            fontSize: f.fontSize,
-            fontWeight: f.fontWeight,
-            color: f.color,
-            fill: f.fill,
-            stroke: f.stroke,
-          })),
+          frontBackground,
+          previewFields: createPreviewFields(frontPlaceholders),
         };
       });
       const lastFallback = pageFallback.at(-1);

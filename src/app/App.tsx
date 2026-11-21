@@ -377,9 +377,8 @@ function CardPreview({ orientation, background, placeholders = [], thumbnail, va
   variant?: 'project' | 'layout';
 }) {
   const ratio = orientation === 'horizontal' ? 'preview-wide' : 'preview-tall';
-  const hasPreviewContent = placeholders.some((field) => field.type !== 'text' || Boolean(field.staticText && !/^\s*\{\{.*\}\}\s*$/.test(field.staticText)) || Boolean(field.key && !/^(new text|text|field)$/i.test(field.key)));
-  // Background artwork alone is a valid preview. Treating it as empty hid uploaded
-  // front artwork behind the dashed placeholder on the workspace project card.
+  const hasPreviewContent = placeholders.length > 0;
+  // Background artwork or placeholders alone are valid previews.
   const empty = !thumbnail && !background && !hasPreviewContent;
   const src = makeCardPreviewSvg(orientation, background, placeholders);
   return <div className={`card-preview ${ratio} ${variant}${empty ? ' is-empty' : ''}`} aria-label={`${label(orientation)} card preview`}>
@@ -392,24 +391,22 @@ function makeCardPreviewSvg(orientation: Orientation, background: string | undef
   const width = orientation === 'horizontal' ? 856 : 540;
   const height = orientation === 'horizontal' ? 540 : 856;
   const esc = (text: string) => text.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[char]!);
-  const nameField = fields.find((field) => field.type === 'text' && /name|person|employee/i.test(`${field.key || ''} ${field.staticText || ''}`));
-  const nameBottom = nameField ? (nameField.y + nameField.height) * height : -1;
-  const parts = fields.slice(0, 16).map((field) => {
+  const parts = fields.slice(0, 24).map((field) => {
     const x = Math.max(0, Math.min(width, field.x * width));
-    const nominalY = field.y * height;
-    const isDesignation = field.type === 'text' && /designation|title|role|position/i.test(`${field.key || ''} ${field.staticText || ''}`);
-    const y = Math.max(0, Math.min(height, isDesignation && nameBottom >= nominalY ? nameBottom + height * .025 : nominalY));
+    const y = Math.max(0, Math.min(height, field.y * height));
     const w = Math.max(0, Math.min(width - x, field.width * width));
     const h = Math.max(0, Math.min(height - y, field.height * height));
     if (field.type === 'text') {
-      const key = `${field.key || ''} ${field.staticText || ''}`.toLowerCase();
-      const fallback = (field.staticText || '').replace(/\{\{.*?\}\}/g, '').trim() || (/^(new text|text|field)$/i.test(field.key || '') ? '' : (field.key || ''));
-      const text = /name|person|employee/.test(key) ? 'Maya Chen' : /designation|title|role|position/.test(key) ? 'Product Designer' : /department|team/.test(key) ? 'Design' : /email/.test(key) ? 'maya@example.com' : /id|number/.test(key) ? 'ID 2048' : fallback;
+      const text = field.staticText || (field.key ? (field.key.startsWith('{{') ? field.key : `{{${field.key}}}`) : '');
       if (!text) return '';
-      const size = Math.max(9, Math.min(42, Number(field.fontSize) || (/name/.test(key) ? 26 : 15)));
+      const size = Math.max(9, Math.min(42, Number(field.fontSize) || 16));
       return `<text x="${x}" y="${y + size}" font-family="Arial,sans-serif" font-size="${size}" font-weight="${Number(field.fontWeight) >= 600 ? 600 : 400}" fill="${esc(String(field.color || '#252a31'))}">${esc(text)}</text>`;
     }
-    if (field.type === 'photo') return `<ellipse cx="${x+w/2}" cy="${y+h/2}" rx="${w/2}" ry="${h/2}" fill="#d9dee6" stroke="#aeb5c0" stroke-width="3"/><circle cx="${x+w/2}" cy="${y+h*.38}" r="${Math.min(w,h)*.16}" fill="#aab2bf"/><path d="M${x+w*.2} ${y+h*.86} Q${x+w/2} ${y+h*.48} ${x+w*.8} ${y+h*.86}" fill="#aab2bf"/>`;
+    if (field.type === 'photo') {
+      const rx = field.shape === 'circle' ? w / 2 : 4;
+      const ry = field.shape === 'circle' ? h / 2 : 4;
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" ry="${ry}" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/><line x1="${x}" y1="${y}" x2="${x+w}" y2="${y+h}" stroke="#e2e8f0" stroke-width="1"/><line x1="${x+w}" y1="${y}" x2="${x}" y2="${y+h}" stroke="#e2e8f0" stroke-width="1"/><text x="${x+w/2}" y="${y+h/2+4}" font-family="Arial,sans-serif" font-size="10" fill="#64748b" text-anchor="middle">Photo</text>`;
+    }
     if (field.type === 'shape') return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="${esc(String(field.fill || '#dfe3e8'))}" stroke="${esc(String(field.stroke || '#aeb5c0'))}" stroke-width="2"/>`;
     if (field.type === 'qr') return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#fff" stroke="#d0d4da"/><path d="M${x+w*.1} ${y+h*.1}h${w*.3}v${h*.3}h-${w*.3}z M${x+w*.6} ${y+h*.1}h${w*.3}v${h*.3}h-${w*.3}z M${x+w*.1} ${y+h*.6}h${w*.3}v${h*.3}h-${w*.3}z" fill="#222"/>`;
     return '';

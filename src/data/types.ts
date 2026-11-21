@@ -111,6 +111,9 @@ export const emptyDocument = (orientation: Orientation, name = 'Untitled card'):
 };
 
 export function projectToSummary(project: ProjectRecord): ProjectSummary {
+  const frontPlaceholders = Array.isArray(project.placeholders)
+    ? project.placeholders
+    : (project.placeholders?.front || []);
   return {
     kind: 'project',
     id: project.id,
@@ -119,7 +122,7 @@ export function projectToSummary(project: ProjectRecord): ProjectSummary {
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
     frontBackground: project.backgrounds?.front,
-    previewFields: (project.placeholders?.front || []).slice(0, 24).map((f) => ({
+    previewFields: frontPlaceholders.slice(0, 24).map((f) => ({
       id: f.id,
       type: f.type,
       key: f.key,
@@ -138,6 +141,9 @@ export function projectToSummary(project: ProjectRecord): ProjectSummary {
 }
 
 export function layoutToSummary(layout: LayoutRecord): LayoutSummary {
+  const frontPlaceholders = Array.isArray(layout.placeholders)
+    ? layout.placeholders
+    : (layout.placeholders?.front || []);
   return {
     kind: 'layout',
     id: layout.id,
@@ -146,7 +152,7 @@ export function layoutToSummary(layout: LayoutRecord): LayoutSummary {
     createdAt: layout.createdAt,
     updatedAt: layout.updatedAt,
     frontBackground: layout.backgrounds?.front,
-    previewFields: (layout.placeholders?.front || []).slice(0, 24).map((f) => ({
+    previewFields: frontPlaceholders.slice(0, 24).map((f) => ({
       id: f.id,
       type: f.type,
       key: f.key,
