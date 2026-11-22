@@ -30,4 +30,18 @@ assert.ok(fs.existsSync('public/vendor/qrcode.min.js'), 'public vendor qrcode mu
 // 4. Verify supabase config.toml exists
 assert.ok(fs.existsSync('supabase/config.toml'), 'supabase config.toml must exist');
 
+// 5. Verify QIDS Smart Bundle Fixtures
+const { validateQidsBundle } = await import('./test-bundle-fixtures.mjs');
+const clean = await validateQidsBundle('test-fixtures/qids/clean_10A.qids');
+assert.strictEqual(clean.valid, true);
+assert.strictEqual(clean.photoErrors.length, 0);
+
+const retake = await validateQidsBundle('test-fixtures/qids/retake_10A.qids');
+assert.strictEqual(retake.valid, true);
+assert.strictEqual(retake.photoErrors.length, 0);
+
+const corrupted = await validateQidsBundle('test-fixtures/qids/corrupted_10A.qids');
+assert.strictEqual(corrupted.valid, true);
+assert.strictEqual(corrupted.photoErrors.length, 2);
+
 console.log('✅ All self-checks passed successfully!');

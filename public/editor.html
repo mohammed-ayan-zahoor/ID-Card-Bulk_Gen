@@ -1212,12 +1212,21 @@
                 <div id="left-sidebar" class="hidden"></div>
             </div>
 
-            <!-- Tab 2: Data (Excel / CSV Spreadsheet & Field Creation) -->
+            <!-- Tab 2: Data (Smart Bundle / Excel / CSV Spreadsheet & Field Creation) -->
             <div id="tab-content-data" class="dock-tab-content hidden">
                 <div id="step2" class="dock-section">
-                    <div class="dock-section-title">Data Source (Excel / CSV)</div>
-                    <p class="text-[11px] text-ink-dim mb-2">Upload student spreadsheet (.xlsx or .csv) to bind dynamic fields.</p>
-                    <input type="file" id="data-file-input" accept=".xlsx,.csv" class="w-full text-xs text-ink-dim file:mr-2 file:py-1 file:px-2 file:rounded file:border file:border-control file:text-xs file:bg-field file:text-white file:cursor-pointer hover:file:bg-hover">
+                    <div class="dock-section-title">Data Source (Smart Bundle / Excel)</div>
+                    <p class="text-[11px] text-ink-dim mb-2">Drop a <strong>.qids</strong> smart bundle or upload an Excel (.xlsx / .csv) sheet.</p>
+                    <div id="qids-drop-box" class="border border-dashed border-line hover:border-accent p-2.5 rounded text-center cursor-pointer mb-2 bg-field/30 hover:bg-field/70 transition-colors">
+                        <span class="block text-xs text-ink-bright font-medium">Drop .qids Smart Bundle</span>
+                        <span class="block text-[10px] text-ink-dim mt-0.5">Auto-binds student data & aligned photos</span>
+                        <input type="file" id="qids-bundle-input" accept=".qids,.zip" multiple class="hidden">
+                    </div>
+                    <input type="file" id="data-file-input" accept=".xlsx,.csv,.qids,.zip" class="w-full text-xs text-ink-dim file:mr-2 file:py-1 file:px-2 file:rounded file:border file:border-control file:text-xs file:bg-field file:text-white file:cursor-pointer hover:file:bg-hover">
+                    <div class="flex items-center gap-2 mt-2 pt-1.5 border-t border-line/40">
+                        <input type="checkbox" id="include-absent-checkbox" class="rounded border-control text-accent focus:ring-0">
+                        <label for="include-absent-checkbox" class="text-[11px] text-ink-dim select-none cursor-pointer">Print absent / pending students</label>
+                    </div>
                 </div>
 
                 <!-- Field Creation Section moved into Data Tab -->
@@ -2422,7 +2431,19 @@
             const loadImage = async (src, columnKey, rowData = null) => {
                 let srcStr = String(src || '').trim();
 
-                // 0. Check manual custom photo bindings for current record
+                // 0. Check Smart Bundle direct photo attachment
+                if (rowData && rowData._photoDataUrl) {
+                    try {
+                        return new Promise((resolve, reject) => {
+                            const img = new Image();
+                            img.onload = () => resolve(img);
+                            img.onerror = reject;
+                            img.src = rowData._photoDataUrl;
+                        });
+                    } catch (_) {}
+                }
+
+                // 0b. Check manual custom photo bindings for current record
                 if (rowData && typeof data !== 'undefined' && data && typeof customPhotoBindings !== 'undefined') {
                     const recordIdx = data.indexOf(rowData);
                     if (recordIdx !== -1 && customPhotoBindings.has(recordIdx)) {
@@ -3914,10 +3935,291 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                     processPhotoFolder(files);
                 }
             });
-            dataFileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
+            // --- QIDS Smart Bundle (.qids / .zip) Ingestion & Merging Engine ---
+            let qidsBundleMap = new Map(); // studentId -> { ...student, photoDataUrl, bundleCreatedAt }
+            window.qidsBundleMap = qidsBundleMap;
 
+            async function computeSha256Hex(arrayBuffer) {
+                if (!window.crypto || !window.crypto.subtle) return null;
+                const hashBuffer = await window.crypto.subtle.digest('SHA-256', arrayBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+
+            async function importSmartBundleFiles(fileList) {
+                const files = Array.from(fileList).filter(f => {
+                    const name = (f.name || '').toLowerCase();
+                    return name.endsWith('.qids') || name.endsWith('.zip');
+                });
+                if (files.length === 0) return false;
+
+                await ensureVendorScript('jszip');
+                const JSZip = window.JSZip;
+                if (!JSZip) {
+                    toast('JSZip library could not be loaded.', 'error');
+                    return false;
+                }
+
+                let totalNewStudents = 0;
+                let totalPhotosReplaced = 0;
+                let anySuccess = false;
+
+                for (const file of files) {
+                    try {
+                        const zip = await JSZip.loadAsync(file);
+                        const manifestEntry = zip.file('manifest.json');
+                        if (!manifestEntry) {
+                            toast(`Bundle ${file.name} rejected: Missing manifest.json`, 'error');
+                            continue;
+                        }
+
+                        let manifest;
+                        try {
+                            const manifestText = await manifestEntry.async('text');
+                            manifest = JSON.parse(manifestText);
+                        } catch (parseErr) {
+                            toast(`Bundle ${file.name} rejected: Corrupted manifest.json`, 'error');
+                            continue;
+                        }
+
+                        // Validate schema version
+                        const versionStr = String(manifest.schemaVersion || '').trim();
+                        const [majorStr] = versionStr.split('.');
+                        const major = parseInt(majorStr, 10);
+                        if (!majorStr || isNaN(major) || major > 1) {
+                            toast(`Bundle schema v${versionStr} is newer than this Studio. Update the app.`, 'error', 7000);
+                            continue;
+                        }
+
+                        // Validate expiresAt (warning only in v1.0)
+                        if (manifest.expiresAt) {
+                            const expDate = new Date(manifest.expiresAt);
+                            if (!isNaN(expDate.getTime()) && expDate < new Date()) {
+                                toast(`⚠️ Warning: Bundle ${manifest.bundleId || file.name} expired on ${manifest.expiresAt}. Proceeding with manual override.`, 'warn', 8000);
+                            }
+                        }
+
+                        // Validate unique studentId in bundle
+                        const rawIds = (manifest.students || []).map(s => s.studentId);
+                        if (rawIds.length !== new Set(rawIds).size) {
+                            toast(`Bundle ${file.name} rejected: Duplicate studentId found in manifest`, 'error');
+                            continue;
+                        }
+
+                        window.currentBatchInfo = manifest.batch || null;
+                        window.currentInstituteInfo = manifest.institute || null;
+
+                        const students = manifest.students || [];
+                        let bundlePhotoErrors = 0;
+
+                        for (const s of students) {
+                            let photoDataUrl = null;
+                            if (s.photo) {
+                                const photoEntry = zip.file(s.photo);
+                                if (!photoEntry) {
+                                    bundlePhotoErrors++;
+                                    s.photoError = 'missing_file';
+                                    console.warn(`[QIDS] Missing photo: ${s.photo} for ${s.studentId}`);
+                                } else {
+                                    const photoBuf = await photoEntry.async('arraybuffer');
+                                    const digest = await computeSha256Hex(photoBuf);
+                                    if (s.photoSha256 && digest && digest.toLowerCase() !== s.photoSha256.toLowerCase()) {
+                                        bundlePhotoErrors++;
+                                        s.photoError = 'sha_mismatch';
+                                        console.warn(`[QIDS] SHA mismatch for ${s.studentId}: expected ${s.photoSha256}, got ${digest}`);
+                                    } else {
+                                        const blob = new Blob([photoBuf], { type: 'image/jpeg' });
+                                        photoDataUrl = await createPhotoDataURL(blob);
+                                    }
+                                }
+                            }
+
+                            // Merging logic across bundles
+                            if (!qidsBundleMap.has(s.studentId)) {
+                                qidsBundleMap.set(s.studentId, {
+                                    ...s,
+                                    photoDataUrl,
+                                    bundleCreatedAt: manifest.createdAt || new Date().toISOString()
+                                });
+                                totalNewStudents++;
+                            } else {
+                                const cur = qidsBundleMap.get(s.studentId);
+                                const curBundleDate = new Date(cur.bundleCreatedAt || 0).getTime();
+                                const incBundleDate = new Date(manifest.createdAt || 0).getTime();
+
+                                // Update non-photo fields if incoming bundle is newer
+                                if (incBundleDate >= curBundleDate) {
+                                    cur.fields = { ...(cur.fields || {}), ...(s.fields || {}) };
+                                    cur.fullName = s.fullName || cur.fullName;
+                                    cur.rollNo = s.rollNo || cur.rollNo;
+                                    cur.admissionNo = s.admissionNo || cur.admissionNo;
+                                    cur.photoLabel = s.photoLabel || cur.photoLabel;
+                                    cur.bundleCreatedAt = manifest.createdAt;
+                                }
+
+                                // Update photo if incoming capturedAt is newer
+                                if (photoDataUrl) {
+                                    const curPhotoDate = new Date(cur.capturedAt || 0).getTime();
+                                    const incPhotoDate = new Date(s.capturedAt || 0).getTime();
+                                    if (!cur.photoDataUrl || incPhotoDate > curPhotoDate) {
+                                        cur.photoDataUrl = photoDataUrl;
+                                        cur.photoSha256 = s.photoSha256;
+                                        cur.capturedAt = s.capturedAt;
+                                        cur.status = s.status;
+                                        totalPhotosReplaced++;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (bundlePhotoErrors > 0) {
+                            toast(`Warning: ${bundlePhotoErrors} photo errors in ${file.name} (marked and skipped).`, 'warn', 6000);
+                        }
+                        anySuccess = true;
+                    } catch (bundleErr) {
+                        console.error('[QIDS] Failed to process bundle:', bundleErr);
+                        toast(`Failed to process ${file.name}: ${bundleErr.message}`, 'error');
+                    }
+                }
+
+                if (!anySuccess) return false;
+
+                // Sync merged records to studio data
+                const mergedList = Array.from(qidsBundleMap.values());
+                data = mergedList.map(s => {
+                    const row = {
+                        ...(s.fields || {}),
+                        'Student ID': s.studentId,
+                        'Full Name': s.fullName || '',
+                        'Roll No': s.rollNo || '',
+                        'Admission No': s.admissionNo || '',
+                        'Photo Label': s.photoLabel || '',
+                        'Status': s.status || 'done',
+                        _photoDataUrl: s.photoDataUrl,
+                        _rawStudent: s
+                    };
+                    return row;
+                });
+                window.data = data;
+
+                // Populate photoFiles lookup map
+                for (const s of mergedList) {
+                    if (s.photoDataUrl) {
+                        photoFiles.set(s.studentId, s.photoDataUrl);
+                        photoFiles.set(s.studentId.toLowerCase(), s.photoDataUrl);
+                        if (s.admissionNo) {
+                            photoFiles.set(s.admissionNo, s.photoDataUrl);
+                            photoFiles.set(s.admissionNo.toLowerCase(), s.photoDataUrl);
+                        }
+                        if (s.rollNo) {
+                            photoFiles.set(String(s.rollNo), s.photoDataUrl);
+                        }
+                        if (s.photoLabel) {
+                            photoFiles.set(s.photoLabel, s.photoDataUrl);
+                            photoFiles.set(s.photoLabel.replace(/^#/, ''), s.photoDataUrl);
+                        }
+                    }
+                }
+                photoFolderLoaded = photoFiles.size > 0;
+                if (photoCount) photoCount.textContent = `Found ${photoFiles.size} photos ready for matching`;
+                if (photoFolderStatus) photoFolderStatus.classList.remove('hidden');
+
+                if (data.length > 0) {
+                    headers = Object.keys(data[0]).filter(k => !k.startsWith('_'));
+                    window.headers = headers;
+                    if (qrFieldSelect) {
+                        qrFieldSelect.innerHTML = '<option value="">Select a field from data</option>';
+                        headers.forEach(h => {
+                            const opt = document.createElement('option');
+                            opt.value = h;
+                            opt.textContent = h;
+                            qrFieldSelect.appendChild(opt);
+                        });
+                        qrFieldSelect.disabled = false;
+                    }
+                    if (previewBtn) previewBtn.disabled = false;
+                    if (generateZipBtn) generateZipBtn.disabled = false;
+                    if (generatePdfBtn) generatePdfBtn.disabled = false;
+                    if (openExportModalBtn) openExportModalBtn.disabled = false;
+                    updateAuditBadge();
+                    drawAllCanvases();
+                }
+
+                if (totalPhotosReplaced > 0) {
+                    toast(`Updated: ${totalPhotosReplaced} retake photo(s) replaced! Total active: ${data.length}`, 'success');
+                } else {
+                    toast(`Loaded ${data.length} students from Smart Bundle successfully!`, 'success');
+                }
+                return true;
+            }
+            window.importSmartBundleFiles = importSmartBundleFiles;
+
+            // Hook up dedicated QIDS file picker and drop zone
+            const qidsBundleInput = document.getElementById('qids-bundle-input');
+            const qidsDropBox = document.getElementById('qids-drop-box');
+            if (qidsDropBox && qidsBundleInput) {
+                qidsDropBox.addEventListener('click', () => qidsBundleInput.click());
+                qidsBundleInput.addEventListener('change', (e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                        importSmartBundleFiles(e.target.files);
+                    }
+                });
+
+                qidsDropBox.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    qidsDropBox.classList.add('border-accent', 'bg-field');
+                });
+                qidsDropBox.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    qidsDropBox.classList.remove('border-accent', 'bg-field');
+                });
+                qidsDropBox.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    qidsDropBox.classList.remove('border-accent', 'bg-field');
+                    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        importSmartBundleFiles(e.dataTransfer.files);
+                    }
+                });
+            }
+
+            // Window-wide drag and drop listener for .qids and .zip bundles
+            window.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+            window.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    const hasQids = Array.from(e.dataTransfer.files).some(f => f.name.toLowerCase().endsWith('.qids') || f.name.toLowerCase().endsWith('.zip'));
+                    if (hasQids) {
+                        importSmartBundleFiles(e.dataTransfer.files);
+                    }
+                }
+            });
+
+            // Message bridge for parent shell (App.tsx)
+            window.addEventListener('message', (e) => {
+                if (e.data && e.data.type === 'quantech:import-qids-bundle' && e.data.bundle) {
+                    // Direct programmatic bundle ingestion from parent
+                    if (Array.isArray(e.data.bundle)) {
+                        importSmartBundleFiles(e.data.bundle);
+                    }
+                }
+            });
+
+            dataFileInput.addEventListener('change', (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+
+                const qidsFiles = files.filter(f => f.name.toLowerCase().endsWith('.qids') || f.name.toLowerCase().endsWith('.zip'));
+                if (qidsFiles.length > 0) {
+                    importSmartBundleFiles(qidsFiles);
+                    return;
+                }
+
+                const file = files[0];
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     try {
@@ -4253,6 +4555,14 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
 if (generatePdfBtn) {
                 generatePdfBtn.addEventListener('click', async () => {
                     if (data.length === 0) { toast('Please upload data and add fields before generating.', 'warn'); return; }
+
+                    const includeAbsent = document.getElementById('include-absent-checkbox')?.checked || false;
+                    const exportData = data.filter(d => includeAbsent || (d.Status !== 'absent' && d.Status !== 'pending'));
+                    if (exportData.length === 0) {
+                        toast('No active students to print (all marked absent/pending). Check "Print absent / pending" to include them.', 'warn');
+                        return;
+                    }
+
                     if (loadingModal) loadingModal.classList.remove('hidden');
                     if (loadingText) loadingText.textContent = 'Generating A4 PDF...';
                     showProgress(0);
@@ -4327,17 +4637,26 @@ if (generatePdfBtn) {
                     };
 
                     const cardsPerPage = frontOnly ? cardsPerRow * 2 : cardsPerRow;
-                    const totalPages = Math.ceil(data.length / cardsPerPage);
+                    const totalPages = Math.ceil(exportData.length / cardsPerPage);
 
                     // Batching configuration: maximum 25 A4 pages per PDF file to prevent browser memory overflow
                     const MAX_PAGES_PER_PDF = 25;
                     const totalBatches = Math.ceil(totalPages / MAX_PAGES_PER_PDF);
 
+                    let filenameBase = frontOnly ? 'ID_Cards_FrontOnly' : 'ID_Cards_DoubleSided';
+                    if (window.currentBatchInfo) {
+                        const cName = String(window.currentBatchInfo.className || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+                        const sName = String(window.currentBatchInfo.section || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+                        if (cName || sName) {
+                            filenameBase = `${cName ? cName + '_' : ''}${sName ? sName + '_' : ''}${filenameBase}`;
+                        }
+                    }
+
                     for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
                         const startPage = batchIdx * MAX_PAGES_PER_PDF;
                         const endPage = Math.min(totalPages, (batchIdx + 1) * MAX_PAGES_PER_PDF);
                         const startRecord = startPage * cardsPerPage;
-                        const endRecord = Math.min(data.length, endPage * cardsPerPage);
+                        const endRecord = Math.min(exportData.length, endPage * cardsPerPage);
 
                         const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
                         let isFirstPageInBatch = true;
@@ -4354,10 +4673,10 @@ if (generatePdfBtn) {
                             await new Promise(r => setTimeout(r, 0));
 
                             // ROW 1 (Fronts)
-                            const row1Size = Math.min(cardsPerRow, data.length - i);
+                            const row1Size = Math.min(cardsPerRow, exportData.length - i);
                             const row1StartX = cardSpacing + (cardsPerRow - row1Size) * (cardWidthMM + cardSpacing);
                             for (let j = 0; j < row1Size; j++) {
-                                const cardData = data[i + j];
+                                const cardData = exportData[i + j];
                                 const cardX = row1StartX + j * (cardWidthMM + cardSpacing);
 
                                 await drawVerticalCard('front', cardData);
@@ -4382,10 +4701,10 @@ if (generatePdfBtn) {
                             if (frontOnly) {
                                 // ROW 2 (Next 5 Fronts)
                                 const row2Start = i + cardsPerRow;
-                                const row2Size = Math.min(cardsPerRow, Math.max(0, data.length - row2Start));
+                                const row2Size = Math.min(cardsPerRow, Math.max(0, exportData.length - row2Start));
                                 const row2StartX = cardSpacing + (cardsPerRow - row2Size) * (cardWidthMM + cardSpacing);
                                 for (let j = 0; j < row2Size; j++) {
-                                    const cardData = data[row2Start + j];
+                                    const cardData = exportData[row2Start + j];
                                     const cardX = row2StartX + j * (cardWidthMM + cardSpacing);
 
                                     await drawVerticalCard('front', cardData);
@@ -4394,7 +4713,7 @@ if (generatePdfBtn) {
                             }
                         }
 
-                        let filename = frontOnly ? 'ID_Cards_FrontOnly_10_Per_Sheet' : 'ID_Cards_Double_Sided_5_Per_Sheet';
+                        let filename = filenameBase;
                         if (totalBatches > 1) {
                             filename += `_Part${batchIdx + 1}_Pages${startPage + 1}-${endPage}`;
                         }

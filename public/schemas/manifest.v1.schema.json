@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qids.3ftech.in/schemas/manifest.v1.schema.json",
+  "title": "QIDS Smart Bundle Manifest v1",
+  "description": "manifest.json inside a .qids bundle. Major version 1. Unknown keys are allowed (forward-compatible minor versions). Uniqueness of studentId is not expressible here; the validator checks it.",
+  "type": "object",
+  "required": ["schemaVersion", "bundleId", "createdAt", "deviceId", "source", "institute", "batch", "columns", "students"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^1\\.\\d+$",
+      "description": "Major.minor. Studio rejects major > 1; accepts any 1.x and ignores unknown keys."
+    },
+    "bundleId": { "type": "string", "pattern": "^bnd_[A-Za-z0-9]+$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "deviceId": { "type": "string", "pattern": "^dev_[A-Za-z0-9]+$" },
+    "expiresAt": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Warning only in v1.0. Studio shows an amber banner with a Proceed override and logs the override."
+    },
+    "source": {
+      "type": "object",
+      "required": ["type", "fileName"],
+      "properties": {
+        "type": { "enum": ["ims_template", "excel"] },
+        "fileName": { "type": "string", "minLength": 1 }
+      }
+    },
+    "institute": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "code": { "type": ["string", "null"] }
+      }
+    },
+    "batch": {
+      "type": "object",
+      "required": ["className", "section"],
+      "properties": {
+        "id": { "type": ["string", "null"] },
+        "className": { "type": "string", "minLength": 1 },
+        "section": { "type": "string", "minLength": 1 }
+      }
+    },
+    "columns": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Display/column order for keys in students[].fields."
+    },
+    "students": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/student" }
+    }
+  },
+  "$defs": {
+    "student": {
+      "type": "object",
+      "required": ["studentId", "status", "photo", "fields"],
+      "properties": {
+        "studentId": {
+          "type": "string",
+          "pattern": "^(ims:[0-9a-f]{24}|adm:[a-z0-9._/-]+|gen:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$",
+          "description": "ims: ObjectId hex. adm: sanitized lowercase admission/GR/reg number. gen: RFC 4122 v5 UUID."
+        },
+        "status": { "enum": ["done", "absent", "pending"] },
+        "photo": {
+          "type": ["string", "null"],
+          "pattern": "^photos/[A-Za-z0-9_-]+\\.jpg$"
+        },
+        "photoSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "capturedAt": { "type": ["string", "null"], "format": "date-time" },
+        "rollNo": { "type": ["string", "null"] },
+        "admissionNo": { "type": ["string", "null"] },
+        "photoLabel": {
+          "type": ["string", "null"],
+          "description": "Display-only proof label such as #104. Never a key."
+        },
+        "fullName": { "type": "string" },
+        "fields": {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "number", "null"] },
+          "description": "Every original Excel column, verbatim."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "done" } }, "required": ["status"] },
+          "then": {
+            "required": ["photo", "photoSha256", "capturedAt"],
+            "properties": {
+              "photo": { "type": "string" },
+              "photoSha256": { "type": "string" },
+              "capturedAt": { "type": "string" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["absent", "pending"] } }, "required": ["status"] },
+          "then": { "properties": { "photo": { "type": "null" } } }
+        }
+      ]
+    }
+  }
+}
