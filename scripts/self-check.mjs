@@ -44,4 +44,11 @@ const corrupted = await validateQidsBundle('test-fixtures/qids/corrupted_10A.qid
 assert.strictEqual(corrupted.valid, true);
 assert.strictEqual(corrupted.photoErrors.length, 2);
 
+// 6. Verify Schema Byte-Parity
+assert.ok(fs.existsSync('schemas/manifest.v1.schema.json'), 'Root schema must exist');
+assert.ok(fs.existsSync('public/schemas/manifest.v1.schema.json'), 'Public schema must exist');
+const rootSchemaBuf = fs.readFileSync('schemas/manifest.v1.schema.json');
+const pubSchemaBuf = fs.readFileSync('public/schemas/manifest.v1.schema.json');
+assert.ok(rootSchemaBuf.equals(pubSchemaBuf), 'Root schema and public schema must be byte-identical');
+
 console.log('✅ All self-checks passed successfully!');

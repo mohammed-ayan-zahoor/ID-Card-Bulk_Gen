@@ -1,0 +1,185 @@
+{
+  "namespace": {
+    "derivation": "uuid5(NAMESPACE_DNS, 'qids.3ftech.in')",
+    "value": "d79db0ac-088e-53d9-ab2a-d96711f457ec"
+  },
+  "canonicalFormat": "qids:gen:v1|norm(school)|norm(class)|norm(section)|norm(fullName)|<tag>=<value>",
+  "tagPriority": [
+    "dob (ISO, raw)",
+    "father (norm)",
+    "roll (norm)",
+    "none (empty)"
+  ],
+  "collisionEscalation": "row=<first16hex sha256(US-joined norm(values in column order))>, then |ord=<n>",
+  "normalize": "NFKC; lowercase; delete U+200B-U+200D,U+FEFF; each Unicode P* or C* char and '|' -> space; split on whitespace and join with one space",
+  "vectors": [
+    {
+      "id": "v1_basic",
+      "input": {
+        "school": "Test Institute of Science",
+        "cls": "10",
+        "sec": "A",
+        "name": "Aryan Sharma",
+        "dob": "2012-03-04"
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|aryan sharma|dob=2012-03-04",
+      "studentId": "gen:2ae435d6-affe-5b3c-a176-b3ae8ef6dbae",
+      "mustEqual": null
+    },
+    {
+      "id": "v2_case_whitespace",
+      "input": {
+        "school": "  TEST   Institute of Science ",
+        "cls": "10",
+        "sec": "a",
+        "name": " ARYAN   sharma\t",
+        "dob": "2012-03-04"
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|aryan sharma|dob=2012-03-04",
+      "studentId": "gen:2ae435d6-affe-5b3c-a176-b3ae8ef6dbae",
+      "mustEqual": "v1_basic"
+    },
+    {
+      "id": "v2b_fullwidth_nbsp",
+      "input": {
+        "school": "Test Institute of Science",
+        "cls": "10",
+        "sec": "A",
+        "name": "\uff21ryan\u00a0Sharma",
+        "dob": "2012-03-04"
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|aryan sharma|dob=2012-03-04",
+      "studentId": "gen:2ae435d6-affe-5b3c-a176-b3ae8ef6dbae",
+      "mustEqual": "v1_basic"
+    },
+    {
+      "id": "v3_devanagari_father",
+      "input": {
+        "school": "\u0938\u0930\u0938\u094d\u0935\u0924\u0940 \u0935\u093f\u0926\u094d\u092f\u093e\u0932\u092f",
+        "cls": "10",
+        "sec": "A",
+        "name": "\u0930\u093e\u0939\u0941\u0932 \u0936\u0930\u094d\u092e\u093e",
+        "father": "\u0938\u0941\u0930\u0947\u0936 \u0936\u0930\u094d\u092e\u093e"
+      },
+      "canonical": "qids:gen:v1|\u0938\u0930\u0938\u094d\u0935\u0924\u0940 \u0935\u093f\u0926\u094d\u092f\u093e\u0932\u092f|10|a|\u0930\u093e\u0939\u0941\u0932 \u0936\u0930\u094d\u092e\u093e|father=\u0938\u0941\u0930\u0947\u0936 \u0936\u0930\u094d\u092e\u093e",
+      "studentId": "gen:1dec5199-f4a0-57c2-a5eb-1e82c6bdbfd6",
+      "mustEqual": null
+    },
+    {
+      "id": "v4a_nukta_precomposed",
+      "input": {
+        "school": "Test Institute of Science",
+        "cls": "10",
+        "sec": "A",
+        "name": "\u0958\u093e\u0938\u093f\u092e \u0959\u093e\u0928",
+        "father": "\u0905\u092c\u094d\u0926\u0941\u0932 \u0930\u0939\u092e\u093e\u0928"
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|\u0915\u093c\u093e\u0938\u093f\u092e \u0916\u093c\u093e\u0928|father=\u0905\u092c\u094d\u0926\u0941\u0932 \u0930\u0939\u092e\u093e\u0928",
+      "studentId": "gen:81bc2219-a4e2-5385-a94f-e6072a03c04e",
+      "mustEqual": null
+    },
+    {
+      "id": "v4b_nukta_decomposed_zwj",
+      "input": {
+        "school": "Test Institute of Science",
+        "cls": "10",
+        "sec": "A",
+        "name": "\u0915\u093c\u093e\u0938\u093f\u092e \u0916\u093c\u093e\u200d\u0928",
+        "father": "\u0905\u092c\u094d\u0926\u0941\u0932 \u0930\u0939\u092e\u093e\u0928"
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|\u0915\u093c\u093e\u0938\u093f\u092e \u0916\u093c\u093e\u0928|father=\u0905\u092c\u094d\u0926\u0941\u0932 \u0930\u0939\u092e\u093e\u0928",
+      "studentId": "gen:81bc2219-a4e2-5385-a94f-e6072a03c04e",
+      "mustEqual": "v4a_nukta_precomposed"
+    },
+    {
+      "id": "v5_roll_only",
+      "input": {
+        "school": "Test Institute of Science",
+        "cls": "10",
+        "sec": "A",
+        "name": "Isha Patil",
+        "roll": "12"
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|isha patil|roll=12",
+      "studentId": "gen:f9486ea7-b825-5fcc-bb58-284b177170bb",
+      "mustEqual": null
+    },
+    {
+      "id": "v5b_none",
+      "input": {
+        "school": "Test Institute of Science",
+        "cls": "10",
+        "sec": "A",
+        "name": "Isha Patil"
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|isha patil|none=",
+      "studentId": "gen:f842adbe-5072-527a-8f93-2dbf5152bbc6",
+      "mustEqual": null
+    },
+    {
+      "id": "v6a_punctuation",
+      "input": {
+        "school": "Test Institute of Science",
+        "cls": "10",
+        "sec": "A",
+        "name": "Dr. Anne-Marie O'Brien",
+        "father": "Mr. J. O'Brien"
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|dr anne marie o brien|father=mr j o brien",
+      "studentId": "gen:fbc4cdcb-9941-556f-88ef-0d80a47e5de4",
+      "mustEqual": null
+    },
+    {
+      "id": "v6b_punctuation_plain",
+      "input": {
+        "school": "Test Institute of Science",
+        "cls": "10",
+        "sec": "A",
+        "name": "dr anne marie o brien",
+        "father": "mr j o brien"
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|dr anne marie o brien|father=mr j o brien",
+      "studentId": "gen:fbc4cdcb-9941-556f-88ef-0d80a47e5de4",
+      "mustEqual": "v6a_punctuation"
+    },
+    {
+      "id": "v7_collision_row",
+      "input": {
+        "school": "Test Institute of Science",
+        "cls": "10",
+        "sec": "A",
+        "name": "Rahul Sharma",
+        "row_values": [
+          "Rahul Sharma",
+          "10",
+          "A",
+          "Bus 3",
+          ""
+        ]
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|rahul sharma|row=8356d5117dd523c5",
+      "studentId": "gen:fe41b37d-6980-5267-bf86-800b17510be6",
+      "mustEqual": null
+    },
+    {
+      "id": "v7b_collision_row_ord2",
+      "input": {
+        "school": "Test Institute of Science",
+        "cls": "10",
+        "sec": "A",
+        "name": "Rahul Sharma",
+        "row_values": [
+          "Rahul Sharma",
+          "10",
+          "A",
+          "Bus 3",
+          ""
+        ],
+        "ord_": 2
+      },
+      "canonical": "qids:gen:v1|test institute of science|10|a|rahul sharma|row=8356d5117dd523c5|ord=2",
+      "studentId": "gen:072dc22d-70d9-53c0-ad58-bfa19fef056b",
+      "mustEqual": null
+    }
+  ]
+}

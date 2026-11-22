@@ -4029,6 +4029,14 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                             continue;
                         }
 
+                        // Mixed institute guard
+                        const incomingInst = (manifest.institute?.name || '').trim();
+                        if (window.loadedInstituteName && incomingInst && window.loadedInstituteName.toLowerCase() !== incomingInst.toLowerCase()) {
+                            toast(`⚠️ Notice: Bundle institute "${incomingInst}" differs from active project "${window.loadedInstituteName}". Merging records.`, 'warn', 8000);
+                        } else if (incomingInst) {
+                            window.loadedInstituteName = incomingInst;
+                        }
+
                         window.currentBatchInfo = manifest.batch || null;
                         window.currentInstituteInfo = manifest.institute || null;
 
@@ -4669,12 +4677,21 @@ if (generatePdfBtn) {
                     const totalBatches = Math.ceil(totalPages / MAX_PAGES_PER_PDF);
 
                     let filenameBase = frontOnly ? 'ID_Cards_FrontOnly' : 'ID_Cards_DoubleSided';
+                    let instPrefix = '';
+                    if (window.currentInstituteInfo) {
+                        const code = String(window.currentInstituteInfo.code || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+                        if (code) instPrefix = `${code}_`;
+                    }
                     if (window.currentBatchInfo) {
                         const cName = String(window.currentBatchInfo.className || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
                         const sName = String(window.currentBatchInfo.section || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
                         if (cName || sName) {
-                            filenameBase = `${cName ? cName + '_' : ''}${sName ? sName + '_' : ''}${filenameBase}`;
+                            filenameBase = `${instPrefix}${cName ? cName + '_' : ''}${sName ? sName + '_' : ''}${filenameBase}`;
+                        } else if (instPrefix) {
+                            filenameBase = `${instPrefix}${filenameBase}`;
                         }
+                    } else if (instPrefix) {
+                        filenameBase = `${instPrefix}${filenameBase}`;
                     }
 
                     for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
