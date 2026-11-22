@@ -914,6 +914,15 @@
             </div>
         </header>
 
+        <!-- Amber Expiry Alert Banner -->
+        <div id="bundle-expiry-banner" class="hidden bg-amber-500/15 border-b border-amber-500/30 text-amber-300 text-[11px] px-3 py-1 flex items-center justify-between z-40">
+            <div class="flex items-center gap-2">
+                <span>⚠️</span>
+                <span id="bundle-expiry-text">Warning: This bundle has expired.</span>
+            </div>
+            <button id="bundle-expiry-proceed-btn" class="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 px-2 py-0.5 rounded transition-colors font-medium cursor-pointer">Proceed with override</button>
+        </div>
+
         <!-- ── Contextual Options Bar (40px) ── -->
         <div id="workspace-optionsbar">
             <div class="flex items-center gap-2.5 overflow-x-auto scrollbar-none">
@@ -3991,11 +4000,25 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                             continue;
                         }
 
-                        // Validate expiresAt (warning only in v1.0)
+                        // Validate expiresAt (warning banner with proceed override in v1.0)
                         if (manifest.expiresAt) {
                             const expDate = new Date(manifest.expiresAt);
                             if (!isNaN(expDate.getTime()) && expDate < new Date()) {
-                                toast(`⚠️ Warning: Bundle ${manifest.bundleId || file.name} expired on ${manifest.expiresAt}. Proceeding with manual override.`, 'warn', 8000);
+                                const expiryBanner = document.getElementById('bundle-expiry-banner');
+                                const expiryText = document.getElementById('bundle-expiry-text');
+                                const expiryProceedBtn = document.getElementById('bundle-expiry-proceed-btn');
+                                if (expiryBanner && expiryText) {
+                                    expiryText.textContent = `Warning: Bundle ${manifest.bundleId || file.name} expired on ${expDate.toLocaleDateString()}. Confirm with school authority before printing.`;
+                                    expiryBanner.classList.remove('hidden');
+                                    if (expiryProceedBtn) {
+                                        expiryProceedBtn.onclick = () => {
+                                            expiryBanner.classList.add('hidden');
+                                            console.info(`[Audit] Operator manually overrode expired bundle: ${manifest.bundleId} (expired ${manifest.expiresAt}) at ${new Date().toISOString()}`);
+                                            toast('Bundle expiry override logged.', 'info');
+                                        };
+                                    }
+                                }
+                                toast(`⚠️ Warning: Bundle ${manifest.bundleId || file.name} expired on ${manifest.expiresAt}.`, 'warn', 7000);
                             }
                         }
 
@@ -4145,7 +4168,9 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                     drawAllCanvases();
                 }
 
-                if (totalPhotosReplaced > 0) {
+                if (totalNewStudents === 0 && totalPhotosReplaced === 0) {
+                    toast('Bundle already up to date: 0 changes detected.', 'info');
+                } else if (totalPhotosReplaced > 0) {
                     toast(`Updated: ${totalPhotosReplaced} retake photo(s) replaced! Total active: ${data.length}`, 'success');
                 } else {
                     toast(`Loaded ${data.length} students from Smart Bundle successfully!`, 'success');

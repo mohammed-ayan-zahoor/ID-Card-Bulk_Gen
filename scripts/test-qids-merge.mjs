@@ -76,9 +76,15 @@ const retake = await validateQidsBundle(path.join(fixturesDir, 'retake_10A.qids'
 assert.strictEqual(retake.studentsCount, 3);
 
 // Merge clean + retake
-const { merged, photosReplacedCount } = mergeStudents(clean.manifest.students, retake);
+const { merged, photosReplacedCount, newStudentsCount } = mergeStudents(clean.manifest.students, retake);
 assert.strictEqual(merged.length, 6, 'Total merged student count should remain 6');
 assert.strictEqual(photosReplacedCount, 3, 'Exactly 3 photos should be updated/replaced');
+assert.strictEqual(newStudentsCount, 0, 'No new students added from retake bundle');
+
+// Test Idempotency: dropping retake again should result in 0 changes
+const secondPass = mergeStudents(merged, retake);
+assert.strictEqual(secondPass.photosReplacedCount, 0, 'Second drop of retake bundle must replace 0 photos');
+assert.strictEqual(secondPass.newStudentsCount, 0, 'Second drop of retake bundle must add 0 students');
 
 // Verify student 05 (Kunal Jadhav) transitioned from pending to done
 const kunal = merged.find(s => s.studentId === 'ims:65d2f8a19b3c4e5f6a7b8c05');
