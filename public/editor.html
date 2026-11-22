@@ -1529,6 +1529,20 @@
                     class="mt-6 bg-red-500 text-white font-bold py-2 px-6 rounded-lg">Close</button>
             </div>
         </div>
+        <div id="mixed-institute-modal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 460px; background: #1f2430; border: 1px solid #374151; border-radius: 6px; padding: 20px; box-shadow: 0 16px 36px rgba(0,0,0,0.7);">
+                <h3 class="text-base font-semibold text-amber-400 mb-2 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    Different Institute Detected
+                </h3>
+                <p id="mixed-institute-text" class="text-xs text-gray-300 leading-relaxed mb-5"></p>
+                <div class="flex items-center justify-end gap-2.5">
+                    <button id="mixed-institute-cancel-btn" class="btn-photoshop text-xs px-3 py-1.5 text-gray-300 hover:text-white">Cancel</button>
+                    <button id="mixed-institute-replace-btn" class="btn-photoshop text-xs px-3 py-1.5 text-red-300 border-red-700 hover:bg-red-950/40">Replace Project</button>
+                    <button id="mixed-institute-merge-btn" class="btn-photoshop btn-primary text-xs px-3 py-1.5 font-medium">Merge Anyway</button>
+                </div>
+            </div>
+        </div>
         <div id="toast-container"></div>
     </div>
     <script>
@@ -3955,6 +3969,40 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                 return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
             }
 
+            function confirmMixedInstituteModal({ incomingName, incomingCode, activeName, activeCode }) {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById('mixed-institute-modal');
+                    const text = document.getElementById('mixed-institute-text');
+                    const btnCancel = document.getElementById('mixed-institute-cancel-btn');
+                    const btnReplace = document.getElementById('mixed-institute-replace-btn');
+                    const btnMerge = document.getElementById('mixed-institute-merge-btn');
+
+                    if (!modal || !btnCancel || !btnReplace || !btnMerge) {
+                        resolve('merge');
+                        return;
+                    }
+
+                    const curLabel = activeCode ? `${activeName || 'Active'} (${activeCode})` : (activeName || 'Active');
+                    const incLabel = incomingCode ? `${incomingName || 'Incoming'} (${incomingCode})` : (incomingName || 'Incoming');
+
+                    text.textContent = `This bundle belongs to "${incLabel}", but the active project has students from "${curLabel}". Mixing students from different institutes into the same PDF print job can cause card mixups.`;
+
+                    modal.classList.remove('hidden');
+
+                    const cleanup = (choice) => {
+                        modal.classList.add('hidden');
+                        btnCancel.onclick = null;
+                        btnReplace.onclick = null;
+                        btnMerge.onclick = null;
+                        resolve(choice);
+                    };
+
+                    btnCancel.onclick = () => cleanup('cancel');
+                    btnReplace.onclick = () => cleanup('replace');
+                    btnMerge.onclick = () => cleanup('merge');
+                });
+            }
+
             async function importSmartBundleFiles(fileList) {
                 const files = Array.from(fileList).filter(f => {
                     const name = (f.name || '').toLowerCase();
@@ -4029,16 +4077,51 @@ if (frontDimsLabel) frontDimsLabel.textContent = `${newW} × ${newH}`;
                             continue;
                         }
 
-                        // Mixed institute guard
-                        const incomingInst = (manifest.institute?.name || '').trim();
-                        if (window.loadedInstituteName && incomingInst && window.loadedInstituteName.toLowerCase() !== incomingInst.toLowerCase()) {
-                            toast(`⚠️ Notice: Bundle institute "${incomingInst}" differs from active project "${window.loadedInstituteName}". Merging records.`, 'warn', 8000);
-                        } else if (incomingInst) {
-                            window.loadedInstituteName = incomingInst;
+                        // Mixed institute guard: compare institute.code first, then name
+                        const incomingInstName = (manifest.institute?.name || '').trim();
+                        const incomingInstCode = (manifest.institute?.code || '').trim();
+                        const activeInstName = (window.loadedInstituteName || '').trim();
+                        const activeInstCode = (window.currentInstituteInfo?.code || '').trim();
+
+                        let isInstituteClash = false;
+                        if (activeInstCode && incomingInstCode) {
+                            isInstituteClash = activeInstCode.toLowerCase() !== incomingInstCode.toLowerCase();
+                        } else if (activeInstName && incomingInstName) {
+                            isInstituteClash = activeInstName.toLowerCase() !== incomingInstName.toLowerCase();
+                        }
+
+                        if (isInstituteClash && (data.length > 0 || qidsBundleMap.size > 0)) {
+                            const choice = await confirmMixedInstituteModal({
+                                incomingName: incomingInstName,
+                                incomingCode: incomingInstCode,
+                                activeName: activeInstName,
+                                activeCode: activeInstCode
+                            });
+
+                            if (choice === 'cancel') {
+                                toast(`Import of bundle ${manifest.bundleId || file.name} cancelled.`, 'info');
+                                continue;
+                            } else if (choice === 'replace') {
+                                qidsBundleMap.clear();
+                                photoFiles.clear();
+                                data = [];
+                                window.data = data;
+                                window.loadedInstituteName = incomingInstName;
+                                window.currentInstituteInfo = manifest.institute || null;
+                                toast(`Project cleared. Loading bundle from ${incomingInstName || incomingInstCode}...`, 'info');
+                            } else {
+                                // 'merge': keep active institute code or proceed
+                                toast(`Merging records from ${incomingInstName || incomingInstCode} into active project.`, 'warn', 5000);
+                            }
+                        } else if (incomingInstName || incomingInstCode) {
+                            window.loadedInstituteName = incomingInstName || activeInstName;
+                            window.currentInstituteInfo = manifest.institute || window.currentInstituteInfo;
                         }
 
                         window.currentBatchInfo = manifest.batch || null;
-                        window.currentInstituteInfo = manifest.institute || null;
+                        if (!window.currentInstituteInfo) {
+                            window.currentInstituteInfo = manifest.institute || null;
+                        }
 
                         const students = manifest.students || [];
                         let bundlePhotoErrors = 0;
